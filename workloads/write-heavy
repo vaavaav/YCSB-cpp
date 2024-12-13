@@ -1,0 +1,9 @@
+recordcount=100000
+operationcount=100000
+
+readallfields=true
+
+readproportion=0.1
+updateproportion=0
+scanproportion=0
+insertproportion=0.9
