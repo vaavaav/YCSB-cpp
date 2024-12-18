@@ -50,7 +50,7 @@ private:
   static RocksDB rocksdb_;
   static std::shared_ptr<Cache> cache_;
   thread_local static int threadId_;
-  thread_local static facebook::CacheLib::PoolId poolId_;
+  thread_local static facebook::cachelib::PoolId poolId_;
   static int ref_cnt_;
 };
 

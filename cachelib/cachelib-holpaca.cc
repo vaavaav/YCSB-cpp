@@ -1,4 +1,7 @@
 #include "cachelib-holpaca.h"
+#include "cachelib/allocator/HitsPerSlabStrategy.h"
+#include "cachelib/allocator/MarginalHitsOptimizeStrategy.h"
+#include "cachelib/allocator/PoolOptimizeStrategy.h"
 #include "core/db_factory.h"
 
 namespace {
@@ -30,18 +33,19 @@ std::mutex CacheLibHolpaca::mutex_;
 RocksDB CacheLibHolpaca::rocksdb_;
 std::shared_ptr<CacheLibHolpaca::Cache> CacheLibHolpaca::cache_ = nullptr;
 thread_local int CacheLibHolpaca::threadId_;
-thread_local facebook::CacheLib::PoolId CacheLibHolpaca::poolId_;
+thread_local facebook::cachelib::PoolId CacheLibHolpaca::poolId_;
 int CacheLibHolpaca::ref_cnt_ = 0;
 
 void CacheLibHolpaca::Init() {
 
   std::lock_guard<std::mutex> lock(mutex_);
   if (cache_ == nullptr) {
-    CacheConfig config;
+    Cache::Config config;
     config
         .setControllerAddress(
             props_->GetProperty(PROP_CONTROLLER_ADDRESS, "localhost:11211"))
-        .setStageAddress(PROP_STAGE_ADDRESS, "localhost:11212")
+        .setAddress(
+            props_->GetProperty(PROP_CONTROLLER_ADDRESS, "localhost:11212"))
         .m_config
         .setCacheSize(
             std::stol(props_->GetProperty(PROP_SIZE, PROP_SIZE_DEFAULT)))
@@ -69,13 +73,13 @@ void CacheLibHolpaca::Init() {
     rocksdb_.SetProps(props_);
     rocksdb_.Init();
   }
-  poolId_ = cache_->addPool(
+  CacheLibHolpaca::poolId_ = cache_->addPool(
       props_->GetProperty(PROP_POOL_NAME + "." + std::to_string(threadId_),
                           PROP_POOL_NAME_DEFAULT),
       static_cast<long>(cache_->getCacheMemoryStats().ramCacheSize *
                         std::stod(props_->GetProperty(
                             PROP_POOL_SIZE + "." + std::to_string(threadId_),
-                            PROP_POOL_SIZE_DEFAULT)));
+                            PROP_POOL_SIZE_DEFAULT))));
 }
 
 DB::Status CacheLibHolpaca::Read(const std::string &table,
@@ -83,7 +87,7 @@ DB::Status CacheLibHolpaca::Read(const std::string &table,
                                  const std::vector<std::string> *fields,
                                  std::vector<Field> &result) {
   auto key_ = key;
-  auto value = cache_->get(poolId_, key_);
+  auto value = cache_->get(CacheLibHolpaca::poolId_, key_);
   if (value.empty()) {
     if (rocksdb_.Read(table, key, fields, result) == kOK) {
       std::string newValue = result.front().value;
@@ -115,7 +119,7 @@ DB::Status CacheLibHolpaca::Update(const std::string &table,
   std::string data = values.front().value;
   auto key_ = key;
 
-  bool success = cache_->put(poolId_, key_, data);
+  bool success = cache_->put(CacheLibHolpaca::poolId_, key_, data);
   if (success) {
     rocksdb_.Update(table, key, values);
     return kOK;
@@ -131,7 +135,7 @@ DB::Status CacheLibHolpaca::Insert(const std::string &table,
   std::string data = values.front().value;
   auto key_ = key;
 
-  if (!cache_->put(poolId_, key_, data)) {
+  if (!cache_->put(CacheLibHolpaca::poolId_, key_, data)) {
     return kError;
   }
   return rocksdb_.Insert(table, key, values);
@@ -140,8 +144,7 @@ DB::Status CacheLibHolpaca::Insert(const std::string &table,
 DB::Status CacheLibHolpaca::Delete(const std::string &table,
                                    const std::string &key) {
   auto key_ = key;
-  bool success = cache_->remove(key_);
-  return success ? kOK : kError;
+  return cache_->remove(key_) == Cache::RemoveRes::kSuccess ? kOK : kNotFound;
 }
 
 DB *NewCacheLibHolpaca() { return new CacheLibHolpaca(); }

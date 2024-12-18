@@ -67,12 +67,13 @@ std::string CoreWorkload::BuildValue(size_t size) {
   return result;
 }
 
-bool CoreWorkload::DoInsert(DB &db, std::string const &key, size_t size) {
+bool CoreWorkload::DoInsert(DB &db) {
+  auto next = NextOperation();
   std::vector<DB::Field> fields;
   auto field = DB::Field();
-  field.value = BuildValue(size);
+  field.value = BuildValue(std::get<2>(next));
   fields.push_back(field);
-  return db.Insert(table_name_, key, fields);
+  return db.Insert(table_name_, std::get<1>(next), fields);
 }
 
 std::tuple<Operation, std::string, size_t> CoreWorkload::NextOperation() {

@@ -63,7 +63,8 @@ CMAKE_FLAGS=(
   "-DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE"
   "-DCMAKE_VERBOSE_MAKEFILE=$CMAKE_VERBOSE_MAKEFILE"
   "-DCMAKE_INSTALL_RPATH=$PREFIX/lib"
-  "-DCMAKE_INSTALL_RPATH_USE_LINK_PATH=TRUE"
+  "-DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE"
+  "-DCMAKE_BUILD_WITH_INSTALL_RPATH=TRUE"
 )
 
 # <name> <branch/tag> <shallow?> <recurse-submodules?> <repository> <cmake-source-dir> [<cmake-flag>...]
@@ -78,10 +79,10 @@ dependencies=(
   "rocksdb main yes no https://github.com/vaavaav/rocksdb . -DWITH_TESTS=OFF -DWITH_GFLAGS=OFF -DWITH_BENCHMARK_TESTS=OFF"
   "fizz v2022.09.19.00 yes yes https://github.com/facebookincubator/fizz fizz -DBUILD_TESTS=OFF"
   "wangle v2022.09.19.00 yes yes https://github.com/facebook/wangle wangle -DBUILD_TESTS=OFF"
-  "fbthrift v2022.09.19.00 yes yes https://github.com/facebook/fbthrift ."
-  "grpc v1.50.1 yes yes https://github.com/grpc/grpc . -DgRPC_INSTALL=ON -DgRPC_BUILD_TESTS=OFF -DgRPC_ZLIB_PROVIDER=package -DgRPC_SSL_PROVIDER=package -DABSL_PROPAGATE_CXX_STD=ON -Dprotobuf_WITH_ZLIB=ON"
- "flows master no no https://gitfront.io/r/vaavaav/davMvwJ8jxJv/flows-cpp.git ."
- "CacheLib-Holpaca dev-new yes no https://github.com/vaavaav/CacheLib-Holpaca cachelib -DBUILD_TESTS=OFF -DCMAKE_FIND_DEBUG_MODE=ON" 
+  "fbthrift v2022.09.19.00 yes yes https://github.com/facebook/fbthrift . -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"
+  "grpc v1.50.1 yes yes https://github.com/grpc/grpc . -DgRPC_INSTALL=ON -DgRPC_BUILD_TESTS=OFF -DgRPC_ZLIB_PROVIDER=package -DgRPC_SSL_PROVIDER=package -DABSL_PROPAGATE_CXX_STD=ON -Dprotobuf_WITH_ZLIB=ON -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"
+  "flows master no no https://gitfront.io/r/vaavaav/davMvwJ8jxJv/flows-cpp.git ."
+  "CacheLib-Holpaca dev-new yes no https://github.com/vaavaav/CacheLib-Holpaca cachelib -DBUILD_TESTS=OFF -DCMAKE_FIND_DEBUG_MODE=ON" 
 )
 
 # Installing dependencies

@@ -128,57 +128,6 @@ int main(const int argc, const char *argv[]) {
   const std::chrono::seconds status_interval = std::chrono::seconds(
       std::stoi(props.GetProperty("status.interval", "10")));
 
-  // load phase
-  if (do_load) {
-    std::atomic_bool done(false);
-    const long total_ops =
-        stol(props[ycsbc::CoreWorkload::RECORD_COUNT_PROPERTY]);
-
-    CountDownLatch latch(num_threads);
-    ycsbc::utils::Timer<double> timer;
-
-    timer.Start();
-    std::future<void> status_future;
-    if (show_status) {
-      status_future = std::async(std::launch::async, StatusThread,
-                                 &measurements, gMeasurements,
-                                 &operationsForStatus, &done, status_interval);
-    }
-    std::vector<std::future<long>> client_threads;
-    for (int i = 0; i < num_threads; ++i) {
-      long thread_ops = total_ops / num_threads;
-      if (i < total_ops % num_threads) {
-        thread_ops++;
-      }
-      client_threads.emplace_back(
-          std::async(std::launch::async, ycsbc::ClientThread, 0s, 0s, i, dbs[i],
-                     wls[i], thread_ops, true, true, !do_transaction));
-    }
-    assert((int)client_threads.size() == num_threads);
-
-    long sum = 0;
-    for (auto &n : client_threads) {
-      assert(n.valid());
-      n.wait();
-      sum += n.get();
-    }
-    done.store(true);
-    double runtime = timer.End();
-
-    if (show_status) {
-      status_future.wait();
-    }
-
-    std::cout << "Load runtime(sec): " << runtime << std::endl;
-    std::cout << "Load operations(ops): " << sum << std::endl;
-    std::cout << "Load throughput(ops/sec): " << sum / runtime << std::endl;
-  }
-  for (int i = 0; i < num_threads; i++) {
-    measurements[i]->Reset();
-  }
-  gMeasurements->Reset();
-
-  // transaction phase
   if (do_transaction) {
     const long total_ops =
         std::stol(props[ycsbc::CoreWorkload::OPERATION_COUNT_PROPERTY]);
@@ -243,14 +192,7 @@ void ParseCommandLine(int argc, const char *argv[],
                       ycsbc::utils::Properties &props) {
   int argindex = 1;
   while (argindex < argc && StrStartWith(argv[argindex], "-")) {
-    if (strcmp(argv[argindex], "-load") == 0) {
-      props.SetProperty("doload", "true");
-      argindex++;
-    } else if (strcmp(argv[argindex], "-run") == 0 ||
-               strcmp(argv[argindex], "-t") == 0) {
-      props.SetProperty("dotransaction", "true");
-      argindex++;
-    } else if (strcmp(argv[argindex], "-threads") == 0) {
+    if (strcmp(argv[argindex], "-threads") == 0) {
       argindex++;
       if (argindex >= argc) {
         UsageMessage(argv[0]);
@@ -267,23 +209,6 @@ void ParseCommandLine(int argc, const char *argv[],
         exit(0);
       }
       props.SetProperty("dbname", argv[argindex]);
-      argindex++;
-    } else if (strcmp(argv[argindex], "-P") == 0) {
-      argindex++;
-      if (argindex >= argc) {
-        UsageMessage(argv[0]);
-        std::cerr << "Missing argument value for -P" << std::endl;
-        exit(0);
-      }
-      std::string filename(argv[argindex]);
-      std::ifstream input(argv[argindex]);
-      try {
-        props.Load(input);
-      } catch (const std::string &message) {
-        std::cerr << message << std::endl;
-        exit(0);
-      }
-      input.close();
       argindex++;
     } else if (strcmp(argv[argindex], "-p") == 0) {
       argindex++;
@@ -339,15 +264,8 @@ void UsageMessage(const char *command) {
       << "Usage: " << command
       << " [options]\n"
          "Options:\n"
-         "  -load: run the loading phase of the workload\n"
-         "  -t: run the transactions phase of the workload\n"
-         "  -run: same as -t\n"
          "  -threads n: execute using n threads (default: 1)\n"
          "  -db dbname: specify the name of the DB to use (default: basic)\n"
-         "  -P propertyfile: load properties from the given file. Multiple "
-         "files can\n"
-         "                   be specified, and will be processed in the order "
-         "specified\n"
          "  -p name=value: specify a property to be passed to the DB and "
          "workloads\n"
          "                 multiple properties can be specified, and override "

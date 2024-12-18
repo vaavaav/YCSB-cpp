@@ -64,9 +64,6 @@ public:
   static const std::string OPERATION_COUNT_PROPERTY;
 
   static const std::string FILENAME_PROPERTY;
-
-  ///
-  /// Initialize the scenario.
   /// Called once, in the main client thread, before any operations are started.
   ///
   virtual void Init(std::string const property_suffix,
@@ -95,7 +92,6 @@ protected:
 
   // for productiont traces
   std::string BuildValue(size_t size);
-  virtual bool DoInsert(DB &db, std::string const &key, size_t objectSize);
 
   std::tuple<Operation, std::string, size_t> NextOperation();
 

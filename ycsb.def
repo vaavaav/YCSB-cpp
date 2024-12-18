@@ -10,14 +10,13 @@ From: ubuntu:20.04
   ../.tmux.conf /etc/tmux.conf
   ../.bashrc /etc/bash.bashrc
   ../.bash_profile /etc/profile
-  . /YCSB-cpp
 
 %post
   export DEBIAN_FRONTEND=noninteractive
   echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections
   echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections
   apt-get update
-  apt-get install -y tzdata git sudo tmux fzf ninja-build gettext libtool libtool-bin autoconf automake cmake g++ pkg-config unzip curl doxygen binutils-dev bison flex build-essential libboost-all-dev libbz2-dev libdouble-conversion-dev libdwarf-dev libelf-dev libevent-dev libgflags-dev libgoogle-glog-dev libiberty-dev libjemalloc-dev libleveldb-dev liblz4-dev liblzma-dev libnuma-dev libsnappy-dev libsodium-dev libunwind-dev make pkg-config software-properties-common zlib1g-dev libssl-dev
+  apt-get install -y tzdata git sudo tmux tmux-plugin-manager fzf ninja-build gettext libtool libtool-bin autoconf automake cmake g++ pkg-config unzip curl doxygen binutils-dev bison flex build-essential libboost-all-dev libbz2-dev libdouble-conversion-dev libdwarf-dev libelf-dev libevent-dev libgflags-dev libgoogle-glog-dev libiberty-dev libjemalloc-dev libleveldb-dev liblz4-dev liblzma-dev libnuma-dev libsnappy-dev libsodium-dev libunwind-dev make pkg-config software-properties-common zlib1g-dev libssl-dev
   # Install neovim
   git clone -b v0.10.2 --depth 1 https://github.com/neovim/neovim.git /neovim
   cd /neovim
@@ -26,6 +25,3 @@ From: ubuntu:20.04
   cd ~
   rm -rf /neovim
   # End install neovim
-  cd /YCSB-cpp
-#  ./build.sh -j4 -b -v
-
