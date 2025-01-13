@@ -79,6 +79,7 @@ bool CoreWorkload::DoInsert(DB &db) {
 std::tuple<Operation, std::string, size_t> CoreWorkload::NextOperation() {
   std::string line;
   file_buffer_ >> line;
+  std::cout << line << std::endl;
   std::string del = ",";
   auto pos = line.find(del);
   line.erase(0, pos + del.length());
