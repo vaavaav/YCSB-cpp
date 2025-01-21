@@ -63,14 +63,16 @@ public:
 
   static const std::string OPERATION_COUNT_PROPERTY;
 
+  static const std::string RECORD_COUNT_PROPERTY;
+
   static const std::string FILENAME_PROPERTY;
   /// Called once, in the main client thread, before any operations are started.
   ///
   virtual void Init(std::string const property_suffix,
                     const utils::Properties &p);
 
-  virtual bool DoInsert(DB &db);
   virtual bool DoTransaction(DB &db);
+  virtual bool DoInsert(DB &db);
 
   CoreWorkload() {};
 

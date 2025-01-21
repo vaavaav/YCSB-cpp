@@ -23,12 +23,10 @@ namespace ycsbc {
 inline long ClientThread(std::chrono::seconds sleepafterload,
                          std::chrono::seconds maxexecutiontime, int threadId,
                          ycsbc::DB *db, ycsbc::CoreWorkload *wl,
-                         const long num_ops, bool init_db, bool cleanup_db) {
+                         const long num_ops, bool load, bool cleanup_db) {
   try {
     db->SetThreadId(threadId);
-    if (init_db) {
-      db->Init();
-    }
+    db->Init();
     if (sleepafterload.count() > 0) {
       std::this_thread::sleep_for(sleepafterload);
     }
@@ -40,11 +38,17 @@ inline long ClientThread(std::chrono::seconds sleepafterload,
 
     long ops = 0;
 
-    for (; ops < num_ops; ++ops) {
-      if (wl->is_stop_requested()) {
-        break;
+    if (load) {
+      for (; ops < num_ops; ++ops) {
+        wl->DoInsert(*db);
       }
-      wl->DoTransaction(*db);
+    } else {
+      for (; ops < num_ops; ++ops) {
+        if (wl->is_stop_requested()) {
+          break;
+        }
+        wl->DoTransaction(*db);
+      }
     }
 
     if (cleanup_db) {
