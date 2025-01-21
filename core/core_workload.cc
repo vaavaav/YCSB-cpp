@@ -67,19 +67,13 @@ std::string CoreWorkload::BuildValue(size_t size) {
   return result;
 }
 
-bool CoreWorkload::DoInsert(DB &db) {
-  auto next = NextOperation();
-  std::vector<DB::Field> fields;
-  auto field = DB::Field();
-  field.value = BuildValue(std::get<2>(next));
-  fields.push_back(field);
-  return db.Insert(table_name_, std::get<1>(next), fields);
-}
-
 std::tuple<Operation, std::string, size_t> CoreWorkload::NextOperation() {
   std::string line;
   file_buffer_ >> line;
-  std::cout << line << std::endl;
+  if (line.empty()) {
+    return std::make_tuple(MAXOPTYPE, "", 0);
+  }
+
   std::string del = ",";
   auto pos = line.find(del);
   line.erase(0, pos + del.length());
@@ -108,24 +102,33 @@ std::tuple<Operation, std::string, size_t> CoreWorkload::NextOperation() {
   }
 }
 
+bool CoreWorkload::DoInsert(DB &db) {
+  auto [_, key, size] = NextOperation();
+  std::vector<DB::Field> fields;
+  auto field = DB::Field();
+  field.value = BuildValue(size);
+  fields.push_back(field);
+  return db.Insert(table_name_, key, fields);
+}
+
 bool CoreWorkload::DoTransaction(DB &db) {
   DB::Status status;
-  auto next = NextOperation();
-  std::cout << "Operation: " << std::get<0>(next) << ", " << std::get<1>(next)
-            << ", " << std::get<2>(next) << std::endl;
-  // switch (std::get<0>(next)) {
-  // case READ:
-  //   status = TransactionRead(db, std::get<1>(next));
-  //   break;
-  // case UPDATE:
-  //   status = TransactionUpdate(db, std::get<1>(next), std::get<2>(next));
-  //   break;
-  // case INSERT:
-  //   status = TransactionInsert(db, std::get<1>(next), std::get<2>(next));
-  //   break;
-  // default:
-  //   throw utils::Exception("Operation request is not recognized!");
-  // }
+  auto [op, key, size] = NextOperation();
+  switch (op) {
+  case READ:
+    status = TransactionRead(db, key);
+    break;
+  case UPDATE:
+    status = TransactionUpdate(db, key, size);
+    break;
+  case INSERT:
+    status = TransactionInsert(db, key, size);
+    break;
+  default:
+    // throw utils::Exception("Operation request is not recognized!");
+    status = DB::kOK;
+    break;
+  }
   return (status == DB::kOK);
 }
 
@@ -136,14 +139,20 @@ DB::Status CoreWorkload::TransactionRead(DB &db, std::string const &key) {
 
 DB::Status CoreWorkload::TransactionUpdate(DB &db, std::string const &key,
                                            size_t size) {
-  std::vector<DB::Field> values{{BuildValue(size)}};
-  return db.Update(table_name_, key, values);
+  std::vector<DB::Field> fields;
+  auto field = DB::Field();
+  field.value = BuildValue(size);
+  fields.push_back(field);
+  return db.Update(table_name_, key, fields);
 }
 
 DB::Status CoreWorkload::TransactionInsert(DB &db, std::string const &key,
                                            size_t size) {
-  std::vector<DB::Field> values{{BuildValue(size)}};
-  return db.Insert(table_name_, key, values);
+  std::vector<DB::Field> fields;
+  auto field = DB::Field();
+  field.value = BuildValue(size);
+  fields.push_back(field);
+  return db.Insert(table_name_, key, fields);
 }
 
 } // namespace ycsbc

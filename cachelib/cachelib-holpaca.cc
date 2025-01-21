@@ -17,7 +17,7 @@ const std::string PROP_POOL_NAME = "cachelib.pool.name";
 const std::string PROP_POOL_NAME_DEFAULT = "default";
 
 const std::string PROP_POOL_SIZE = "cachelib.pool.relsize";
-const std::string PROP_POOL_SIZE_DEFAULT = "1000000000";
+const std::string PROP_POOL_SIZE_DEFAULT = "1";
 
 const std::string PROP_POOL_RESIZER = "cachelib.poolresizer";
 const std::string PROP_POOL_RESIZER_DEFAULT = "off";
@@ -44,8 +44,7 @@ void CacheLibHolpaca::Init() {
     config
         .setControllerAddress(
             props_->GetProperty(PROP_CONTROLLER_ADDRESS, "localhost:11211"))
-        .setAddress(
-            props_->GetProperty(PROP_CONTROLLER_ADDRESS, "localhost:11212"))
+        .setAddress(props_->GetProperty(PROP_STAGE_ADDRESS, "localhost:11212"))
         .m_config
         .setCacheSize(
             std::stol(props_->GetProperty(PROP_SIZE, PROP_SIZE_DEFAULT)))
@@ -86,6 +85,7 @@ DB::Status CacheLibHolpaca::Read(const std::string &table,
                                  const std::string &key,
                                  const std::vector<std::string> *fields,
                                  std::vector<Field> &result) {
+  std::lock_guard<std::mutex> lock(mutex_);
   auto key_ = key;
   auto value = cache_->get(CacheLibHolpaca::poolId_, key_);
   if (value.empty()) {
@@ -108,6 +108,7 @@ DB::Status CacheLibHolpaca::Scan(const std::string &table,
                                  const std::vector<std::string> *fields,
                                  std::vector<std::vector<Field>> &result) {
 
+  std::lock_guard<std::mutex> lock(mutex_);
   // TODO
 
   return kError;
@@ -116,6 +117,7 @@ DB::Status CacheLibHolpaca::Scan(const std::string &table,
 DB::Status CacheLibHolpaca::Update(const std::string &table,
                                    const std::string &key,
                                    std::vector<Field> &values) {
+  std::lock_guard<std::mutex> lock(mutex_);
   std::string data = values.front().value;
   auto key_ = key;
 
@@ -132,17 +134,19 @@ DB::Status CacheLibHolpaca::Update(const std::string &table,
 DB::Status CacheLibHolpaca::Insert(const std::string &table,
                                    const std::string &key,
                                    std::vector<Field> &values) {
+  std::lock_guard<std::mutex> lock(mutex_);
   std::string data = values.front().value;
   auto key_ = key;
 
-  if (!cache_->put(CacheLibHolpaca::poolId_, key_, data)) {
-    return kError;
-  }
+  //  if (!cache_->put(CacheLibHolpaca::poolId_, key_, data)) {
+  //    return kError;
+  //  }
   return rocksdb_.Insert(table, key, values);
 }
 
 DB::Status CacheLibHolpaca::Delete(const std::string &table,
                                    const std::string &key) {
+  std::lock_guard<std::mutex> lock(mutex_);
   auto key_ = key;
   return cache_->remove(key_) == Cache::RemoveRes::kSuccess ? kOK : kNotFound;
 }

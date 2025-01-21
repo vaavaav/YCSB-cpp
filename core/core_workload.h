@@ -69,8 +69,8 @@ public:
   virtual void Init(std::string const property_suffix,
                     const utils::Properties &p);
 
-  virtual bool DoInsert(DB &db);
   virtual bool DoTransaction(DB &db);
+  virtual bool DoInsert(DB &db);
 
   CoreWorkload() {};
 
