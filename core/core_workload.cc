@@ -44,7 +44,10 @@ const string CoreWorkload::TABLENAME_PROPERTY = "table";
 const string CoreWorkload::TABLENAME_DEFAULT = "usertable";
 
 const string CoreWorkload::OPERATION_COUNT_PROPERTY = "operationcount";
-const string CoreWorkload::RECORD_COUNT_PROPERTY = "operationcount";
+const string CoreWorkload::RECORD_COUNT_PROPERTY = "recordcount";
+
+const string CoreWorkload::SCALE_VALUE_SIZE_PROPERTY = "scalevaluesize";
+const string CoreWorkload::SCALE_VALUE_SIZE_DEFAULT = "1.0"; 
 
 const string CoreWorkload::FILENAME_PROPERTY = "file";
 
@@ -58,6 +61,8 @@ void CoreWorkload::Init(std::string const property_suffix,
 
   std::string file_name = p.GetProperty(FILENAME_PROPERTY + property_suffix);
   file_buffer_.open(file_name, std::ifstream::in);
+
+  scale_value_size = std::stod(p.GetProperty(SCALE_VALUE_SIZE_PROPERTY + property_suffix, p.GetProperty(SCALE_VALUE_SIZE_PROPERTY, SCALE_VALUE_SIZE_DEFAULT)));
 }
 
 std::string CoreWorkload::BuildValue(size_t size) {
@@ -82,7 +87,7 @@ std::tuple<Operation, std::string, size_t> CoreWorkload::NextOperation() {
   std::string key = line.substr(0, pos);
   line.erase(0, pos + del.length());
   pos = line.find(del);
-  size_t keysize = std::stoi(line.substr(0, pos));
+  size_t keysize = std::stoi(line.substr(0, pos)) * scale_value_size;
   line.erase(0, pos + del.length());
   pos = line.find(del);
   size_t valuesize = std::stoi(line.substr(0, pos));

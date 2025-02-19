@@ -90,8 +90,8 @@ DB::Status CacheLibHolpaca::Read(const std::string &table,
   auto value = cache_->get(CacheLibHolpaca::poolId_, key_);
   if (value.empty()) {
     if (rocksdb_.Read(table, key, fields, result) == kOK) {
-      std::string newValue = result.front().value;
-      if (!cache_->put(poolId_, key_, newValue)) {
+      value = result.front().value;
+      if (!cache_->put(poolId_, key_, value)) {
         return kError;
       }
     }
@@ -121,13 +121,12 @@ DB::Status CacheLibHolpaca::Update(const std::string &table,
   std::string data = values.front().value;
   auto key_ = key;
 
-  bool success = cache_->put(CacheLibHolpaca::poolId_, key_, data);
-  if (success) {
-    rocksdb_.Update(table, key, values);
-    return kOK;
-  } else {
-    return kError;
-  }
+//  bool success = cache_->put(CacheLibHolpaca::poolId_, key_, data);
+//  if (success) {
+    return rocksdb_.Update(table, key, values);
+//  } else {
+//    return kError;
+//  }
   // TODO: confirm if this is the correct behavior
 }
 
