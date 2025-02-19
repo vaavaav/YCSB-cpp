@@ -63,6 +63,11 @@ public:
 
   static const std::string OPERATION_COUNT_PROPERTY;
 
+  static const std::string RECORD_COUNT_PROPERTY;
+
+  static const std::string SCALE_VALUE_SIZE_PROPERTY;
+  static const std::string SCALE_VALUE_SIZE_DEFAULT;
+
   static const std::string FILENAME_PROPERTY;
   /// Called once, in the main client thread, before any operations are started.
   ///
@@ -75,6 +80,8 @@ public:
   CoreWorkload() {};
 
   virtual ~CoreWorkload() {}
+
+  double scale_value_size {1.0};
 
   void request_stop() {
     stop_requested_.store(true, std::memory_order_release);

@@ -143,10 +143,8 @@ int main(const int argc, const char *argv[]) {
     std::vector<std::future<long>> client_threads;
     for (int i = 0; i < num_threads; ++i) {
       const long thread_ops = stol(props.GetProperty(
-          ycsbc::CoreWorkload::OPERATION_COUNT_PROPERTY + "." +
-              std::to_string(i),
-          props.GetProperty(ycsbc::CoreWorkload::OPERATION_COUNT_PROPERTY,
-                            "0")));
+          ycsbc::CoreWorkload::RECORD_COUNT_PROPERTY + "." + std::to_string(i),
+          props.GetProperty(ycsbc::CoreWorkload::RECORD_COUNT_PROPERTY, "0")));
 
       client_threads.emplace_back(
           std::async(std::launch::async, ycsbc::ClientThread, 0s, 0s, i, dbs[i],
