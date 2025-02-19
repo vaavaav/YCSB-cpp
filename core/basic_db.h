@@ -13,35 +13,42 @@
 #include "properties.h"
 
 #include <iostream>
-#include <string>
 #include <mutex>
+#include <string>
 
-namespace ycsbc
-{
+namespace ycsbc {
 
-  class BasicDB : public DB
-  {
-  public:
-    void Init();
+class BasicDB : public DB {
+public:
+  void Init();
 
-    Status Read(const std::string &table, const std::string &key,
-                const std::vector<std::string> *fields, std::vector<Field> &result);
+  Status Read(const std::string &table, const std::string &key,
+              const std::vector<std::string> *fields,
+              std::vector<Field> &result);
 
-    Status Scan(const std::string &table, const std::string &key, long len,
-                const std::vector<std::string> *fields, std::vector<std::vector<Field>> &result);
+  Status Scan(const std::string &table, const std::string &key, long len,
+              const std::vector<std::string> *fields,
+              std::vector<std::vector<Field>> &result);
 
-    Status Update(const std::string &table, const std::string &key, std::vector<Field> &values);
+  Status Update(const std::string &table, const std::string &key,
+                std::vector<Field> &values);
 
-    Status Insert(const std::string &table, const std::string &key, std::vector<Field> &values);
+  Status Insert(const std::string &table, const std::string &key,
+                std::vector<Field> &values);
 
-    Status Delete(const std::string &table, const std::string &key);
+  Status Delete(const std::string &table, const std::string &key);
 
-  private:
-    static std::mutex mutex_;
-  };
+  std::tuple<uint64_t, uint64_t, uint64_t, uint64_t>
+  OccupancyCapacityAndGlobal() {
+    return std::make_tuple(0, 0, 0, 0);
+  }
 
-  DB *NewBasicDB();
+private:
+  static std::mutex mutex_;
+};
 
-} // ycsbc
+DB *NewBasicDB();
+
+} // namespace ycsbc
 
 #endif // YCSB_C_BASIC_DB_H_

@@ -12,6 +12,7 @@
 #include <ctime>
 #include <future>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <thread>
 #include <unordered_set>
@@ -55,22 +56,30 @@ void ParseCommandLine(int argc, const char *argv[],
 void StatusThread(std::vector<ycsbc::Measurements *> *measurements,
                   ycsbc::Measurements *gMeasurements,
                   std::vector<ycsbc::Operation> *operations,
-                  std::atomic_bool *done, std::chrono::seconds interval = 1s) {
+                  std::vector<ycsbc::DB *> *dbs, std::atomic_bool *done,
+                  std::chrono::seconds interval = 1s) {
   using namespace std::chrono;
 
   auto start = high_resolution_clock::now();
   while (1) {
     auto now = high_resolution_clock::now();
     auto elapsed_time = duration_cast<std::chrono::seconds>(now - start);
+    std::stringstream msg;
 
-    std::cout << elapsed_time.count() << " sec: ";
-
-    std::cout << "global { " + gMeasurements->GetStatusMsg(*operations) + " } ";
+    uint64_t gOcc, gCap;
     for (long i = 0; i < measurements->size(); i++) {
-      std::cout << "worker-" + std::to_string(i) + " { " +
-                       measurements->at(i)->GetStatusMsg(*operations) + " } ";
+      auto const &[occ, cap, gOcc_, gCap_] =
+          (*dbs)[i]->OccupancyCapacityAndGlobal();
+      gOcc = gOcc_;
+      gCap = gCap_;
+      msg << elapsed_time.count() << " sec [T-" << i
+          << "]: " << (*measurements)[i]->GetStatusMsg(*operations) << " ("
+          << occ << "/" << cap << ")" << std::endl;
     }
-    std::cout << std::endl;
+    msg << elapsed_time.count()
+        << " sec [GLOBAL]: " << gMeasurements->GetStatusMsg(*operations) << " ("
+        << gOcc << "/" << gCap << ")" << std::endl;
+    std::cout << msg.str();
     if (done->load()) {
       break;
     }
@@ -136,9 +145,9 @@ int main(const int argc, const char *argv[]) {
     timer.Start();
     std::future<void> status_future;
     if (show_status) {
-      status_future = std::async(std::launch::async, StatusThread,
-                                 &measurements, gMeasurements,
-                                 &operationsForStatus, &done, status_interval);
+      status_future = std::async(
+          std::launch::async, StatusThread, &measurements, gMeasurements,
+          &operationsForStatus, &dbs, &done, status_interval);
     }
     std::vector<std::future<long>> client_threads;
     for (int i = 0; i < num_threads; ++i) {
@@ -181,8 +190,9 @@ int main(const int argc, const char *argv[]) {
     timer.Start();
     std::thread status_thread;
     if (show_status) {
-      status_thread = std::thread(StatusThread, &measurements, gMeasurements,
-                                  &operationsForStatus, &done, status_interval);
+      status_thread =
+          std::thread(StatusThread, &measurements, gMeasurements,
+                      &operationsForStatus, &dbs, &done, status_interval);
     }
     std::vector<std::future<long>> client_threads;
     for (int i = 0; i < num_threads; ++i) {

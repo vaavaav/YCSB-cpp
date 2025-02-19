@@ -81,6 +81,14 @@ void CacheLibHolpaca::Init() {
                             PROP_POOL_SIZE_DEFAULT))));
 }
 
+std::tuple<uint64_t, uint64_t> CacheLibHolpaca::OccupancyAndCapacity() {
+  if (cache_ == nullptr) {
+    return std::make_tuple(0, 0);
+  }
+  auto ps = cache_->getPoolStats(poolId_);
+  return std::make_tuple(ps.poolSize - ps.freeMemoryBytes(), ps.poolSize);
+}
+
 DB::Status CacheLibHolpaca::Read(const std::string &table,
                                  const std::string &key,
                                  const std::vector<std::string> *fields,
@@ -121,12 +129,12 @@ DB::Status CacheLibHolpaca::Update(const std::string &table,
   std::string data = values.front().value;
   auto key_ = key;
 
-//  bool success = cache_->put(CacheLibHolpaca::poolId_, key_, data);
-//  if (success) {
-    return rocksdb_.Update(table, key, values);
-//  } else {
-//    return kError;
-//  }
+  //  bool success = cache_->put(CacheLibHolpaca::poolId_, key_, data);
+  //  if (success) {
+  return rocksdb_.Update(table, key, values);
+  //  } else {
+  //    return kError;
+  //  }
   // TODO: confirm if this is the correct behavior
 }
 

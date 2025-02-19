@@ -102,7 +102,7 @@ const std::string PROP_OPTIONS_FILE_DEFAULT = "";
 namespace ycsbc {
 
 std::mutex RocksDB::db_mutex_;
-rocksdb::DB* RocksDB::db_ = nullptr;
+rocksdb::DB *RocksDB::db_ = nullptr;
 int RocksDB::ref_cnt_ = 0;
 
 void RocksDB::Cleanup() {
@@ -114,10 +114,9 @@ void RocksDB::Cleanup() {
 }
 
 void RocksDB::GetOptions(
-    const utils::Properties& props,
-    rocksdb::Options* opt,
-    std::vector<rocksdb::ColumnFamilyDescriptor>* cf_descs) {
-  rocksdb::Env* env = rocksdb::Env::Default();
+    const utils::Properties &props, rocksdb::Options *opt,
+    std::vector<rocksdb::ColumnFamilyDescriptor> *cf_descs) {
+  rocksdb::Env *env = rocksdb::Env::Default();
   ;
   const std::string options_file =
       props_->GetProperty(PROP_OPTIONS_FILE, PROP_OPTIONS_FILE_DEFAULT);
@@ -260,10 +259,9 @@ void RocksDB::GetOptions(
   }
 }
 
-DB::Status RocksDB::Read(const std::string& table,
-                         const std::string& key,
-                         const std::vector<std::string>* fields,
-                         std::vector<Field>& result) {
+DB::Status RocksDB::Read(const std::string &table, const std::string &key,
+                         const std::vector<std::string> *fields,
+                         std::vector<Field> &result) {
   std::string data;
   rocksdb::Status s = db_->Get(rocksdb::ReadOptions(), key, &data);
   if (s.IsNotFound()) {
@@ -279,17 +277,15 @@ DB::Status RocksDB::Read(const std::string& table,
   return kOK;
 }
 
-DB::Status RocksDB::Scan(const std::string& table,
-                         const std::string& key,
-                         long len,
-                         const std::vector<std::string>* fields,
-                         std::vector<std::vector<Field>>& result) {
-  rocksdb::Iterator* db_iter = db_->NewIterator(rocksdb::ReadOptions());
+DB::Status RocksDB::Scan(const std::string &table, const std::string &key,
+                         long len, const std::vector<std::string> *fields,
+                         std::vector<std::vector<Field>> &result) {
+  rocksdb::Iterator *db_iter = db_->NewIterator(rocksdb::ReadOptions());
   db_iter->Seek(key);
   for (int i = 0; db_iter->Valid() && i < len; i++) {
     std::string data = db_iter->value().ToString();
     result.push_back(std::vector<Field>());
-    std::vector<Field>& values = result.back();
+    std::vector<Field> &values = result.back();
     if (fields != nullptr) {
       DeserializeRowFilter(values, data, *fields);
     } else {
@@ -301,9 +297,8 @@ DB::Status RocksDB::Scan(const std::string& table,
   return kOK;
 }
 
-DB::Status RocksDB::Update(const std::string& table,
-                           const std::string& key,
-                           std::vector<Field>& values) {
+DB::Status RocksDB::Update(const std::string &table, const std::string &key,
+                           std::vector<Field> &values) {
   std::string data;
   rocksdb::Status s = db_->Get(rocksdb::ReadOptions(), key, &data);
   if (s.IsNotFound()) {
@@ -313,9 +308,9 @@ DB::Status RocksDB::Update(const std::string& table,
   }
   std::vector<Field> current_values;
   DeserializeRow(current_values, data);
-  for (Field& new_field : values) {
+  for (Field &new_field : values) {
     bool found MAYBE_UNUSED = false;
-    for (Field& cur_field : current_values) {
+    for (Field &cur_field : current_values) {
       if (cur_field.name == new_field.name) {
         found = true;
         cur_field.value = new_field.value;
@@ -336,9 +331,8 @@ DB::Status RocksDB::Update(const std::string& table,
   return kOK;
 }
 
-DB::Status RocksDB::Insert(const std::string& table,
-                           const std::string& key,
-                           std::vector<Field>& values) {
+DB::Status RocksDB::Insert(const std::string &table, const std::string &key,
+                           std::vector<Field> &values) {
   std::string data;
   SerializeRow(values, data);
   rocksdb::WriteOptions wopt;
@@ -350,7 +344,7 @@ DB::Status RocksDB::Insert(const std::string& table,
   return kOK;
 }
 
-DB::Status RocksDB::Delete(const std::string& table, const std::string& key) {
+DB::Status RocksDB::Delete(const std::string &table, const std::string &key) {
   rocksdb::WriteOptions wopt;
   rocksdb::Status s = db_->Delete(wopt, key);
   if (!s.ok()) {
@@ -367,7 +361,7 @@ void RocksDB::Init() {
     return;
   }
 
-  const std::string& db_path =
+  const std::string &db_path =
       props_->GetProperty(PROP_NAME, PROP_NAME_DEFAULT);
   if (db_path == "") {
     throw utils::Exception("RocksDB db path is missing");
@@ -376,7 +370,7 @@ void RocksDB::Init() {
   rocksdb::Options opt;
   opt.create_if_missing = true;
   std::vector<rocksdb::ColumnFamilyDescriptor> cf_descs;
-  std::vector<rocksdb::ColumnFamilyHandle*> cf_handles;
+  std::vector<rocksdb::ColumnFamilyHandle *> cf_handles;
   GetOptions(*props_, &opt, &cf_descs);
 
   rocksdb::Status s;
@@ -396,30 +390,29 @@ void RocksDB::Init() {
   }
 }
 
-void RocksDB::SerializeRow(const std::vector<Field>& values,
-                           std::string& data) {
-  for (const Field& field : values) {
+void RocksDB::SerializeRow(const std::vector<Field> &values,
+                           std::string &data) {
+  for (const Field &field : values) {
     uint32_t len = field.name.size();
-    data.append(reinterpret_cast<char*>(&len), sizeof(uint32_t));
+    data.append(reinterpret_cast<char *>(&len), sizeof(uint32_t));
     data.append(field.name.data(), field.name.size());
     len = field.value.size();
-    data.append(reinterpret_cast<char*>(&len), sizeof(uint32_t));
+    data.append(reinterpret_cast<char *>(&len), sizeof(uint32_t));
     data.append(field.value.data(), field.value.size());
   }
 }
 
-void RocksDB::DeserializeRowFilter(std::vector<Field>& values,
-                                   const char* p,
-                                   const char* lim,
-                                   const std::vector<std::string>& fields) {
+void RocksDB::DeserializeRowFilter(std::vector<Field> &values, const char *p,
+                                   const char *lim,
+                                   const std::vector<std::string> &fields) {
   std::vector<std::string>::const_iterator filter_iter = fields.begin();
   while (p != lim && filter_iter != fields.end()) {
     assert(p < lim);
-    uint32_t len = *reinterpret_cast<const uint32_t*>(p);
+    uint32_t len = *reinterpret_cast<const uint32_t *>(p);
     p += sizeof(uint32_t);
     std::string field(p, static_cast<const size_t>(len));
     p += len;
-    len = *reinterpret_cast<const uint32_t*>(p);
+    len = *reinterpret_cast<const uint32_t *>(p);
     p += sizeof(uint32_t);
     std::string value(p, static_cast<const size_t>(len));
     p += len;
@@ -431,24 +424,23 @@ void RocksDB::DeserializeRowFilter(std::vector<Field>& values,
   assert(values.size() == fields.size());
 }
 
-void RocksDB::DeserializeRowFilter(std::vector<Field>& values,
-                                   const std::string& data,
-                                   const std::vector<std::string>& fields) {
-  const char* p = data.data();
-  const char* lim = p + data.size();
+void RocksDB::DeserializeRowFilter(std::vector<Field> &values,
+                                   const std::string &data,
+                                   const std::vector<std::string> &fields) {
+  const char *p = data.data();
+  const char *lim = p + data.size();
   DeserializeRowFilter(values, p, lim, fields);
 }
 
-void RocksDB::DeserializeRow(std::vector<Field>& values,
-                             const char* p,
-                             const char* lim) {
+void RocksDB::DeserializeRow(std::vector<Field> &values, const char *p,
+                             const char *lim) {
   while (p != lim) {
     assert(p < lim);
-    uint32_t len = *reinterpret_cast<const uint32_t*>(p);
+    uint32_t len = *reinterpret_cast<const uint32_t *>(p);
     p += sizeof(uint32_t);
     std::string field(p, static_cast<const size_t>(len));
     p += len;
-    len = *reinterpret_cast<const uint32_t*>(p);
+    len = *reinterpret_cast<const uint32_t *>(p);
     p += sizeof(uint32_t);
     std::string value(p, static_cast<const size_t>(len));
     p += len;
@@ -456,10 +448,10 @@ void RocksDB::DeserializeRow(std::vector<Field>& values,
   }
 }
 
-void RocksDB::DeserializeRow(std::vector<Field>& values,
-                             const std::string& data) {
-  const char* p = data.data();
-  const char* lim = p + data.size();
+void RocksDB::DeserializeRow(std::vector<Field> &values,
+                             const std::string &data) {
+  const char *p = data.data();
+  const char *lim = p + data.size();
   DeserializeRow(values, p, lim);
 }
 

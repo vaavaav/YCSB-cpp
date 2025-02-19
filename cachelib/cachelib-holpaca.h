@@ -27,6 +27,8 @@ public:
 
   Status Delete(const std::string &table, const std::string &key);
 
+  std::tuple<uint64_t, uint64_t> OccupancyAndCapacity();
+
   static void SerializeRow(const std::vector<Field> &values, std::string &data);
 
   static void DeserializeRowFilter(std::vector<Field> &values, const char *p,
@@ -44,6 +46,19 @@ public:
                              const std::string &data);
 
   void SetThreadId(int threadId) override;
+
+  std::tuple<uint64_t, uint64_t, uint64_t, uint64_t>
+  OccupancyCapacityAndGlobal() {
+    if (cache_ == nullptr) {
+      return std::make_tuple(0, 0, 0, 0);
+    }
+    auto ps = cache_->getPoolStats(poolId_);
+    auto cms = cache_->getCacheMemoryStats();
+    return std::make_tuple(ps.poolSize - ps.freeMemoryBytes(), ps.poolSize,
+                           cms.configuredRamCacheRegularSize -
+                               cms.unReservedSize,
+                           cms.configuredRamCacheRegularSize);
+  }
 
 private:
   static std::mutex mutex_;

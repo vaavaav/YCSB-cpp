@@ -22,23 +22,23 @@ typedef unsigned int uint;
 namespace ycsbc {
 
 class Measurements {
- public:
+public:
   virtual void Report(Operation op, uint64_t latency) = 0;
-  virtual std::string GetStatusMsg(
-      std::vector<Operation> const& operations) = 0;
+  virtual std::string
+  GetStatusMsg(std::vector<Operation> const &operations) = 0;
   virtual std::string GetCDF() = 0;
   virtual void Reset() = 0;
 };
 
 class BasicMeasurements : public Measurements {
- public:
+public:
   BasicMeasurements();
   void Report(Operation op, uint64_t latency) override;
-  std::string GetStatusMsg(std::vector<Operation> const& operations) override;
+  std::string GetStatusMsg(std::vector<Operation> const &operations) override;
   std::string GetCDF() override { return ""; }
   void Reset() override;
 
- private:
+private:
   std::atomic<uint> count_[MAXOPTYPE];
   std::atomic<uint64_t> latency_sum_[MAXOPTYPE];
   std::atomic<uint64_t> latency_min_[MAXOPTYPE];
@@ -47,19 +47,19 @@ class BasicMeasurements : public Measurements {
 
 #ifdef HDRMEASUREMENT
 class HdrHistogramMeasurements : public Measurements {
- public:
+public:
   HdrHistogramMeasurements();
   void Report(Operation op, uint64_t latency) override;
-  std::string GetStatusMsg(std::vector<Operation> const& operations) override;
+  std::string GetStatusMsg(std::vector<Operation> const &operations) override;
   std::string GetCDF() override;
   void Reset() override;
 
- private:
-  hdr_histogram* histogram_[MAXOPTYPE];
+private:
+  hdr_histogram *histogram_[MAXOPTYPE];
 };
 #endif
 
-Measurements* CreateMeasurements(utils::Properties* props);
+Measurements *CreateMeasurements(utils::Properties *props);
 
 } // namespace ycsbc
 

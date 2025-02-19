@@ -12,97 +12,76 @@
 using std::cout;
 using std::endl;
 
-namespace ycsbc
-{
+namespace ycsbc {
 
-  std::mutex BasicDB::mutex_;
+std::mutex BasicDB::mutex_;
 
-  void BasicDB::Init()
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-  }
+void BasicDB::Init() { std::lock_guard<std::mutex> lock(mutex_); }
 
-  DB::Status BasicDB::Read(const std::string &table, const std::string &key,
-                           const std::vector<std::string> *fields, std::vector<Field> &result)
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    cout << "READ " << table << ' ' << key;
-    if (fields)
-    {
-      cout << " [ ";
-      for (auto f : *fields)
-      {
-        cout << f << ' ';
-      }
-      cout << ']' << endl;
-    }
-    else
-    {
-      cout << " < all fields >" << endl;
-    }
-    return kOK;
-  }
-
-  DB::Status BasicDB::Scan(const std::string &table, const std::string &key, long len,
-                           const std::vector<std::string> *fields,
-                           std::vector<std::vector<Field>> &result)
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    cout << "SCAN " << table << ' ' << key << " " << len;
-    if (fields)
-    {
-      cout << " [ ";
-      for (auto f : *fields)
-      {
-        cout << f << ' ';
-      }
-      cout << ']' << endl;
-    }
-    else
-    {
-      cout << " < all fields >" << endl;
-    }
-    return kOK;
-  }
-
-  DB::Status BasicDB::Update(const std::string &table, const std::string &key,
-                             std::vector<Field> &values)
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    cout << "UPDATE " << table << ' ' << key << " [ ";
-    for (auto v : values)
-    {
-      cout << v.name << '=' << v.value << ' ';
+DB::Status BasicDB::Read(const std::string &table, const std::string &key,
+                         const std::vector<std::string> *fields,
+                         std::vector<Field> &result) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  cout << "READ " << table << ' ' << key;
+  if (fields) {
+    cout << " [ ";
+    for (auto f : *fields) {
+      cout << f << ' ';
     }
     cout << ']' << endl;
-    return kOK;
+  } else {
+    cout << " < all fields >" << endl;
   }
+  return kOK;
+}
 
-  DB::Status BasicDB::Insert(const std::string &table, const std::string &key,
-                             std::vector<Field> &values)
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    cout << "INSERT " << table << ' ' << key << " [ ";
-    for (auto v : values)
-    {
-      cout << v.name << '=' << v.value << ' ';
+DB::Status BasicDB::Scan(const std::string &table, const std::string &key,
+                         long len, const std::vector<std::string> *fields,
+                         std::vector<std::vector<Field>> &result) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  cout << "SCAN " << table << ' ' << key << " " << len;
+  if (fields) {
+    cout << " [ ";
+    for (auto f : *fields) {
+      cout << f << ' ';
     }
     cout << ']' << endl;
-    return kOK;
+  } else {
+    cout << " < all fields >" << endl;
   }
+  return kOK;
+}
 
-  DB::Status BasicDB::Delete(const std::string &table, const std::string &key)
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    cout << "DELETE " << table << ' ' << key << endl;
-    return kOK;
+DB::Status BasicDB::Update(const std::string &table, const std::string &key,
+                           std::vector<Field> &values) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  cout << "UPDATE " << table << ' ' << key << " [ ";
+  for (auto v : values) {
+    cout << v.name << '=' << v.value << ' ';
   }
+  cout << ']' << endl;
+  return kOK;
+}
 
-  DB *NewBasicDB()
-  {
-    return new BasicDB;
+DB::Status BasicDB::Insert(const std::string &table, const std::string &key,
+                           std::vector<Field> &values) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  cout << "INSERT " << table << ' ' << key << " [ ";
+  for (auto v : values) {
+    cout << v.name << '=' << v.value << ' ';
   }
+  cout << ']' << endl;
+  return kOK;
+}
 
-  const bool registered = DBFactory::RegisterDB("basic", NewBasicDB);
+DB::Status BasicDB::Delete(const std::string &table, const std::string &key) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  cout << "DELETE " << table << ' ' << key << endl;
+  return kOK;
+}
 
-} // ycsbc
+DB *NewBasicDB() { return new BasicDB; }
+
+const bool registered = DBFactory::RegisterDB("basic", NewBasicDB);
+
+} // namespace ycsbc
