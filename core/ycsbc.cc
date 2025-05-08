@@ -23,6 +23,7 @@
 #include "db_factory.h"
 #include "measurements.h"
 #include "timer.h"
+#include "trace_replayer.h"
 #include "utils.h"
 
 using namespace std::chrono_literals;
@@ -47,6 +48,9 @@ static const std::unordered_set<std::string> kOperationTypes = {
     "READMODIFYWRITE-FAILED",
     "DELETE-FAILED",
     "ALL"};
+
+static const std::string WORKLOAD_TYPE_PROPERTY = "workload_type";
+static const std::string WORKLOAD_TYPE_DEFAULT = "synthetic";
 
 void UsageMessage(const char *command);
 bool StrStartWith(const char *str, const char *pre);
@@ -127,8 +131,20 @@ int main(const int argc, const char *argv[]) {
 
   std::vector<ycsbc::CoreWorkload *> wls;
   for (int i = 0; i < num_threads; i++) {
-    ycsbc::CoreWorkload *wl = new ycsbc::CoreWorkload();
-
+    ycsbc::CoreWorkload *wl;
+    if (props.GetProperty(WORKLOAD_TYPE_PROPERTY, WORKLOAD_TYPE_DEFAULT) ==
+        "trace") {
+      wl = new ycsbc::TraceReplayer();
+    } else if (props.GetProperty(WORKLOAD_TYPE_PROPERTY,
+                                 WORKLOAD_TYPE_DEFAULT) == "synthetic") {
+      ycsbc::CoreWorkload *wl = new ycsbc::CoreWorkload();
+    } else {
+      std::cerr << "Unknown workload type: "
+                << props.GetProperty(WORKLOAD_TYPE_PROPERTY,
+                                     WORKLOAD_TYPE_DEFAULT)
+                << std::endl;
+      exit(1);
+    }
     wl->Init("." + std::to_string(i), props);
     wls.push_back(wl);
   }
