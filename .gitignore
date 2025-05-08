@@ -8,3 +8,8 @@ tags
 compile_commands.json
 .clangd/
 .cache/
+
+build-*
+__pycache__*
+.ccls-cache*
+ext/

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "cachelib/holpaca/data-plane/CacheAllocator.h"
 #include "rocksdb.h"
+#include <cachelib/holpaca/data-plane/CacheAllocator.h>
 #include <core/db.h>
 
 namespace ycsbc {
@@ -67,6 +67,8 @@ private:
   thread_local static int threadId_;
   thread_local static facebook::cachelib::PoolId poolId_;
   static int ref_cnt_;
+  thread_local static int rocksdbIOPS_;
+  thread_local static std::chrono::high_resolution_clock::time_point lastTime_;
 };
 
 DB *NewCacheLibHolpaca();

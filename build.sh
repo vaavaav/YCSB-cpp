@@ -71,18 +71,18 @@ CMAKE_FLAGS=(
 dependencies=( 
   "zstd v1.5.6 yes no https://github.com/facebook/zstd build/cmake -DZSTD_BUILD_TESTS=OFF"
   "glog v0.5.0 yes no https://github.com/google/glog . -DWITH_GFLAGS=OFF"
-  "gflags v2.2.2 yes no https://github.com/gflags/gflags . -DGFLAGS_BUILD_TESTING=NO"
+  "gflags v2.2.2 yes no https://github.com/gflags/gflags . -DGFLAGS_BUILD_TESTING=NO -DGFLAGS_BUILD_STATIC_LIBS=NO -DGFLAGS_INSTALL_STATIC_LIBS=NO"
   "googletest v1.15.2 yes no https://github.com/google/googletest ."
   "fmt 8.0.1 yes no https://github.com/fmtlib/fmt . -DFMT_TEST=NO"
   "sparsemap v0.6.2 yes no https://github.com/Tessil/sparse-map ."
-  "folly v2022.09.19.00 yes yes https://github.com/facebook/folly . -DBUILD_TESTS=OFF"
+ "folly v2022.09.19.00 yes yes https://github.com/facebook/folly . -DBUILD_TESTS=OFF"
   "rocksdb main yes no https://github.com/vaavaav/rocksdb . -DWITH_TESTS=OFF -DWITH_GFLAGS=OFF -DWITH_BENCHMARK_TESTS=OFF"
-  "fizz v2022.09.19.00 yes yes https://github.com/facebookincubator/fizz fizz -DBUILD_TESTS=OFF"
+  "fizz v2022.09.19.00 yes yes https://github.com/facebookincubator/fizz fizz -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF"
   "wangle v2022.09.19.00 yes yes https://github.com/facebook/wangle wangle -DBUILD_TESTS=OFF"
   "fbthrift v2022.09.19.00 yes yes https://github.com/facebook/fbthrift . -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"
   "grpc v1.50.1 yes yes https://github.com/grpc/grpc . -DgRPC_INSTALL=ON -DgRPC_BUILD_TESTS=OFF -DgRPC_ZLIB_PROVIDER=package -DgRPC_SSL_PROVIDER=package -DABSL_PROPAGATE_CXX_STD=ON -Dprotobuf_WITH_ZLIB=ON -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"
-  "flows master no no https://gitfront.io/r/vaavaav/davMvwJ8jxJv/flows-cpp.git ."
-  "CacheLib-Holpaca dev-new yes no https://github.com/vaavaav/CacheLib-Holpaca cachelib -DBUILD_TESTS=OFF -DCMAKE_FIND_DEBUG_MODE=ON" 
+  "Shards varying-size yes no https://github.com/vaavaav/SHARDS-cpp ."
+  "CacheLib-Holpaca holpaca yes no https://github.com/vaavaav/CacheLib-Holpaca cachelib -DBUILD_TESTS=OFF -DCMAKE_FIND_DEBUG_MODE=ON" 
 )
 
 # Installing dependencies
@@ -113,7 +113,7 @@ if [ $build_deps -eq 1 ]; then
   done
 fi
 
-cmake "${CMAKE_FLAGS[@]}" -B"build-ycsb" \
+cmake "${CMAKE_FLAGS[@]}" -DHDR_HISTOGRAM_BUILD_PROGRAMS=0 -DHDR_HISTOGRAM_BUILD_STATIC=OFF -DHDR_HISTOGRAM_INSTALL_STATIC=OFF -DHDR_LOG_ENABLED=FALSE -B"build-ycsb" \
   && make -C"build-ycsb" -j$JOBS install \
   || die "failed to build ycsb" 
   

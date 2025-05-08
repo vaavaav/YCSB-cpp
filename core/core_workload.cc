@@ -89,10 +89,9 @@ std::tuple<Operation, std::string, size_t> CoreWorkload::NextOperation() {
   std::string key = line.substr(0, pos);
   line.erase(0, pos + del.length());
   pos = line.find(del);
-  size_t keysize = std::stoi(line.substr(0, pos)) * scale_value_size;
   line.erase(0, pos + del.length());
   pos = line.find(del);
-  size_t valuesize = std::stoi(line.substr(0, pos));
+  size_t valuesize = std::stoi(line.substr(0, pos)) * scale_value_size;
   line.erase(0, pos + del.length());
   pos = line.find(del);
   line.erase(0, pos + del.length());
@@ -100,13 +99,13 @@ std::tuple<Operation, std::string, size_t> CoreWorkload::NextOperation() {
   std::string operation = line.substr(0, pos);
 
   if (operation == "get") {
-    return std::make_tuple(READ, key, keysize);
+    return std::make_tuple(READ, key, valuesize);
   } else if (operation == "set" || operation == "replace") {
-    return std::make_tuple(UPDATE, key, keysize);
+    return std::make_tuple(UPDATE, key, valuesize);
   } else if (operation == "add") {
-    return std::make_tuple(INSERT, key, keysize);
+    return std::make_tuple(INSERT, key, valuesize);
   } else {
-    return std::make_tuple(MAXOPTYPE, key, keysize);
+    return std::make_tuple(MAXOPTYPE, key, valuesize);
   }
 }
 
