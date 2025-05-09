@@ -119,6 +119,10 @@ const std::string CoreWorkload::REQUEST_KEY_DOMAIN_START_DEFAULT = "0";
 const std::string CoreWorkload::REQUEST_KEY_DOMAIN_END_PROPERTY =
     "request_key_domain_end";
 
+const std::string CoreWorkload::REQUEST_KEY_PREFIX_PROPERTY =
+    "request_key_prefix";
+const std::string CoreWorkload::REQUEST_KEY_PREFIX_DEFAULT = "key";
+
 namespace ycsbc {
 
 void CoreWorkload::Init(std::string const property_suffix,
@@ -133,6 +137,10 @@ void CoreWorkload::Init(std::string const property_suffix,
       FIELD_NAME_PREFIX + property_suffix,
       p.GetProperty(FIELD_NAME_PREFIX, FIELD_NAME_PREFIX_DEFAULT));
   field_len_generator_ = GetFieldLenGenerator(property_suffix, p);
+
+  request_key_prefix_ = p.GetProperty(
+      REQUEST_KEY_PREFIX_PROPERTY + property_suffix,
+      p.GetProperty(REQUEST_KEY_PREFIX_PROPERTY, REQUEST_KEY_PREFIX_DEFAULT));
 
   double read_proportion = std::stod(p.GetProperty(
       READ_PROPORTION_PROPERTY + property_suffix,
@@ -285,10 +293,9 @@ std::string CoreWorkload::BuildKeyName(uint64_t key_num) {
   if (!ordered_inserts_) {
     key_num = utils::Hash(key_num);
   }
-  std::string prekey = "user";
   std::string value = std::to_string(key_num);
   long fill = std::max(0l, zero_padding_ - static_cast<long>(value.size()));
-  return prekey.append(fill, '0').append(value);
+  return request_key_prefix_.append(fill, '0').append(value);
 }
 
 void CoreWorkload::BuildValues(std::vector<ycsbc::DB::Field> &values) {

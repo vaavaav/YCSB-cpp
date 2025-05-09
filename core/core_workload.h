@@ -191,6 +191,9 @@ public:
   ///
   static const std::string REQUEST_KEY_DOMAIN_END_PROPERTY;
 
+  static const std::string REQUEST_KEY_PREFIX_PROPERTY;
+  static const std::string REQUEST_KEY_PREFIX_DEFAULT;
+
   ///
   /// Initialize the scenario.
   /// Called once, in the main client thread, before any operations are started.
@@ -269,6 +272,7 @@ protected:
   AcknowledgedCounterGenerator *transaction_insert_key_sequence_; // transaction
                                                                   // insert key
                                                                   // gen
+  std::string request_key_prefix_;
   bool ordered_inserts_;
   size_t record_count_;
   long zero_padding_;
