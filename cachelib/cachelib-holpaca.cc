@@ -34,34 +34,53 @@ const std::string PROP_POOL_RESIZER_DEFAULT = "off";
 namespace ycsbc {
 
 std::mutex CacheLibHolpaca::mutex_;
-RocksDB CacheLibHolpaca::rocksdb_;
-std::shared_ptr<CacheLibHolpaca::Cache> CacheLibHolpaca::cache_ = nullptr;
-thread_local int CacheLibHolpaca::threadId_;
 thread_local facebook::cachelib::PoolId CacheLibHolpaca::poolId_;
 int CacheLibHolpaca::ref_cnt_ = 0;
 thread_local int CacheLibHolpaca::rocksdbIOPS_ = 0;
 thread_local std::chrono::time_point<std::chrono::high_resolution_clock>
     CacheLibHolpaca::lastTime_ = std::chrono::high_resolution_clock::now();
+std::unordered_map<std::string, RocksDB> CacheLibHolpaca::rocksdbs_;
+std::unordered_map<std::string, std::shared_ptr<CacheLibHolpaca::Cache>>
+    CacheLibHolpaca::caches_;
+thread_local std::string CacheLibHolpaca::cacheName_;
+thread_local std::shared_ptr<CacheLibHolpaca::Cache> CacheLibHolpaca::cache_;
+thread_local RocksDB CacheLibHolpaca::rocksdb_;
+thread_local int CacheLibHolpaca::threadId_;
+thread_local static facebook::cachelib::PoolId poolId_;
 
 void CacheLibHolpaca::Init() {
 
+  cacheName_ = props_->GetProperty(
+      PROP_CACHE_NAME + "." + std::to_string(threadId_),
+      props_->GetProperty(PROP_CACHE_NAME, PROP_CACHE_NAME_DEFAULT));
+
   std::lock_guard<std::mutex> lock(mutex_);
-  if (cache_ == nullptr) {
+  if (auto it = caches_.find(cacheName_); it != caches_.end()) {
+    // already initialized (two threads can point to the same cache)
+    cache_ = it->second;
+    rocksdb_ = rocksdbs_[cacheName_];
+  } else {
     Cache::Config config;
     config
         .setControllerAddress(props_->GetProperty(
-            PROP_CONTROLLER_ADDRESS, PROP_CONTROLLER_ADDRESS_DEFAULT))
-        .setAddress(
-            props_->GetProperty(PROP_STAGE_ADDRESS, PROP_STAGE_ADDRESS_DEFAULT))
-        .setCacheSize(
-            std::stol(props_->GetProperty(PROP_SIZE, PROP_SIZE_DEFAULT)))
-        .setCacheName(
-            props_->GetProperty(PROP_CACHE_NAME, PROP_CACHE_NAME_DEFAULT))
+            PROP_CONTROLLER_ADDRESS + "." + std::to_string(threadId_),
+            props_->GetProperty(PROP_CONTROLLER_ADDRESS,
+                                PROP_CONTROLLER_ADDRESS_DEFAULT)))
+        .setAddress(props_->GetProperty(
+            PROP_STAGE_ADDRESS + "." + std::to_string(threadId_),
+            props_->GetProperty(PROP_STAGE_ADDRESS,
+                                PROP_STAGE_ADDRESS_DEFAULT)))
+        .setCacheSize(std::stol(props_->GetProperty(
+            PROP_SIZE + "." + std::to_string(threadId_),
+            props_->GetProperty(PROP_SIZE, PROP_SIZE_DEFAULT))))
+        .setCacheName(cacheName_)
         .setAccessConfig(
             {25 /* bucket power */, 10 /* lock power */}); // assuming caching
                                                            // 20 million items
     // Needed for pool resizing
-    if (props_->GetProperty(PROP_POOL_RESIZER, PROP_POOL_RESIZER_DEFAULT) ==
+    if (props_->GetProperty(PROP_POOL_RESIZER + "." + std::to_string(threadId_),
+                            props_->GetProperty(PROP_POOL_RESIZER,
+                                                PROP_POOL_RESIZER_DEFAULT)) ==
         "on") {
       config.enablePoolResizing(
           std::make_shared<facebook::cachelib::HitsPerSlabStrategy>(
@@ -69,17 +88,21 @@ void CacheLibHolpaca::Init() {
                   0.25, static_cast<unsigned int>(1))),
           std::chrono::milliseconds(100), 1);
     }
-    if (props_->GetProperty(PROP_POOL_OPTIMIZER, PROP_POOL_OPTIMIZER_DEFAULT) ==
-        "on") {
+    if (props_->GetProperty(
+            PROP_POOL_OPTIMIZER + "." + std::to_string(threadId_),
+            props_->GetProperty(PROP_POOL_OPTIMIZER,
+                                PROP_POOL_OPTIMIZER_DEFAULT)) == "on") {
       config.enableTailHitsTracking(); // needed for tracking tail hits
       config.enablePoolOptimizer(
           std::make_shared<facebook::cachelib::MarginalHitsOptimizeStrategy>(),
           std::chrono::seconds(1), std::chrono::seconds(1), 0);
     }
     config.validate(); // will throw if bad config
-    cache_ = std::make_unique<Cache>(config);
+    cache_ = std::make_shared<Cache>(config);
+    caches_[cacheName_] = cache_;
     rocksdb_.SetProps(props_);
     rocksdb_.Init();
+    rocksdbs_[cacheName_] = rocksdb_;
   }
   CacheLibHolpaca::poolId_ = cache_->addPool(
       props_->GetProperty(PROP_POOL_NAME + "." + std::to_string(threadId_),

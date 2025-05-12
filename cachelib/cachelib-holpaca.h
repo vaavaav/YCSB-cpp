@@ -3,6 +3,7 @@
 #include "rocksdb.h"
 #include <cachelib/holpaca/data-plane/CacheAllocator.h>
 #include <core/db.h>
+#include <unordered_map>
 
 namespace ycsbc {
 
@@ -62,8 +63,11 @@ public:
 
 private:
   static std::mutex mutex_;
-  static RocksDB rocksdb_;
-  static std::shared_ptr<Cache> cache_;
+  static std::unordered_map<std::string, RocksDB> rocksdbs_;
+  static std::unordered_map<std::string, std::shared_ptr<Cache>> caches_;
+  thread_local static std::string cacheName_;
+  thread_local static std::shared_ptr<Cache> cache_;
+  thread_local static RocksDB rocksdb_;
   thread_local static int threadId_;
   thread_local static facebook::cachelib::PoolId poolId_;
   static int ref_cnt_;
