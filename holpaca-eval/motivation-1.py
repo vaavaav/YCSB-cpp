@@ -14,9 +14,10 @@ if __name__ == '__main__':
     workloadsDir = os.path.abspath(sys.argv[2])
     outputDir = os.path.join(os.path.abspath(sys.argv[3]), f"{datetime.now().strftime('%m-%d-%H-%M-%S')}")
     dbHostDir = os.path.abspath(sys.argv[4])
-    os.makedirs(dbHostDir, exist_ok=True)
     db = os.path.join(dbHostDir, 'db')
     dbBackup = os.path.join(dbHostDir, 'db-backup')
+    os.makedirs(db, exist_ok=True)
+    os.makedirs(dbBackup, exist_ok=True)
     executable = os.path.join(sourceDir, 'build-ycsb/ycsb')
     cleanupScript = os.path.join(sourceDir, 'utils.sh')
     runs = 3
