@@ -114,7 +114,7 @@ if [ $build_deps -eq 1 ]; then
   done
 fi
 
-cmake "${CMAKE_FLAGS[@]}" -DHDR_HISTOGRAM_BUILD_PROGRAMS=0 -DHDR_HISTOGRAM_BUILD_STATIC=OFF -DHDR_HISTOGRAM_INSTALL_STATIC=OFF -DHDR_LOG_ENABLED=FALSE -B"build-ycsb" \
+cmake "${CMAKE_FLAGS[@]}" -B"build-ycsb" \
   && make -C"build-ycsb" -j$JOBS install \
   || die "failed to build ycsb" 
   

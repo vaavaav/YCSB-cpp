@@ -295,7 +295,8 @@ std::string CoreWorkload::BuildKeyName(uint64_t key_num) {
   }
   std::string value = std::to_string(key_num);
   long fill = std::max(0l, zero_padding_ - static_cast<long>(value.size()));
-  return request_key_prefix_.append(fill, '0').append(value);
+  std::string key;
+  return key.append(request_key_prefix_).append(fill, '0').append(value);
 }
 
 void CoreWorkload::BuildValues(std::vector<ycsbc::DB::Field> &values) {
@@ -346,18 +347,9 @@ std::string CoreWorkload::NextFieldName() {
 bool CoreWorkload::DoInsert(DB &db) {
   const std::string key = BuildKeyName(insert_key_sequence_->Next());
   std::vector<DB::Field> fields;
-  BuildValues(fields);
+  BuildSingleValue(fields);
   return db.Insert(table_name_, key, fields) == DB::kOK;
 }
-
-bool CoreWorkload::DoInsert(DB &db, std::string const &key, size_t objectSize) {
-  std::vector<DB::Field> fields;
-  auto field = DB::Field();
-  field.value = BuildValue(objectSize);
-  fields.push_back(field);
-  return db.Insert(table_name_, key, fields);
-}
-
 bool CoreWorkload::DoTransaction(DB &db) {
   DB::Status status;
   switch (op_chooser_.Next()) {

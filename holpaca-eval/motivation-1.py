@@ -1,17 +1,24 @@
-#!/user/bin/env python3
+#!/usr/bin/env python3
 
+import subprocess
+import shutil
+import sys
+from pathlib import Path
 import os
 from datetime import datetime
 
 runs = 3
 outputDir = f"motivation-1/{datetime.now().strftime('%m-%d-%H-%M-%S')}"
-db = os.path('/tmp/db')
-dbBackup = os.path('/tmp/db-backup')
+db = '/tmp/db'
+dbBackup = '/tmp/db-backup'
 workloads = ['read-only']
+status = 'READ-FAILED READ-PASSED ALL'
+threads = 2
+workload_type = 'synthetic'
 
 ycsb = {
         'sleepafterload': 0,
-        'threadcount': 2,
+        'workload.type': workload_type,
         'maxexecutiontime': 500,
         'operationcount': 1_000_000_000,
         'recordcount': 20_000_000,
@@ -70,13 +77,16 @@ setups = {
         }
 
 if __name__ == '__main__':
-    executableDir = os.path.dirname(os.path.abspath(executable))
-    workloadsDir = os.path.abspath(sys.argv[1])
-    outputDir = os.path.abspath(sys.argv[2])
-    executable = os.path.join(executableDir, 'ycsb')
+    sourceDir = os.path.abspath(sys.argv[1])
+    workloadsDir = os.path.abspath(sys.argv[2])
+    outputDir = os.path.abspath(sys.argv[3])
+    executable = os.path.join(sourceDir, 'build-ycsb/ycsb')
+    cleanupScript = os.path.join(sourceDir, 'utils.sh')
     for workload in workloads:
         # Load
-        subprocess.run(f'{executable} -load -db cachelib-holpaca -P {workloadsDir}/{workload} -threads {ycsb["threadcount"]} {" ".join([f"-p {k}={v}" for k,v in load.items()])}', shell=True, stdout=subprocess.DEVNULL)
+        command = f'{executable} -load -db cachelib-holpaca -threads {threads} -P {workloadsDir}/{workload}  {" ".join([f"-p {k}={v}" for k,v in load.items()])}'
+        print(f'[LOAD]: {command}') 
+        subprocess.run(command, shell=True, text=True, stdout=subprocess.DEVNULL)
         for setup, config in setups.items():
             for run in range(runs):
                 # restore db
@@ -84,12 +94,12 @@ if __name__ == '__main__':
                     shutil.rmtree(db)
                 shutil.copytree(dbBackup, db)
                 print("Cleaning heap")
-                subprocess.call([util_script, 'clean-heap'], stdout=subprocess.DEVNULL)
+                subprocess.call([cleanupScript, 'clean-heap'], stdout=subprocess.DEVNULL)
                 # create output dir
                 dir = f'{outputDir}/{config["resultsDir"]}/{workload}/{run+1}'
                 os.makedirs(dir, exist_ok=True)
                 with open(f'{dir}/ycsb.txt', 'w') as outputFile:
                     # run ycsb
-                    command = f'systemd-run --scope -p MemoryMax={ycsb["cachelib.cachesize"]*1.2} --user {executable} -run -db cachelib-holpaca -P {workloadsDir}/{workload} -s {" ".join([f"-p {k}={v}" for k,v in config.items()])}'
+                    command = f'systemd-run --scope -p MemoryMax={ycsb["cachelib.cachesize"]*1.2} --user {executable} -run -db cachelib-holpaca -threads {threads} -P {workloadsDir}/{workload} -s {status} {" ".join([f"-p {k}={v}" for k,v in config.items()])}'
                     print(f'[RUN] Running: {command}')
                     subprocess.run(command, shell=True, text=True, stdout=outputFile)

@@ -114,12 +114,11 @@ DB::Status CacheLibHolpaca::Read(const std::string &table,
   if (handle == nullptr) {
     rocksdbIOPS_++;
     if (rocksdb_.Read(table, key, fields, result) == kOK) {
-      auto new_handle =
-          cache_->allocate(poolId_, key, result.front().value.size());
+      uint32_t size = result.front().value.size();
+      auto new_handle = cache_->allocate(poolId_, key, size);
       if (handle == nullptr) {
         return kError;
       }
-      uint32_t size = result.front().value.size();
       std::memcpy(new_handle->getMemory(), result.front().value.data(), size);
       cache_->insertOrReplace(new_handle);
       cache_->registerAccess(poolId_, key, size, true, true, false);
@@ -186,6 +185,7 @@ DB *NewCacheLibHolpaca() { return new CacheLibHolpaca(); }
 
 const bool registered =
     DBFactory::RegisterDB("cachelib-holpaca", NewCacheLibHolpaca);
+
 void CacheLibHolpaca::SetThreadId(int threadId) { threadId_ = threadId; }
 
 } // namespace ycsbc

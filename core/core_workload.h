@@ -248,7 +248,6 @@ protected:
 
   // for productiont traces
   virtual std::string BuildValue(size_t size);
-  virtual bool DoInsert(DB &db, std::string const &key, size_t objectSize);
   virtual DB::Status TransactionRead(DB &db, std::string const &key);
   DB::Status TransactionReadModifyWrite(DB &db, std::string const &key,
                                         size_t objectSize);

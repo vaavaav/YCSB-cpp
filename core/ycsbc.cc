@@ -49,7 +49,7 @@ static const std::unordered_set<std::string> kOperationTypes = {
     "DELETE-FAILED",
     "ALL"};
 
-static const std::string WORKLOAD_TYPE_PROPERTY = "workload_type";
+static const std::string WORKLOAD_TYPE_PROPERTY = "workload.type";
 static const std::string WORKLOAD_TYPE_DEFAULT = "synthetic";
 
 void UsageMessage(const char *command);
@@ -137,7 +137,7 @@ int main(const int argc, const char *argv[]) {
       wl = new ycsbc::TraceReplayer();
     } else if (props.GetProperty(WORKLOAD_TYPE_PROPERTY,
                                  WORKLOAD_TYPE_DEFAULT) == "synthetic") {
-      ycsbc::CoreWorkload *wl = new ycsbc::CoreWorkload();
+      wl = new ycsbc::CoreWorkload();
     } else {
       std::cerr << "Unknown workload type: "
                 << props.GetProperty(WORKLOAD_TYPE_PROPERTY,
@@ -284,6 +284,23 @@ void ParseCommandLine(int argc, const char *argv[],
         exit(0);
       }
       props.SetProperty("dbname", argv[argindex]);
+      argindex++;
+    } else if (strcmp(argv[argindex], "-P") == 0) {
+      argindex++;
+      if (argindex >= argc) {
+        UsageMessage(argv[0]);
+        std::cerr << "Missing argument value for -P" << std::endl;
+        exit(0);
+      }
+      std::string filename(argv[argindex]);
+      std::ifstream input(argv[argindex]);
+      try {
+        props.Load(input);
+      } catch (const std::string &message) {
+        std::cerr << message << std::endl;
+        exit(0);
+      }
+      input.close();
       argindex++;
     } else if (strcmp(argv[argindex], "-p") == 0) {
       argindex++;
