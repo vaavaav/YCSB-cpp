@@ -5,14 +5,16 @@
 
 namespace {
 
-const std::string PROP_CACHE_NAME = "cachelib-holpaca.cache.name";
+const std::string PROP_CACHE_NAME = "cachelib.cache.name";
 const std::string PROP_CACHE_NAME_DEFAULT = "CacheLib";
 
-const std::string PROP_CONTROLLER_ADDRESS =
-    "cachelib-holpaca.controller.address";
+const std::string PROP_CACHE_EVICTION = "cachelib.cache.eviction";
+const std::string PROP_CACHE_EVICTION_DEFAULT = "lru"; // or 2q
+
+const std::string PROP_CONTROLLER_ADDRESS = "cachelib.controller.address";
 const std::string PROP_CONTROLLER_ADDRESS_DEFAULT = "";
 
-const std::string PROP_STAGE_ADDRESS = "cachelib-holpaca.stage.address";
+const std::string PROP_STAGE_ADDRESS = "cachelib.stage.address";
 const std::string PROP_STAGE_ADDRESS_DEFAULT = "";
 
 const std::string PROP_SIZE = "cachelib.size";
@@ -50,109 +52,153 @@ thread_local static facebook::cachelib::PoolId poolId_;
 
 void CacheLibHolpaca::Init() {
 
+  std::lock_guard<std::mutex> lock(mutex_);
   cacheName_ = props_->GetProperty(
       PROP_CACHE_NAME + "." + std::to_string(threadId_),
       props_->GetProperty(PROP_CACHE_NAME, PROP_CACHE_NAME_DEFAULT));
 
-  std::lock_guard<std::mutex> lock(mutex_);
   if (auto it = caches_.find(cacheName_); it != caches_.end()) {
     // already initialized (two threads can point to the same cache)
     cache_ = it->second;
     rocksdb_ = rocksdbs_[cacheName_];
   } else {
-    Cache::Config config;
-    config
-        .setControllerAddress(props_->GetProperty(
-            PROP_CONTROLLER_ADDRESS + "." + std::to_string(threadId_),
-            props_->GetProperty(PROP_CONTROLLER_ADDRESS,
-                                PROP_CONTROLLER_ADDRESS_DEFAULT)))
-        .setAddress(props_->GetProperty(
-            PROP_STAGE_ADDRESS + "." + std::to_string(threadId_),
-            props_->GetProperty(PROP_STAGE_ADDRESS,
-                                PROP_STAGE_ADDRESS_DEFAULT)))
-        .setCacheSize(std::stol(props_->GetProperty(
-            PROP_SIZE + "." + std::to_string(threadId_),
-            props_->GetProperty(PROP_SIZE, PROP_SIZE_DEFAULT))))
-        .setCacheName(cacheName_)
-        .setAccessConfig(
-            {25 /* bucket power */, 10 /* lock power */}); // assuming caching
-                                                           // 20 million items
-    // Needed for pool resizing
-    if (props_->GetProperty(PROP_POOL_RESIZER + "." + std::to_string(threadId_),
-                            props_->GetProperty(PROP_POOL_RESIZER,
-                                                PROP_POOL_RESIZER_DEFAULT)) ==
-        "on") {
-      config.enablePoolResizing(
-          std::make_shared<facebook::cachelib::HitsPerSlabStrategy>(
-              facebook::cachelib::HitsPerSlabStrategy::Config(
-                  0.25, static_cast<unsigned int>(1))),
-          std::chrono::milliseconds(100), 1);
-    }
+    Config config;
     if (props_->GetProperty(
-            PROP_POOL_OPTIMIZER + "." + std::to_string(threadId_),
-            props_->GetProperty(PROP_POOL_OPTIMIZER,
-                                PROP_POOL_OPTIMIZER_DEFAULT)) == "on") {
-      config.enableTailHitsTracking(); // needed for tracking tail hits
-      config.enablePoolOptimizer(
-          std::make_shared<facebook::cachelib::MarginalHitsOptimizeStrategy>(),
-          std::chrono::seconds(1), std::chrono::seconds(1), 0);
+            PROP_CACHE_EVICTION + "." + std::to_string(threadId_),
+            props_->GetProperty(PROP_CACHE_EVICTION,
+                                PROP_CACHE_EVICTION_DEFAULT)) == "lru") {
+      CacheLRU::Config configlru;
+      config = configlru;
+    } else if (props_->GetProperty(
+                   PROP_CACHE_EVICTION + "." + std::to_string(threadId_),
+                   props_->GetProperty(PROP_CACHE_EVICTION,
+                                       PROP_CACHE_EVICTION_DEFAULT)) == "2q") {
+      Cache2Q::Config config2q;
+      config = config2q;
+    } else {
+      throw std::runtime_error("Unknown eviction policy");
     }
-    config.validate(); // will throw if bad config
-    cache_ = std::make_shared<Cache>(config);
+    std::visit(
+        [&](auto &config) {
+          config
+              .setControllerAddress(props_->GetProperty(
+                  PROP_CONTROLLER_ADDRESS + "." + std::to_string(threadId_),
+                  props_->GetProperty(PROP_CONTROLLER_ADDRESS,
+                                      PROP_CONTROLLER_ADDRESS_DEFAULT)))
+              .setAddress(props_->GetProperty(
+                  PROP_STAGE_ADDRESS + "." + std::to_string(threadId_),
+                  props_->GetProperty(PROP_STAGE_ADDRESS,
+                                      PROP_STAGE_ADDRESS_DEFAULT)))
+              .setCacheSize(std::stol(props_->GetProperty(
+                  PROP_SIZE + "." + std::to_string(threadId_),
+                  props_->GetProperty(PROP_SIZE, PROP_SIZE_DEFAULT))))
+              .setCacheName(cacheName_)
+              .setAccessConfig({25 /* bucket power */,
+                                10 /* lock power */}); // assuming caching
+                                                       // 20 million items
+          // Needed for pool resizing
+          if (props_->GetProperty(
+                  PROP_POOL_RESIZER + "." + std::to_string(threadId_),
+                  props_->GetProperty(PROP_POOL_RESIZER,
+                                      PROP_POOL_RESIZER_DEFAULT)) == "on") {
+            config.enablePoolResizing(
+                std::make_shared<facebook::cachelib::HitsPerSlabStrategy>(
+                    facebook::cachelib::HitsPerSlabStrategy::Config(
+                        0.25, static_cast<unsigned int>(1))),
+                std::chrono::milliseconds(100), 1);
+          }
+          if (props_->GetProperty(
+                  PROP_POOL_OPTIMIZER + "." + std::to_string(threadId_),
+                  props_->GetProperty(PROP_POOL_OPTIMIZER,
+                                      PROP_POOL_OPTIMIZER_DEFAULT)) == "on") {
+            config.enableTailHitsTracking(); // needed for tracking tail hits
+            config.enablePoolOptimizer(
+                std::make_shared<
+                    facebook::cachelib::MarginalHitsOptimizeStrategy>(),
+                std::chrono::seconds(1), std::chrono::seconds(1), 0);
+          }
+          config.validate(); // will throw if bad config
+        },
+        config);
+    if (props_->GetProperty(
+            PROP_CACHE_EVICTION + "." + std::to_string(threadId_),
+            props_->GetProperty(PROP_CACHE_EVICTION,
+                                PROP_CACHE_EVICTION_DEFAULT)) == "lru") {
+      cache_ = std::make_shared<Cache>(std::get<CacheLRU::Config>(config));
+
+    } else if (props_->GetProperty(
+                   PROP_CACHE_EVICTION + "." + std::to_string(threadId_),
+                   props_->GetProperty(PROP_CACHE_EVICTION,
+                                       PROP_CACHE_EVICTION_DEFAULT)) == "2q") {
+      cache_ = std::make_shared<Cache>(std::get<Cache2Q::Config>(config));
+    }
     caches_[cacheName_] = cache_;
     rocksdb_.SetProps(props_);
     rocksdb_.Init();
     rocksdbs_[cacheName_] = rocksdb_;
   }
-  CacheLibHolpaca::poolId_ = cache_->addPool(
-      props_->GetProperty(PROP_POOL_NAME + "." + std::to_string(threadId_),
-                          PROP_POOL_NAME_DEFAULT),
-      static_cast<long>(cache_->getCacheMemoryStats().ramCacheSize *
-                        std::stod(props_->GetProperty(
-                            PROP_POOL_SIZE + "." + std::to_string(threadId_),
-                            PROP_POOL_SIZE_DEFAULT))));
+  std::string poolName = props_->GetProperty(
+      PROP_POOL_NAME + "." + std::to_string(threadId_),
+      props_->GetProperty(PROP_POOL_NAME, PROP_POOL_NAME_DEFAULT));
+  auto poolSize = std::stol(props_->GetProperty(
+      PROP_POOL_SIZE + "." + std::to_string(threadId_),
+      props_->GetProperty(PROP_POOL_SIZE, PROP_POOL_SIZE_DEFAULT)));
+  std::visit(
+      [&poolName, &poolSize](auto &&cache) {
+        CacheLibHolpaca::poolId_ = cache.addPool(
+            poolName, static_cast<long>(
+                          cache.getCacheMemoryStats().ramCacheSize * poolSize));
+      },
+      *cache_);
   lastTime_ = std::chrono::high_resolution_clock::now();
 }
 
-std::tuple<uint64_t, uint64_t> CacheLibHolpaca::OccupancyAndCapacity() {
-  if (cache_ == nullptr) {
-    return std::make_tuple(0, 0);
-  }
-  const auto &pool = cache_->getPool(poolId_);
-  auto now = std::chrono::high_resolution_clock::now();
-  cache_->registerMetrics(
-      poolId_, rocksdbIOPS_ / std::chrono::duration_cast<std::chrono::seconds>(
-                                  now - lastTime_)
-                                  .count());
-  lastTime_ = now;
-  return std::make_tuple(pool.getCurrentAllocSize(), pool.getPoolUsableSize());
-}
+// std::tuple<uint64_t, uint64_t> CacheLibHolpaca::OccupancyAndCapacity() {
+//   if (cache_ == nullptr) {
+//     return std::make_tuple(0, 0);
+//   }
+//   const auto &pool = cache_->getPool(poolId_);
+//   auto now = std::chrono::high_resolution_clock::now();
+//   cache_->registerMetrics(
+//       poolId_, rocksdbIOPS_ /
+//       std::chrono::duration_cast<std::chrono::seconds>(
+//                                   now - lastTime_)
+//                                   .count());
+//   lastTime_ = now;
+//   return std::make_tuple(pool.getCurrentAllocSize(),
+//   pool.getPoolUsableSize());
+// }
 
 DB::Status CacheLibHolpaca::Read(const std::string &table,
                                  const std::string &key,
                                  const std::vector<std::string> *fields,
                                  std::vector<Field> &result) {
   std::lock_guard<std::mutex> lock(mutex_);
-  auto handle = cache_->find(key);
-  if (handle == nullptr) {
-    rocksdbIOPS_++;
-    if (rocksdb_.Read(table, key, fields, result) == kOK) {
-      uint32_t size = result.front().value.size();
-      auto new_handle = cache_->allocate(poolId_, key, size);
-      if (handle == nullptr) {
-        return kError;
-      }
-      std::memcpy(new_handle->getMemory(), result.front().value.data(), size);
-      cache_->insertOrReplace(new_handle);
-      cache_->registerAccess(poolId_, key, size, true, true, false);
-    }
-    return kNotFound;
-  } else {
-    auto size = handle->getSize();
-    cache_->registerAccess(poolId_, key, size, true, false, false);
-  }
 
-  return kOK;
+  return std::visit(
+      [&table, &key, &fields, &result](auto &&cache) {
+        auto handle = cache.find(key);
+        if (handle == nullptr) {
+          rocksdbIOPS_++;
+          if (rocksdb_.Read(table, key, fields, result) == kOK) {
+            uint32_t size = result.front().value.size();
+            auto new_handle = cache.allocate(poolId_, key, size);
+            if (handle == nullptr) {
+              return kError;
+            }
+            std::memcpy(new_handle->getMemory(), result.front().value.data(),
+                        size);
+            cache.insertOrReplace(new_handle);
+            cache.registerAccess(poolId_, key, size, true, true, false);
+          }
+          return kNotFound;
+        } else {
+          auto size = handle->getSize();
+          cache.registerAccess(poolId_, key, size, true, false, false);
+        }
+        return kOK;
+      },
+      *cache_);
 }
 
 DB::Status CacheLibHolpaca::Scan(const std::string &table,
@@ -176,7 +222,11 @@ DB::Status CacheLibHolpaca::Update(const std::string &table,
   auto res = rocksdb_.Update(table, key, values);
   rocksdbIOPS_++;
   if (res == kOK) {
-    cache_->registerAccess(poolId_, key, size, false, false, true);
+    std::visit(
+        [&key, &size](auto &&cache) {
+          cache.registerAccess(poolId_, key, size, false, true, false);
+        },
+        *cache_);
   }
 
   return res;
@@ -192,7 +242,11 @@ DB::Status CacheLibHolpaca::Insert(const std::string &table,
   auto res = rocksdb_.Insert(table, key, values);
   rocksdbIOPS_++;
   if (res == kOK) {
-    cache_->registerAccess(poolId_, key, size, false, false, true);
+    std::visit(
+        [&key, &size](auto &&cache) {
+          cache.registerAccess(poolId_, key, size, false, false, true);
+        },
+        *cache_);
   }
   return res;
 }
@@ -201,7 +255,9 @@ DB::Status CacheLibHolpaca::Delete(const std::string &table,
                                    const std::string &key) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto key_ = key;
-  return cache_->remove(key_) == Cache::RemoveRes::kSuccess ? kOK : kNotFound;
+  // return cache_->remove(key_) == Cache::RemoveRes::kSuccess ? kOK :
+  // kNotFound;
+  return kOK;
 }
 
 DB *NewCacheLibHolpaca() { return new CacheLibHolpaca(); }

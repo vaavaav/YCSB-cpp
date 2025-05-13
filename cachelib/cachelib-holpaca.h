@@ -4,12 +4,32 @@
 #include <cachelib/holpaca/data-plane/CacheAllocator.h>
 #include <core/db.h>
 #include <unordered_map>
+#include <variant>
 
 namespace ycsbc {
 
 class CacheLibHolpaca : public DB {
+
 public:
-  using Cache = facebook::cachelib::holpaca::LruAllocator;
+  using CacheLRU = facebook::cachelib::holpaca::LruAllocator;
+  using Cache2Q = facebook::cachelib::holpaca::Lru2QAllocator;
+  using Cache = std::variant<CacheLRU, Cache2Q>;
+  using Config = std::variant<CacheLRU::Config, Cache2Q::Config>;
+
+private:
+  static std::mutex mutex_;
+  static std::unordered_map<std::string, RocksDB> rocksdbs_;
+  static std::unordered_map<std::string, std::shared_ptr<Cache>> caches_;
+  thread_local static std::string cacheName_;
+  thread_local static std::shared_ptr<Cache> cache_;
+  thread_local static RocksDB rocksdb_;
+  thread_local static int threadId_;
+  thread_local static facebook::cachelib::PoolId poolId_;
+  static int ref_cnt_;
+  thread_local static int rocksdbIOPS_;
+  thread_local static std::chrono::high_resolution_clock::time_point lastTime_;
+
+public:
   void Init();
 
   Status Read(const std::string &table, const std::string &key,
@@ -53,26 +73,25 @@ public:
     if (cache_ == nullptr) {
       return std::make_tuple(0, 0, 0, 0);
     }
-    auto ps = cache_->getPoolStats(poolId_);
-    auto cms = cache_->getCacheMemoryStats();
-    return std::make_tuple(ps.poolSize - ps.freeMemoryBytes(), ps.poolSize,
-                           cms.configuredRamCacheRegularSize -
-                               cms.unReservedSize,
-                           cms.configuredRamCacheRegularSize);
+    auto value = std::visit(
+        [](auto &&c) {
+          c.registerMetrics(
+              poolId_,
+              rocksdbIOPS_ /
+                  std::chrono::duration_cast<std::chrono::seconds>(
+                      std::chrono::high_resolution_clock::now() - lastTime_)
+                      .count());
+          const auto &pool = c.getPool(poolId_);
+          auto cms = c.getCacheMemoryStats();
+          return std::make_tuple(
+              pool.getCurrentAllocSize(), pool.getPoolUsableSize(),
+              cms.configuredRamCacheRegularSize - cms.unReservedSize,
+              cms.configuredRamCacheRegularSize);
+        },
+        *cache_);
+    lastTime_ = std::chrono::high_resolution_clock::now();
+    return value;
   }
-
-private:
-  static std::mutex mutex_;
-  static std::unordered_map<std::string, RocksDB> rocksdbs_;
-  static std::unordered_map<std::string, std::shared_ptr<Cache>> caches_;
-  thread_local static std::string cacheName_;
-  thread_local static std::shared_ptr<Cache> cache_;
-  thread_local static RocksDB rocksdb_;
-  thread_local static int threadId_;
-  thread_local static facebook::cachelib::PoolId poolId_;
-  static int ref_cnt_;
-  thread_local static int rocksdbIOPS_;
-  thread_local static std::chrono::high_resolution_clock::time_point lastTime_;
 };
 
 DB *NewCacheLibHolpaca();
