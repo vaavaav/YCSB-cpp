@@ -68,6 +68,7 @@ def RunYCSB(sourceDir, workloads, outputDir, load_config, setups, runs, status='
                 stdout=f"/tmp/slurm-load-{os.path.basename(wl_path)}.out",
                 stderr=f"/tmp/slurm-load-{os.path.basename(wl_path)}.err"
             ), 
+            shell=True,
             stdout=subprocess.PIPE, 
             stderr=subprocess.PIPE, 
             universal_newlines=True)
