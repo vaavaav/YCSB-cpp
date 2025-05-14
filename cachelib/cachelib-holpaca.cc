@@ -10,15 +10,15 @@ const std::string PROP_CACHE_NAME_DEFAULT = "CacheLib";
 
 const std::string PROP_CACHE_EVICTION = "cachelib.eviction";
 const std::string PROP_CACHE_EVICTION_DEFAULT = "lru"; // or 2q
+                                                       //
+const std::string PROP_SIZE = "cachelib.size";
+const std::string PROP_SIZE_DEFAULT = "1000000000";
 
 const std::string PROP_CONTROLLER_ADDRESS = "cachelib.controller.address";
 const std::string PROP_CONTROLLER_ADDRESS_DEFAULT = "";
 
 const std::string PROP_STAGE_ADDRESS = "cachelib.stage.address";
 const std::string PROP_STAGE_ADDRESS_DEFAULT = "";
-
-const std::string PROP_SIZE = "cachelib.size";
-const std::string PROP_SIZE_DEFAULT = "1000000000";
 
 const std::string PROP_POOL_NAME = "cachelib.pool.name";
 const std::string PROP_POOL_NAME_DEFAULT = "default";
@@ -140,7 +140,7 @@ void CacheLibHolpaca::Init() {
   std::string poolName = props_->GetProperty(
       PROP_POOL_NAME + "." + std::to_string(threadId_),
       props_->GetProperty(PROP_POOL_NAME, PROP_POOL_NAME_DEFAULT));
-  auto poolSize = std::stol(props_->GetProperty(
+  auto poolSize = std::stod(props_->GetProperty(
       PROP_POOL_SIZE + "." + std::to_string(threadId_),
       props_->GetProperty(PROP_POOL_SIZE, PROP_POOL_SIZE_DEFAULT)));
   std::visit(
