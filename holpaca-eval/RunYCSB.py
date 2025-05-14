@@ -9,11 +9,12 @@ def build_param_str(params):
 def get_mem_mb(cachesize):
     return int(cachesize * 1.2 / 1024 / 1024)
 
-def build_sbatch_cmd(name, mem, cmd, stdout, stderr):
+def build_sbatch_cmd(name, mem, cmd, stdout, stderr, jobid=None):
     return [
         "sbatch",
         f"--job-name={name}",
         "--account=f202400014testdeucalionx",
+        f"--dependency=afterok:{jobid}" if jobid else "",
         "--nodes=1",
         "--ntasks=1",
         "--cpus-per-task=1",
@@ -56,6 +57,7 @@ def RunYCSB(sourceDir, workloads, outputDir, load_config, setups, runs, status='
         os.makedirs(db_bkp, exist_ok=True)
         load_config['rocksdb.dbname'] = db_bkp
         load_cmd = f"{exe} -load -db cachelib-holpaca -P {wl_path} {build_param_str(load_config)}"
+        load_job_id = None
 
         if sif_path is not None:
             wrapped = f"singularity run --bind '{sourceDir},/tmp' {sif_path} {load_cmd}"
@@ -65,7 +67,16 @@ def RunYCSB(sourceDir, workloads, outputDir, load_config, setups, runs, status='
                 cmd=wrapped,
                 stdout=f"/tmp/slurm-load-{os.path.basename(wl_path)}.out",
                 stderr=f"/tmp/slurm-load-{os.path.basename(wl_path)}.err"
-            ))
+            )):
+            # Parse job ID
+            if result.returncode == 0:
+                for line in result.stdout.strip().splitlines():
+                    if line.startswith("Submitted batch job"):
+                        load_job_id = line.split()[-1]
+                    else:
+                        print("[ERROR] Failed to submit load job")
+                        abort()
+
         else:
             print(f"[LOCAL] Running load: {load_cmd}")
             subprocess.run(load_cmd, shell=True)
@@ -94,7 +105,8 @@ cp /tmp/ycsb.txt {outdir}/ycsb.txt
                         mem=mem_mb,
                         cmd=wrapped,
                         stdout=f"/tmp/slurm-{rid}.out",
-                        stderr=f"/tmp/slurm-{rid}.err"
+                        stderr=f"/tmp/slurm-{rid}.err",
+                        jobid=load_job_id
                     )
                     subprocess.run(sbatch_cmd)
                 else:
