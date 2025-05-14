@@ -37,15 +37,14 @@ def build_result_dir(base_dir, setup_name, workload, run):
     return result_dir
 
 
-
 def RunYCSB(sourceDir, workloads, outputDir, load_config, setups, runs, sif_dir=None, status='READ-FAILED READ-PASSED ALL'):
     exe = os.path.join(sourceDir, 'build-ycsb/ycsb')
 
-    if 'cachelib.cachesize' not in load_config:
+    if 'cachelib.size' not in load_config:
         print("[ERROR] Missing cache size in load_config")
         return
 
-    mem_mb = get_mem_mb(load_config['cachelib.cachesize'])
+    mem_mb = get_mem_mb(load_config['cachelib.size'])
 
     for wl_path in workloads:
         if not os.path.exists(wl_path):

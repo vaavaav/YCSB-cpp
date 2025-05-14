@@ -5,10 +5,10 @@
 
 namespace {
 
-const std::string PROP_CACHE_NAME = "cachelib.cache.name";
+const std::string PROP_CACHE_NAME = "cachelib.name";
 const std::string PROP_CACHE_NAME_DEFAULT = "CacheLib";
 
-const std::string PROP_CACHE_EVICTION = "cachelib.cache.eviction";
+const std::string PROP_CACHE_EVICTION = "cachelib.eviction";
 const std::string PROP_CACHE_EVICTION_DEFAULT = "lru"; // or 2q
 
 const std::string PROP_CONTROLLER_ADDRESS = "cachelib.controller.address";
@@ -174,7 +174,6 @@ DB::Status CacheLibHolpaca::Read(const std::string &table,
                                  const std::vector<std::string> *fields,
                                  std::vector<Field> &result) {
   std::lock_guard<std::mutex> lock(mutex_);
-
   return std::visit(
       [&table, &key, &fields, &result](auto &&cache) {
         auto handle = cache.find(key);
@@ -183,13 +182,14 @@ DB::Status CacheLibHolpaca::Read(const std::string &table,
           if (rocksdb_.Read(table, key, fields, result) == kOK) {
             uint32_t size = result.front().value.size();
             auto new_handle = cache.allocate(poolId_, key, size);
-            if (handle == nullptr) {
+            if (new_handle == nullptr) {
               return kError;
             }
             std::memcpy(new_handle->getMemory(), result.front().value.data(),
                         size);
             cache.insertOrReplace(new_handle);
             cache.registerAccess(poolId_, key, size, true, true, false);
+          } else {
           }
           return kNotFound;
         } else {
