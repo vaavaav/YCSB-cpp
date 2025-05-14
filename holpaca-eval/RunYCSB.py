@@ -67,7 +67,8 @@ def RunYCSB(sourceDir, workloads, outputDir, load_config, setups, runs, status='
                 cmd=wrapped,
                 stdout=f"/tmp/slurm-load-{os.path.basename(wl_path)}.out",
                 stderr=f"/tmp/slurm-load-{os.path.basename(wl_path)}.err"
-            )):
+            ))
+
             # Parse job ID
             if result.returncode == 0:
                 for line in result.stdout.strip().splitlines():
