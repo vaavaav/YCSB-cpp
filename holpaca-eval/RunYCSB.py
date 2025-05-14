@@ -37,7 +37,7 @@ def build_result_dir(base_dir, setup_name, workload, run):
     return result_dir
 
 
-def RunYCSB(sourceDir, workloads, outputDir, load_config, setups, runs, sif_dir=None, status='READ-FAILED READ-PASSED ALL'):
+def RunYCSB(sourceDir, workloads, outputDir, load_config, setups, runs, status='READ-FAILED READ-PASSED ALL', sif_path=None):
     exe = os.path.join(sourceDir, 'build-ycsb/ycsb')
 
     if 'cachelib.size' not in load_config:
@@ -58,8 +58,8 @@ def RunYCSB(sourceDir, workloads, outputDir, load_config, setups, runs, sif_dir=
         load_config['rocksdb.dbname'] = db_bkp
         load_cmd = f"{exe} -load -db cachelib-holpaca -P {wl_path} {build_param_str(load_config)}"
 
-        if sif_dir:
-            wrapped = f"singularity run --bind '{sourceDir},/tmp' {os.path.join(sif_dir, 'ycsb.sif')} {load_cmd}"
+        if sif_path:
+            wrapped = f"singularity run --bind '{sourceDir},/tmp' {sif_path} {load_cmd}"
             subprocess.run(build_sbatch_cmd(
                 name=f"load-{os.path.basename(wl_path)}",
                 mem=mem_mb,
@@ -79,7 +79,7 @@ def RunYCSB(sourceDir, workloads, outputDir, load_config, setups, runs, sif_dir=
                 rid = f"{setup_name}-{os.path.basename(wl_path)}-run{run}"
                 outdir = build_result_dir(outputDir, setup_name, os.path.basename(wl_path), run)
 
-                if sif_dir:
+                if sif_path:
                     setup_cfg['config']['rocksdb.dbname'] = "/tmp/db"
                     inner = f"""
 mkdir -p /tmp/db && cp -r {db_bkp}/* /tmp/db/
@@ -89,7 +89,7 @@ dstat -cdlmnyt > /tmp/dstat.csv 2>&1 &
 kill $(pgrep dstat)
 cp /tmp/ycsb.txt {outdir}/ycsb.txt
 """
-                    wrapped = f"singularity run --bind {sourceDir},/tmp {os.path.join(sif_dir, 'ycsb.sif')} bash -c '{inner}'"
+                    wrapped = f"singularity run --bind {sourceDir},/tmp {sif_path} bash -c '{inner}'"
                     sbatch_cmd = build_sbatch_cmd(
                         name=rid,
                         mem=mem_mb,
@@ -100,7 +100,7 @@ cp /tmp/ycsb.txt {outdir}/ycsb.txt
                     subprocess.run(sbatch_cmd)
                 else:
                     setup_cfg['config']['rocksdb.dbname'] = db
-                    shutil.copytree(db_bkp, db, dirs_exist_ok=True)
+                    shutil.copytree(db_bkp, db)
                     dstat_out = os.path.join(outdir, 'dstat.csv')
                     ycsb_out = os.path.join(outdir, 'ycsb.txt')
                     print(f"[LOCAL] Running: {exe} -run -db cachelib-holpaca -P {wl_path} -s {status} {build_param_str(setup_cfg['config'])}")
