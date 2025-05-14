@@ -54,7 +54,6 @@ def RunYCSB(sourceDir, workloads, outputDir, load_config, setups, runs, status='
         db_bkp = os.path.join(sourceDir, 'db-backup', os.path.basename(wl_path))
         db = os.path.join(sourceDir, 'db', os.path.basename(wl_path))
         os.makedirs(db_bkp, exist_ok=True)
-        os.makedirs(db, exist_ok=True)
         load_config['rocksdb.dbname'] = db_bkp
         load_cmd = f"{exe} -load -db cachelib-holpaca -P {wl_path} {build_param_str(load_config)}"
 
@@ -100,6 +99,7 @@ cp /tmp/ycsb.txt {outdir}/ycsb.txt
                     subprocess.run(sbatch_cmd)
                 else:
                     setup_cfg['config']['rocksdb.dbname'] = db
+                    shutil.rmtree(db, ignore_errors=True)
                     shutil.copytree(db_bkp, db)
                     dstat_out = os.path.join(outdir, 'dstat.csv')
                     ycsb_out = os.path.join(outdir, 'ycsb.txt')
