@@ -10,11 +10,11 @@ def get_mem_mb(cachesize):
     return int(cachesize * 1.2 / 1024 / 1024)
 
 def build_sbatch_cmd(name, mem, cmd, stdout, stderr, jobid=None):
+    dependency = f"--dependency=afterok:{jobid}" if jobid else ""
     return [
         "sbatch",
-        f"--job-name={name}",
+        f"--job-name={name} {dependency}",
         "--account=f202400014testdeucalionx",
-        f"--dependency=afterok:{jobid}" if jobid else "",
         "--nodes=1",
         "--ntasks=1",
         "--cpus-per-task=1",
@@ -52,7 +52,7 @@ def RunYCSB(sourceDir, workloads, outputDir, load_config, setups, runs, status='
             print(f"[ERROR] Missing workload: {wl_path}")
             continue
 
-        db_bkp = os.path.join(sourceDir, 'db-backup', os.path.basename(wl_path))
+        db_bkp = os.path.join(sourceDir, 'db-backup', os.path.basename(wl_path), datetime.now().strftime('%m-%d-%H-%M-%S'))
         db = os.path.join(sourceDir, 'db', os.path.basename(wl_path))
         os.makedirs(db_bkp, exist_ok=True)
         load_config['rocksdb.dbname'] = db_bkp
@@ -67,20 +67,22 @@ def RunYCSB(sourceDir, workloads, outputDir, load_config, setups, runs, status='
                 cmd=wrapped,
                 stdout=f"/tmp/slurm-load-{os.path.basename(wl_path)}.out",
                 stderr=f"/tmp/slurm-load-{os.path.basename(wl_path)}.err"
-            ), 
-            shell=True,
-            stdout=subprocess.PIPE, 
-            stderr=subprocess.PIPE, 
-            universal_newlines=True)
+            ),
+             stdout=subprocess.PIPE, 
+             stderr=subprocess.PIPE, 
+             universal_newlines=True)
+            
 
             # Parse job ID
             if result.returncode == 0:
                 for line in result.stdout.strip().splitlines():
+                    print(line)
                     if line.startswith("Submitted batch job"):
                         load_job_id = line.split()[-1]
-                    else:
-                        print("[ERROR] Failed to submit load job")
-                        abort()
+
+            if load_job_id is None:
+                print("[ERROR] Failed to submit load job")
+                return
 
         else:
             print(f"[LOCAL] Running load: {load_cmd}")
@@ -100,11 +102,13 @@ def RunYCSB(sourceDir, workloads, outputDir, load_config, setups, runs, status='
 mkdir -p /tmp/db && cp -r {db_bkp}/* /tmp/db/
 cd {sourceDir}
 dstat -cdlmnyt > /tmp/dstat.csv 2>&1 &
-{exe} -run -db cachelib-holpaca-P {wl_path} -s {status} {build_param_str(setup_cfg['config'])} > /tmp/ycsb.txt
+{exe} -run -db cachelib-holpaca -P {wl_path} -s {status} {build_param_str(setup_cfg['config'])} > /tmp/ycsb.txt
 kill $(pgrep dstat)
 cp /tmp/ycsb.txt {outdir}/ycsb.txt
+cp /tmp/dstat.csv {outdir}/ycsb.txt
 """
                     wrapped = f"singularity run --bind {sourceDir},/tmp {sif_path} bash -c '{inner}'"
+
                     sbatch_cmd = build_sbatch_cmd(
                         name=rid,
                         mem=mem_mb,
@@ -113,6 +117,7 @@ cp /tmp/ycsb.txt {outdir}/ycsb.txt
                         stderr=f"/tmp/slurm-{rid}.err",
                         jobid=load_job_id
                     )
+                    print(sbatch_cmd)
                     subprocess.run(sbatch_cmd)
                 else:
                     setup_cfg['config']['rocksdb.dbname'] = db
