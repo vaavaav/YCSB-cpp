@@ -61,13 +61,13 @@ def RunYCSB(sourceDir, workloads, outputDir, load_config, setups, runs, status='
 
         if sif_path is not None:
             wrapped = f"singularity run --bind '{sourceDir},/tmp' {sif_path} {load_cmd}"
-            subprocess.run(build_sbatch_cmd(
+            result = subprocess.run(build_sbatch_cmd(
                 name=f"load-{os.path.basename(wl_path)}",
                 mem=mem_mb,
                 cmd=wrapped,
                 stdout=f"/tmp/slurm-load-{os.path.basename(wl_path)}.out",
                 stderr=f"/tmp/slurm-load-{os.path.basename(wl_path)}.err"
-            ))
+            ), capture_output=True, text=True)
 
             # Parse job ID
             if result.returncode == 0:
