@@ -12,7 +12,7 @@ if __name__ == '__main__':
     sourceDir = os.path.abspath(sys.argv[1])
     workloadsDir = os.path.abspath(sys.argv[2])
     outputDir = os.path.join(os.path.abspath(sys.argv[3]), f"{datetime.now().strftime('%m-%d-%H-%M-%S')}")
-    sifDir = os.path.abspath(sys.argv[4]) if len(sys.argv) > 5 else None
+    sifDir = os.path.abspath(sys.argv[4]) if len(sys.argv) > 4 else None
 
     runs = 3
     workload_type = 'synthetic'
