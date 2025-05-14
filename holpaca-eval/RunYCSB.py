@@ -57,7 +57,7 @@ def RunYCSB(sourceDir, workloads, outputDir, load_config, setups, runs, status='
         load_config['rocksdb.dbname'] = db_bkp
         load_cmd = f"{exe} -load -db cachelib-holpaca -P {wl_path} {build_param_str(load_config)}"
 
-        if sif_path:
+        if sif_path is not None:
             wrapped = f"singularity run --bind '{sourceDir},/tmp' {sif_path} {load_cmd}"
             subprocess.run(build_sbatch_cmd(
                 name=f"load-{os.path.basename(wl_path)}",
@@ -78,7 +78,7 @@ def RunYCSB(sourceDir, workloads, outputDir, load_config, setups, runs, status='
                 rid = f"{setup_name}-{os.path.basename(wl_path)}-run{run}"
                 outdir = build_result_dir(outputDir, setup_name, os.path.basename(wl_path), run)
 
-                if sif_path:
+                if sif_path is not None:
                     setup_cfg['config']['rocksdb.dbname'] = "/tmp/db"
                     inner = f"""
 mkdir -p /tmp/db && cp -r {db_bkp}/* /tmp/db/
