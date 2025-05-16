@@ -38,17 +38,19 @@ namespace ycsbc {
 std::mutex CacheLibHolpaca::mutex_;
 thread_local facebook::cachelib::PoolId CacheLibHolpaca::poolId_;
 int CacheLibHolpaca::ref_cnt_ = 0;
-thread_local int CacheLibHolpaca::rocksdbIOPS_ = 0;
-thread_local std::chrono::time_point<std::chrono::high_resolution_clock>
-    CacheLibHolpaca::lastTime_ = std::chrono::high_resolution_clock::now();
+std::unordered_map<int, int> CacheLibHolpaca::rocksdbIOPSPerThread_;
 std::unordered_map<std::string, RocksDB> CacheLibHolpaca::rocksdbs_;
 std::unordered_map<std::string, std::shared_ptr<CacheLibHolpaca::Cache>>
     CacheLibHolpaca::caches_;
+std::unordered_map<int, std::tuple<std::shared_ptr<CacheLibHolpaca::Cache>, facebook::cachelib::PoolId>>
+    CacheLibHolpaca::cachesPerThread_;
 thread_local std::string CacheLibHolpaca::cacheName_;
 thread_local std::shared_ptr<CacheLibHolpaca::Cache> CacheLibHolpaca::cache_;
 thread_local RocksDB CacheLibHolpaca::rocksdb_;
 thread_local int CacheLibHolpaca::threadId_;
 thread_local static facebook::cachelib::PoolId poolId_;
+std::unordered_map<int, std::chrono::time_point<std::chrono::high_resolution_clock>> 
+    CacheLibHolpaca::lastTimePerThread_;
 
 void CacheLibHolpaca::Init() {
 
@@ -150,24 +152,11 @@ void CacheLibHolpaca::Init() {
                           cache.getCacheMemoryStats().ramCacheSize * poolSize));
       },
       *cache_);
-  lastTime_ = std::chrono::high_resolution_clock::now();
+  rocksdbIOPSPerThread_[threadId_] = 0;
+  lastTimePerThread_[threadId_] =
+      std::chrono::high_resolution_clock::now();
+  cachesPerThread_[threadId_] = std::make_tuple(cache_, CacheLibHolpaca::poolId_);
 }
-
-// std::tuple<uint64_t, uint64_t> CacheLibHolpaca::OccupancyAndCapacity() {
-//   if (cache_ == nullptr) {
-//     return std::make_tuple(0, 0);
-//   }
-//   const auto &pool = cache_->getPool(poolId_);
-//   auto now = std::chrono::high_resolution_clock::now();
-//   cache_->registerMetrics(
-//       poolId_, rocksdbIOPS_ /
-//       std::chrono::duration_cast<std::chrono::seconds>(
-//                                   now - lastTime_)
-//                                   .count());
-//   lastTime_ = now;
-//   return std::make_tuple(pool.getCurrentAllocSize(),
-//   pool.getPoolUsableSize());
-// }
 
 DB::Status CacheLibHolpaca::Read(const std::string &table,
                                  const std::string &key,
@@ -178,7 +167,7 @@ DB::Status CacheLibHolpaca::Read(const std::string &table,
       [&table, &key, &fields, &result](auto &&cache) {
         auto handle = cache.find(key);
         if (handle == nullptr) {
-          rocksdbIOPS_++;
+          rocksdbIOPSPerThread_[threadId_]++;
           if (rocksdb_.Read(table, key, fields, result) == kOK) {
             uint32_t size = result.front().value.size();
             auto new_handle = cache.allocate(poolId_, key, size);
@@ -189,8 +178,7 @@ DB::Status CacheLibHolpaca::Read(const std::string &table,
                         size);
             cache.insertOrReplace(new_handle);
             cache.registerAccess(poolId_, key, size, true, true, false);
-          } else {
-          }
+          } 
           return kNotFound;
         } else {
           auto size = handle->getSize();
@@ -220,11 +208,11 @@ DB::Status CacheLibHolpaca::Update(const std::string &table,
   auto key_ = key;
   uint32_t size = values.front().value.size();
   auto res = rocksdb_.Update(table, key, values);
-  rocksdbIOPS_++;
+  rocksdbIOPSPerThread_[threadId_]++;
   if (res == kOK) {
     std::visit(
         [&key, &size](auto &&cache) {
-          cache.registerAccess(poolId_, key, size, false, true, false);
+          cache.registerAccess(poolId_, key, size, false, false, true);
         },
         *cache_);
   }
@@ -240,7 +228,7 @@ DB::Status CacheLibHolpaca::Insert(const std::string &table,
   auto key_ = key;
   uint32_t size = values.front().value.size();
   auto res = rocksdb_.Insert(table, key, values);
-  rocksdbIOPS_++;
+  rocksdbIOPSPerThread_[threadId_]++;
   if (res == kOK) {
     std::visit(
         [&key, &size](auto &&cache) {
@@ -266,5 +254,11 @@ const bool registered =
     DBFactory::RegisterDB("cachelib-holpaca", NewCacheLibHolpaca);
 
 void CacheLibHolpaca::SetThreadId(int threadId) { threadId_ = threadId; }
+
+void CacheLibHolpaca::Cleanup() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  std::visit(
+      [](auto &&c) { c.removePool(poolId_); }, *cache_);
+}
 
 } // namespace ycsbc

@@ -50,9 +50,9 @@ public:
   void GetOptions(const utils::Properties &props, rocksdb::Options *opt,
                   std::vector<rocksdb::ColumnFamilyDescriptor> *cf_descs);
 
-  std::tuple<uint64_t, uint64_t, uint64_t, uint64_t>
-  OccupancyCapacityAndGlobal() {
-    return std::make_tuple(0, 0, 0, 0);
+  std::tuple<std::string, std::string, uint64_t, uint64_t, uint64_t, uint64_t>
+  OccupancyCapacityAndGlobal(int i) {
+    return std::make_tuple("", "", 0, 0, 0, 0);
   }
 };
 

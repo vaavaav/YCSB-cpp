@@ -70,19 +70,15 @@ void StatusThread(std::vector<ycsbc::Measurements *> *measurements,
     auto elapsed_time = duration_cast<std::chrono::seconds>(now - start);
     std::stringstream msg;
 
-    uint64_t gOcc, gCap;
     for (long i = 0; i < measurements->size(); i++) {
-      auto const &[occ, cap, gOcc_, gCap_] =
-          (*dbs)[i]->OccupancyCapacityAndGlobal();
-      gOcc = gOcc_;
-      gCap = gCap_;
+      auto const &[cacheName, poolName, occ, cap, gOcc, gCap] =
+          (*dbs)[i]->OccupancyCapacityAndGlobal(i);
       msg << elapsed_time.count() << " sec [T-" << i
-          << "]: " << (*measurements)[i]->GetStatusMsg(*operations) << " ("
-          << occ << "/" << cap << ")" << std::endl;
+          << "]: " << (*measurements)[i]->GetStatusMsg(*operations) << " (" << poolName << "@" << cacheName << ": "
+          << occ << " / " << cap << " | " << gOcc << " / " << gCap << ")" << std::endl;
     }
     msg << elapsed_time.count()
-        << " sec [GLOBAL]: " << gMeasurements->GetStatusMsg(*operations) << " ("
-        << gOcc << "/" << gCap << ")" << std::endl;
+        << " sec [GLOBAL]: " << gMeasurements->GetStatusMsg(*operations) << std::endl;
     std::cout << msg.str();
     if (done->load()) {
       break;

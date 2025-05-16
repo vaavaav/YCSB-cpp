@@ -97,8 +97,8 @@ public:
 
   //
   //
-  virtual std::tuple<uint64_t, uint64_t, uint64_t, uint64_t>
-  OccupancyCapacityAndGlobal() = 0;
+  virtual std::tuple<std::string, std::string, uint64_t, uint64_t, uint64_t, uint64_t>
+  OccupancyCapacityAndGlobal(int i) = 0;
 
   virtual ~DB() {}
 

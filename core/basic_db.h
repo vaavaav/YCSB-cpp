@@ -38,9 +38,9 @@ public:
 
   Status Delete(const std::string &table, const std::string &key);
 
-  std::tuple<uint64_t, uint64_t, uint64_t, uint64_t>
-  OccupancyCapacityAndGlobal() {
-    return std::make_tuple(0, 0, 0, 0);
+  std::tuple<std::string, std::string, uint64_t, uint64_t, uint64_t, uint64_t>
+  OccupancyCapacityAndGlobal(int i) {
+    return std::make_tuple("", "", 0, 0, 0, 0);
   }
 
 private:
