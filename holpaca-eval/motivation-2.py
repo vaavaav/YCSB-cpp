@@ -31,14 +31,7 @@ if __name__ == '__main__':
         'readallfields': 'false',
         'fieldcount': 1,
         'fieldlength': 100,
-        'rocksdb.write_buffer_size': 134217728,
-        'rocksdb.max_write_buffer_number': 2,
-        'rocksdb.level0_file_number_compaction_trigger': 4,
         'rocksdb.compression': 'no',
-        'rocksdb.max_background_flushes': 1,
-        'rocksdb.max_background_compactions': 3,
-        'rocksdb.use_direct_reads': 'true',
-        'rocksdb.use_direct_io_for_flush_compaction': 'true',
         'insertorder': 'nothashed',
         'requestdistribution.0': 'uniform',
         'requestdistribution.1': 'zipfian',
@@ -66,12 +59,24 @@ if __name__ == '__main__':
         'rocksdb.destroy': 'true',
     }
 
+    rocksdbConfigsForRun = {
+        'rocksdb.write_buffer_size': 134217728,
+        'rocksdb.max_write_buffer_number': 2,
+        'rocksdb.level0_file_number_compaction_trigger': 4,
+        'rocksdb.max_background_flushes': 1,
+        'rocksdb.max_background_compactions': 3,
+        'rocksdb.use_direct_reads': 'true',
+        'rocksdb.no_block_cache': 'true',
+        'rocksdb.use_direct_io_for_flush_compaction': 'true',
+    }
+
     setups = {
         'CacheLib-Optimizer': {
             'title': 'CacheLib-Optimizer',
             'resultsDir': f'{outputDir}/cachelib_optimizer',
             'config' : {
                 **ycsb,
+                **rocksdbConfigsForRun,
                 'cachelib.eviction': '2q',
                 'cachelib.pooloptimizer': 'on',
                 'cachelib.poolresizer': 'on',
@@ -82,6 +87,7 @@ if __name__ == '__main__':
             'resultsDir': f'{outputDir}/cachelib',
             'config': {
                 **ycsb,
+                **rocksdbConfigsForRun,
                 'cachelib.pool_optimizer': 'off',
             }
         }

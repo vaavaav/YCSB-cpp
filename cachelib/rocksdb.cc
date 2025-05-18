@@ -97,6 +97,10 @@ const std::string PROP_OPTIMIZE_LEVELCOMP_DEFAULT = "false";
 
 const std::string PROP_OPTIONS_FILE = "rocksdb.optionsfile";
 const std::string PROP_OPTIONS_FILE_DEFAULT = "";
+
+const std::string PROP_NO_BLOCK_CACHE = "rocksdb.no_block_cache";
+const std::string PROP_NO_BLOCK_CACHE_DEFAULT = "false";
+
 } // namespace
 
 namespace ycsbc {
@@ -239,7 +243,10 @@ void RocksDB::GetOptions(
     }
 
     rocksdb::BlockBasedTableOptions table_options;
-    table_options.no_block_cache = true;
+    if (props_->GetProperty(PROP_NO_BLOCK_CACHE, PROP_NO_BLOCK_CACHE_DEFAULT) ==
+        "true") {
+      table_options.no_block_cache = true;
+    }
     int bloom_bits = std::stoul(
         props_->GetProperty(PROP_BLOOM_BITS, PROP_BLOOM_BITS_DEFAULT));
     if (bloom_bits > 0) {

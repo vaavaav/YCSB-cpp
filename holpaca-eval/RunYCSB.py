@@ -60,7 +60,13 @@ def RunYCSB(sourceDir, workloads, outputDir, load_config, setups, runs, status='
         load_job_id = None
 
         if sif_path is not None:
-            wrapped = f"singularity run --bind '{sourceDir},/tmp' {sif_path} {load_cmd}"
+            load_config['rocksdb.dbname'] = "/tmp/db"
+            wrapped = f"""
+mkdir -p /tmp/db 
+cd {sourceDir}
+singularity run --bind '{sourceDir},/tmp' {sif_path} {load_cmd}
+cp /tmp/db/* {db_bkp}/
+"""
             result = subprocess.run(build_sbatch_cmd(
                 name=f"load-{os.path.basename(wl_path)}",
                 mem=mem_mb,
