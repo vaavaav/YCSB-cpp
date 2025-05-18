@@ -9,7 +9,7 @@ import os
 import time
 
 if __name__ == '__main__':
-    name = f"motivation-2-{time.time_ns()}"
+    name = f"motivation-1-1k-{time.time_ns()}"
     sourceDir = os.path.abspath(sys.argv[1])
     workloadsDir = os.path.abspath(sys.argv[2])
     outputDir = os.path.join(os.path.abspath(sys.argv[3]), name)
@@ -33,24 +33,21 @@ if __name__ == '__main__':
         'status.interval': 1,
         'readallfields': 'false',
         'fieldcount': 1,
-        'fieldlength': 100,
-        'rocksdb.compression': 'no',
+        'fieldlength': 1000,
         'insertorder': 'nothashed',
         'requestdistribution.0': 'uniform',
         'requestdistribution.1': 'zipfian',
+        'rocksdb.compression': 'no',
         'zipfian_const.1': '0.9',
         'sleepafterload.0': 0,
         'maxexecutiontime.0': 500,
         'sleepafterload.1': 125,
         'maxexecutiontime.1': 250,
         'cachelib.size': 4_000_000_000,
-        'cachelib.size.0': 2_000_000_000,
-        'cachelib.size.1': 2_000_000_000,
-        'cachelib.name.0': 'instance-0',
-        'cachelib.name.1': 'instance-1',
+        'cachelib.name': 'instance-0',
         'cachelib.eviction': 'lru',
-        'cachelib.pool.relsize.0': 1,
-        'cachelib.pool.relsize.1': 1,
+        'cachelib.pool.relsize.0': 0.5,
+        'cachelib.pool.relsize.1': 0.5,
         'request_key_prefix.0': 'p0',
         'request_key_prefix.1': 'p1',
         'cachelib.pool.name.0': 'p0',
@@ -100,3 +97,7 @@ if __name__ == '__main__':
     }
 
     RunYCSB(sourceDir, workloads, outputDir, load, setups, runs, status, sifDir)
+
+
+
+

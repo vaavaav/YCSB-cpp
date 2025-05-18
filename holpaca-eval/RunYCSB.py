@@ -54,8 +54,7 @@ def RunYCSB(sourceDir, workloads, outputDir, load_config, setups, runs, status='
             print(f"[ERROR] Missing workload: {wl_path}")
             continue
 
-        db_bkp = os.path.join(sourceDir, 'db-backup', os.path.basename(wl_path), datetime.now().strftime('%m-%d-%H-%M-%S'))
-        db = os.path.join(sourceDir, 'db', os.path.basename(wl_path))
+        db_bkp = load_config['rocksdb.dbname']
         os.makedirs(db_bkp, exist_ok=True)
         load_config['rocksdb.dbname'] = db_bkp
         load_cmd = f"{exe} -load -db cachelib-holpaca -P {wl_path} {build_param_str(load_config)}"
@@ -91,6 +90,8 @@ cp /tmp/db/* {db_bkp}/
             if load_job_id is None:
                 print("[ERROR] Failed to submit load job")
                 return
+            
+            load_config['rocksdb.dbname'] = db_bkp
 
         else:
             print(f"[LOCAL] Running load: {load_cmd}")
@@ -105,6 +106,7 @@ cp /tmp/db/* {db_bkp}/
                 outdir = build_result_dir(outputDir, setup_name, os.path.basename(wl_path), run)
 
                 if sif_path is not None:
+                    db = setup_cfg['config']['rocksdb.dbname']
                     setup_cfg['config']['rocksdb.dbname'] = "/tmp/db"
                     inner = f"""
 mkdir -p /tmp/db && cp -r {db_bkp}/* /tmp/db/
@@ -127,10 +129,10 @@ cp /tmp/dstat.csv {outdir}/dstat.csv
                     )
                     print(sbatch_cmd)
                     subprocess.run(sbatch_cmd)
-                else:
                     setup_cfg['config']['rocksdb.dbname'] = db
+                else:
                     shutil.rmtree(db, ignore_errors=True)
-                    shutil.copytree(db_bkp, db)
+                    shutil.copytree(db_bkp, setup_cfg['config']['rocksdb.dbname'])
                     dstat_out = os.path.join(outdir, 'dstat.csv')
                     ycsb_out = os.path.join(outdir, 'ycsb.txt')
                     print(f"[LOCAL] Running: {exe} -run -db cachelib-holpaca -P {wl_path} -s {status} {build_param_str(setup_cfg['config'])}")

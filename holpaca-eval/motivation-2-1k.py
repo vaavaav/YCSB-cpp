@@ -9,7 +9,7 @@ import os
 import time
 
 if __name__ == '__main__':
-    name = f"motivation-2-{time.time_ns()}"
+    name = f"motivation-2-1k-{time.time_ns()}"
     sourceDir = os.path.abspath(sys.argv[1])
     workloadsDir = os.path.abspath(sys.argv[2])
     outputDir = os.path.join(os.path.abspath(sys.argv[3]), name)
@@ -33,7 +33,7 @@ if __name__ == '__main__':
         'status.interval': 1,
         'readallfields': 'false',
         'fieldcount': 1,
-        'fieldlength': 100,
+        'fieldlength': 1000,
         'rocksdb.compression': 'no',
         'insertorder': 'nothashed',
         'requestdistribution.0': 'uniform',

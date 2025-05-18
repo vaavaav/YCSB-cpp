@@ -6,13 +6,16 @@ import subprocess
 import shutil
 import sys
 import os
-from datetime import datetime
+import time
 
 if __name__ == '__main__':
+    name = f"motivation-1-{time.time_ns()}"
     sourceDir = os.path.abspath(sys.argv[1])
     workloadsDir = os.path.abspath(sys.argv[2])
-    outputDir = os.path.join(os.path.abspath(sys.argv[3]), f"motivation-1", f"{datetime.now().strftime('%m-%d-%H-%M-%S')}")
+    outputDir = os.path.join(os.path.abspath(sys.argv[3]), name)
     sifDir = os.path.abspath(sys.argv[4]) if len(sys.argv) > 4 else None
+    db_backup = os.path.join(sourceDir, 'db-backup', name)
+    db = os.path.join(sourceDir, 'db', name)
 
     runs = 3
     workload_type = 'synthetic'
@@ -30,7 +33,7 @@ if __name__ == '__main__':
         'status.interval': 1,
         'readallfields': 'false',
         'fieldcount': 1,
-        'fieldlength': 1000,
+        'fieldlength': 100,
         'insertorder': 'nothashed',
         'requestdistribution.0': 'uniform',
         'requestdistribution.1': 'zipfian',
@@ -53,6 +56,7 @@ if __name__ == '__main__':
 
     load = {
         **ycsb,
+        'rocksdb.dbname': db_backup,
         'rocksdb.destroy': 'true',
     }
 
@@ -65,6 +69,7 @@ if __name__ == '__main__':
         'rocksdb.use_direct_reads': 'true',
         'rocksdb.no_block_cache': 'true',
         'rocksdb.use_direct_io_for_flush_compaction': 'true',
+        'rocksdb.dbname': db,
     }
     
 
@@ -91,12 +96,6 @@ if __name__ == '__main__':
         }
     }
 
-    RunYCSB(sourceDir, workloads, outputDir, load, setups, runs, status, sifDir)
-    # 1k
-    load['fieldlength'] = 1000
-    setups['CacheLib']['config']['fieldlength'] = 1000
-    setups['CacheLib-Optimizer']['config']['fieldlength'] = 1000
-    outputDir = os.path.join(os.path.abspath(sys.argv[3]), f"motivation-1-1k", f"{datetime.now().strftime('%m-%d-%H-%M-%S')}")
     RunYCSB(sourceDir, workloads, outputDir, load, setups, runs, status, sifDir)
 
 
