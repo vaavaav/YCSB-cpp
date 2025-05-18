@@ -30,7 +30,7 @@ if __name__ == '__main__':
         'status.interval': 1,
         'readallfields': 'false',
         'fieldcount': 1,
-        'fieldlength': 100,
+        'fieldlength': 1000,
         'insertorder': 'nothashed',
         'requestdistribution.0': 'uniform',
         'requestdistribution.1': 'zipfian',

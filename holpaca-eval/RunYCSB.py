@@ -10,10 +10,9 @@ def get_mem_mb(cachesize):
     return int(cachesize * 1.2 / 1024 / 1024)
 
 def build_sbatch_cmd(name, mem, cmd, stdout, stderr, jobid=None):
-    dependency = f"--dependency=afterok:{jobid}" if jobid else ""
-    return [
+    cmd = [
         "sbatch",
-        f"--job-name={name} {dependency}",
+        f"--job-name={name}",
         "--account=f202400014testdeucalionx",
         "--nodes=1",
         "--ntasks=1",
@@ -26,6 +25,9 @@ def build_sbatch_cmd(name, mem, cmd, stdout, stderr, jobid=None):
         f"--error={stderr}",
         "--wrap", cmd
     ]
+    if jobid:
+        cmd.insert(1, f"--dependency=afterok:{jobid}")
+    return cmd
 
 def build_result_dir(base_dir, setup_name, workload, run):
     # sanitize everything
@@ -111,7 +113,7 @@ dstat -cdlmnyt > /tmp/dstat.csv 2>&1 &
 {exe} -run -db cachelib-holpaca -P {wl_path} -s {status} {build_param_str(setup_cfg['config'])} > /tmp/ycsb.txt
 kill $(pgrep dstat)
 cp /tmp/ycsb.txt {outdir}/ycsb.txt
-cp /tmp/dstat.csv {outdir}/ycsb.txt
+cp /tmp/dstat.csv {outdir}/dstat.csv
 """
                     wrapped = f"singularity run --bind {sourceDir},/tmp {sif_path} bash -c '{inner}'"
 
