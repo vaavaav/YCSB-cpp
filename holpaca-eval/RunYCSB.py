@@ -56,12 +56,11 @@ def RunYCSB(sourceDir, workloads, outputDir, load_config, setups, runs, status='
 
         db_bkp = load_config['rocksdb.dbname']
         os.makedirs(db_bkp, exist_ok=True)
-        load_config['rocksdb.dbname'] = db_bkp
-        load_cmd = f"{exe} -load -db cachelib-holpaca -P {wl_path} {build_param_str(load_config)}"
-        load_job_id = None
 
         if sif_path is not None:
             load_config['rocksdb.dbname'] = "/tmp/db"
+            load_cmd = f"{exe} -load -db cachelib-holpaca -P {wl_path} {build_param_str(load_config)}"
+            load_job_id = None
             wrapped = f"""
 mkdir -p /tmp/db 
 cd {sourceDir}
@@ -95,6 +94,7 @@ cp /tmp/db/* {db_bkp}/
 
         else:
             print(f"[LOCAL] Running load: {load_cmd}")
+            load_cmd = f"{exe} -load -db cachelib-holpaca -P {wl_path} {build_param_str(load_config)}"
             subprocess.run(load_cmd, shell=True)
 
         # Run phase
