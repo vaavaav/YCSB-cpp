@@ -9,7 +9,7 @@ import os
 import time
 
 if __name__ == '__main__':
-    name = f"motivation-2-{time.time_ns()}"
+    name = f"motivation-2-{time.time() * 1e9}"
     sourceDir = os.path.abspath(sys.argv[1])
     workloadsDir = os.path.abspath(sys.argv[2])
     outputDir = os.path.join(os.path.abspath(sys.argv[3]), name)
