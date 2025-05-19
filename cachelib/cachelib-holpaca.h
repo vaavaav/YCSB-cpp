@@ -25,7 +25,7 @@ private:
       cachesPerThread_;
   thread_local static std::string cacheName_;
   thread_local static std::shared_ptr<Cache> cache_;
-  static RocksDB rocksdb_;
+  thread_local static RocksDB rocksdb_;
   thread_local static int threadId_;
   thread_local static facebook::cachelib::PoolId poolId_;
   static int ref_cnt_;

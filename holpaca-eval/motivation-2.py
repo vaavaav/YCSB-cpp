@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+#!/usr/bin/env python3
 
 from RunYCSB import RunYCSB
 
@@ -9,7 +10,7 @@ import os
 import time
 
 if __name__ == '__main__':
-    name = f"motivation-2-{int(time.time() * 1e9)}"
+    name = f"motivation-1-{int(time.time() * 1e9)}"
     sourceDir = os.path.abspath(sys.argv[1])
     workloadsDir = os.path.abspath(sys.argv[2])
     outputDir = os.path.join(os.path.abspath(sys.argv[3]), name)
@@ -34,7 +35,6 @@ if __name__ == '__main__':
         'readallfields': 'false',
         'fieldcount': 1,
         'fieldlength': 100,
-        'rocksdb.compression': 'no',
         'insertorder': 'nothashed',
         'requestdistribution.0': 'uniform',
         'requestdistribution.1': 'zipfian',
@@ -43,9 +43,7 @@ if __name__ == '__main__':
         'maxexecutiontime.0': 500,
         'sleepafterload.1': 125,
         'maxexecutiontime.1': 250,
-        'cachelib.size': 4_000_000_000,
-        'cachelib.size.0': 2_000_000_000,
-        'cachelib.size.1': 2_000_000_000,
+        'cachelib.size': 4_000_000_0,
         'cachelib.name.0': 'instance-0',
         'cachelib.name.1': 'instance-1',
         'cachelib.eviction': 'lru',
@@ -55,15 +53,8 @@ if __name__ == '__main__':
         'request_key_prefix.1': 'p1',
         'cachelib.pool.name.0': 'p0',
         'cachelib.pool.name.1': 'p1',
-    }
-
-    load = {
-        **ycsb,
-        'rocksdb.dbname': db_backup,
-        'rocksdb.destroy': 'true',
-    }
-
-    rocksdbConfigsForRun = {
+        # rocksdb
+        'rocksdb.compression': 'no',
         'rocksdb.write_buffer_size': 134217728,
         'rocksdb.max_write_buffer_number': 2,
         'rocksdb.level0_file_number_compaction_trigger': 4,
@@ -74,6 +65,12 @@ if __name__ == '__main__':
         'rocksdb.use_direct_io_for_flush_compaction': 'true',
         'rocksdb.dbname': db,
     }
+
+    load = {
+        **ycsb,
+        'rocksdb.dbname': db_backup,
+        'rocksdb.destroy': 'true',
+    }
     
 
     setups = {
@@ -82,7 +79,6 @@ if __name__ == '__main__':
             'resultsDir': f'{outputDir}/cachelib_optimizer',
             'config' : {
                 **ycsb,
-                **rocksdbConfigsForRun,
                 'cachelib.eviction': '2q',
                 'cachelib.pooloptimizer': 'on',
                 'cachelib.poolresizer': 'on',
@@ -93,10 +89,13 @@ if __name__ == '__main__':
             'resultsDir': f'{outputDir}/cachelib',
             'config': {
                 **ycsb,
-                **rocksdbConfigsForRun,
                 'cachelib.pool_optimizer': 'off',
             }
         }
     }
 
     RunYCSB(sourceDir, workloads, outputDir, load, setups, runs, status, sifDir)
+
+
+
+

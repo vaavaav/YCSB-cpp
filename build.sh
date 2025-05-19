@@ -76,7 +76,7 @@ dependencies=(
 #  "fmt 8.0.1 yes no https://github.com/fmtlib/fmt . -DFMT_TEST=NO"
 #  "sparsemap v0.6.2 yes no https://github.com/Tessil/sparse-map ."
 # "folly v2022.09.19.00 yes yes https://github.com/facebook/folly . -DBUILD_TESTS=OFF"
-#  "rocksdb main yes no https://github.com/vaavaav/rocksdb . -DWITH_TESTS=OFF -DWITH_GFLAGS=OFF -DWITH_BENCHMARK_TESTS=OFF"
+  "rocksdb main yes no https://github.com/vaavaav/rocksdb . -DWITH_TESTS=OFF -DWITH_GFLAGS=OFF -DWITH_BENCHMARK_TESTS=OFF"
 #  "fizz v2022.09.19.00 yes yes https://github.com/facebookincubator/fizz fizz -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF"
 #  "wangle v2022.09.19.00 yes yes https://github.com/facebook/wangle wangle -DBUILD_TESTS=OFF"
 #  "fbthrift v2022.09.19.00 yes yes https://github.com/facebook/fbthrift . -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"

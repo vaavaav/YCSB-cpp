@@ -187,9 +187,6 @@ int main(const int argc, const char *argv[]) {
     if (show_status) {
       status_future.wait();
     }
-    if (show_status) {
-      std::cout << "Status thread finished" << std::endl;
-    }
 
     std::cout << "Load runtime(sec): " << runtime << std::endl;
     std::cout << "Load operations(ops): " << sum << std::endl;
