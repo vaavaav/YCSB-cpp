@@ -93,8 +93,8 @@ cp /tmp/db/* {db_bkp}/
             load_config['rocksdb.dbname'] = db_bkp
 
         else:
-            print(f"[LOCAL] Running load: {load_cmd}")
             load_cmd = f"{exe} -load -db cachelib-holpaca -P {wl_path} {build_param_str(load_config)}"
+            print(f"[LOCAL] Running load: {load_cmd}")
             subprocess.run(load_cmd, shell=True)
 
         # Run phase
@@ -131,8 +131,9 @@ cp /tmp/dstat.csv {outdir}/dstat.csv
                     subprocess.run(sbatch_cmd)
                     setup_cfg['config']['rocksdb.dbname'] = db
                 else:
+                    db = setup_cfg['config']['rocksdb.dbname']
                     shutil.rmtree(db, ignore_errors=True)
-                    shutil.copytree(db_bkp, setup_cfg['config']['rocksdb.dbname'])
+                    shutil.copytree(db_bkp, db)
                     dstat_out = os.path.join(outdir, 'dstat.csv')
                     ycsb_out = os.path.join(outdir, 'ycsb.txt')
                     print(f"[LOCAL] Running: {exe} -run -db cachelib-holpaca -P {wl_path} -s {status} {build_param_str(setup_cfg['config'])}")

@@ -74,11 +74,13 @@ void StatusThread(std::vector<ycsbc::Measurements *> *measurements,
       auto const &[cacheName, poolName, occ, cap, gOcc, gCap] =
           (*dbs)[i]->OccupancyCapacityAndGlobal(i);
       msg << elapsed_time.count() << " sec [T-" << i
-          << "]: " << (*measurements)[i]->GetStatusMsg(*operations) << " (" << poolName << "@" << cacheName << ": "
-          << occ << " / " << cap << " | " << gOcc << " / " << gCap << ")" << std::endl;
+          << "]: " << (*measurements)[i]->GetStatusMsg(*operations) << " ("
+          << poolName << "@" << cacheName << ": " << occ << " / " << cap
+          << " | " << gOcc << " / " << gCap << ")" << std::endl;
     }
     msg << elapsed_time.count()
-        << " sec [GLOBAL]: " << gMeasurements->GetStatusMsg(*operations) << std::endl;
+        << " sec [GLOBAL]: " << gMeasurements->GetStatusMsg(*operations)
+        << std::endl;
     std::cout << msg.str();
     if (done->load()) {
       break;
@@ -185,6 +187,9 @@ int main(const int argc, const char *argv[]) {
     if (show_status) {
       status_future.wait();
     }
+    if (show_status) {
+      std::cout << "Status thread finished" << std::endl;
+    }
 
     std::cout << "Load runtime(sec): " << runtime << std::endl;
     std::cout << "Load operations(ops): " << sum << std::endl;
@@ -193,8 +198,6 @@ int main(const int argc, const char *argv[]) {
   gMeasurements->Reset();
 
   if (do_transaction) {
-    const long total_ops =
-        std::stol(props[ycsbc::CoreWorkload::OPERATION_COUNT_PROPERTY]);
 
     std::atomic_bool done(false);
     ycsbc::utils::Timer<double> timer;
@@ -219,9 +222,6 @@ int main(const int argc, const char *argv[]) {
       std::chrono::seconds sleepafterload = std::chrono::seconds(
           stoi(props.GetProperty("sleepafterload." + std::to_string(i),
                                  props.GetProperty("sleepafterload", "0"))));
-      if (i < total_ops % num_threads) {
-        thread_ops++;
-      }
       client_threads.emplace_back(std::async(
           std::launch::async, ycsbc::ClientThread, sleepafterload,
           maxexecutiontime, i, dbs[i], wls[i], thread_ops, false, true));

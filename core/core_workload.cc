@@ -8,6 +8,7 @@
 //
 
 #include "core_workload.h"
+#include <iostream>
 
 #include <algorithm>
 #include <random>
@@ -159,7 +160,9 @@ void CoreWorkload::Init(std::string const property_suffix,
                     p.GetProperty(READMODIFYWRITE_PROPORTION_PROPERTY,
                                   READMODIFYWRITE_PROPORTION_DEFAULT)));
 
-  record_count_ = std::stol(p.GetProperty(RECORD_COUNT_PROPERTY));
+  record_count_ =
+      std::stol(p.GetProperty(RECORD_COUNT_PROPERTY + property_suffix,
+                              p.GetProperty(RECORD_COUNT_PROPERTY)));
   long min_scan_len = std::stol(p.GetProperty(
       MIN_SCAN_LENGTH_PROPERTY + property_suffix,
       p.GetProperty(MIN_SCAN_LENGTH_PROPERTY, MIN_SCAN_LENGTH_DEFAULT)));
@@ -350,6 +353,7 @@ bool CoreWorkload::DoInsert(DB &db) {
   BuildSingleValue(fields);
   return db.Insert(table_name_, key, fields) == DB::kOK;
 }
+
 bool CoreWorkload::DoTransaction(DB &db) {
   DB::Status status;
   switch (op_chooser_.Next()) {

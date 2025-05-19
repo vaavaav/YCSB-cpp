@@ -42,14 +42,16 @@ std::unordered_map<int, int> CacheLibHolpaca::rocksdbIOPSPerThread_;
 std::unordered_map<std::string, RocksDB> CacheLibHolpaca::rocksdbs_;
 std::unordered_map<std::string, std::shared_ptr<CacheLibHolpaca::Cache>>
     CacheLibHolpaca::caches_;
-std::unordered_map<int, std::tuple<std::shared_ptr<CacheLibHolpaca::Cache>, facebook::cachelib::PoolId>>
+std::unordered_map<int, std::tuple<std::shared_ptr<CacheLibHolpaca::Cache>,
+                                   facebook::cachelib::PoolId>>
     CacheLibHolpaca::cachesPerThread_;
 thread_local std::string CacheLibHolpaca::cacheName_;
 thread_local std::shared_ptr<CacheLibHolpaca::Cache> CacheLibHolpaca::cache_;
-thread_local RocksDB CacheLibHolpaca::rocksdb_;
+RocksDB CacheLibHolpaca::rocksdb_;
 thread_local int CacheLibHolpaca::threadId_;
 thread_local static facebook::cachelib::PoolId poolId_;
-std::unordered_map<int, std::chrono::time_point<std::chrono::high_resolution_clock>> 
+std::unordered_map<int,
+                   std::chrono::time_point<std::chrono::high_resolution_clock>>
     CacheLibHolpaca::lastTimePerThread_;
 
 void CacheLibHolpaca::Init() {
@@ -62,7 +64,7 @@ void CacheLibHolpaca::Init() {
   if (auto it = caches_.find(cacheName_); it != caches_.end()) {
     // already initialized (two threads can point to the same cache)
     cache_ = it->second;
-    rocksdb_ = rocksdbs_[cacheName_];
+    //    rocksdb_ = rocksdbs_[cacheName_];
   } else {
     Config config;
     if (props_->GetProperty(
@@ -83,10 +85,11 @@ void CacheLibHolpaca::Init() {
     std::visit(
         [&](auto &config) {
           config
-              .setControllerAddress(props_->GetProperty(
-                  PROP_CONTROLLER_ADDRESS + "." + std::to_string(threadId_),
-                  props_->GetProperty(PROP_CONTROLLER_ADDRESS,
-                                      PROP_CONTROLLER_ADDRESS_DEFAULT)))
+              //              .setControllerAddress(props_->GetProperty(
+              //                  PROP_CONTROLLER_ADDRESS + "." +
+              //                  std::to_string(threadId_),
+              //                  props_->GetProperty(PROP_CONTROLLER_ADDRESS,
+              //                                      PROP_CONTROLLER_ADDRESS_DEFAULT)))
               .setAddress(props_->GetProperty(
                   PROP_STAGE_ADDRESS + "." + std::to_string(threadId_),
                   props_->GetProperty(PROP_STAGE_ADDRESS,
@@ -134,10 +137,14 @@ void CacheLibHolpaca::Init() {
                                        PROP_CACHE_EVICTION_DEFAULT)) == "2q") {
       cache_ = std::make_shared<Cache>(std::get<Cache2Q::Config>(config));
     }
-    caches_[cacheName_] = cache_;
+    rocksdbIOPSPerThread_[threadId_] = 0;
+    lastTimePerThread_[threadId_] = std::chrono::high_resolution_clock::now();
+    cachesPerThread_[threadId_] =
+        std::make_tuple(cache_, CacheLibHolpaca::poolId_);
     rocksdb_.SetProps(props_);
     rocksdb_.Init();
     rocksdbs_[cacheName_] = rocksdb_;
+    caches_[cacheName_] = cache_;
   }
   std::string poolName = props_->GetProperty(
       PROP_POOL_NAME + "." + std::to_string(threadId_),
@@ -152,10 +159,6 @@ void CacheLibHolpaca::Init() {
                           cache.getCacheMemoryStats().ramCacheSize * poolSize));
       },
       *cache_);
-  rocksdbIOPSPerThread_[threadId_] = 0;
-  lastTimePerThread_[threadId_] =
-      std::chrono::high_resolution_clock::now();
-  cachesPerThread_[threadId_] = std::make_tuple(cache_, CacheLibHolpaca::poolId_);
 }
 
 DB::Status CacheLibHolpaca::Read(const std::string &table,
@@ -178,7 +181,7 @@ DB::Status CacheLibHolpaca::Read(const std::string &table,
                         size);
             cache.insertOrReplace(new_handle);
             cache.registerAccess(poolId_, key, size, true, true, false);
-          } 
+          }
           return kNotFound;
         } else {
           auto size = handle->getSize();
@@ -224,10 +227,11 @@ DB::Status CacheLibHolpaca::Insert(const std::string &table,
                                    const std::string &key,
                                    std::vector<Field> &values) {
   std::lock_guard<std::mutex> lock(mutex_);
-  std::string data = values.front().value;
-  auto key_ = key;
   uint32_t size = values.front().value.size();
   auto res = rocksdb_.Insert(table, key, values);
+  if (res == kOK) {
+    std::cout << "Insert " << key << " " << size << std::endl;
+  }
   rocksdbIOPSPerThread_[threadId_]++;
   if (res == kOK) {
     std::visit(
@@ -257,8 +261,8 @@ void CacheLibHolpaca::SetThreadId(int threadId) { threadId_ = threadId; }
 
 void CacheLibHolpaca::Cleanup() {
   std::lock_guard<std::mutex> lock(mutex_);
-  std::visit(
-      [](auto &&c) { c.removePool(poolId_); }, *cache_);
+  //  std::visit(
+  //      [](auto &&c) { c.removePool(poolId_); }, *cache_); BIG ISSUES
 }
 
 } // namespace ycsbc
