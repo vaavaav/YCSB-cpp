@@ -9,24 +9,20 @@ import sys
 import os
 import time
 
+name = "motivation-2"
+runs = 3
+status = 'READ-FAILED READ-PASSED ALL'
+
 if __name__ == '__main__':
-    name = f"motivation-1-{int(time.time() * 1e9)}"
     sourceDir = os.path.abspath(sys.argv[1])
-    workloadsDir = os.path.abspath(sys.argv[2])
-    outputDir = os.path.join(os.path.abspath(sys.argv[3]), name)
-    sifDir = os.path.abspath(sys.argv[4]) if len(sys.argv) > 4 else None
+    outputDir = os.path.join(os.path.abspath(sys.argv[2]), name)
+    sifDir = os.path.abspath(sys.argv[3]) if len(sys.argv) > 3 else None
     db_backup = os.path.join(sourceDir, 'db-backup', name)
     db = os.path.join(sourceDir, 'db', name)
-
-    runs = 3
-    workload_type = 'synthetic'
-    workloads = [ f"{workloadsDir}/{x}" for x in ['read-only'] ]
-    status = 'READ-FAILED READ-PASSED ALL'
 
     ycsb = {
         'threadcount': 2,
         'sleepafterload': 0,
-        'workload.type': workload_type,
         'maxexecutiontime': 500,
         'operationcount': 1_000_000_000,
         'recordcount.0': 200_000_000,
@@ -43,7 +39,7 @@ if __name__ == '__main__':
         'maxexecutiontime.0': 500,
         'sleepafterload.1': 125,
         'maxexecutiontime.1': 250,
-        'cachelib.size': 4_000_000_0,
+        'cachelib.size': 4_000_000_000,
         'cachelib.name.0': 'instance-0',
         'cachelib.name.1': 'instance-1',
         'cachelib.eviction': 'lru',
@@ -64,6 +60,12 @@ if __name__ == '__main__':
         'rocksdb.no_block_cache': 'true',
         'rocksdb.use_direct_io_for_flush_compaction': 'true',
         'rocksdb.dbname': db,
+        # workload
+        'workload.type': 'synthetic',
+        'readproportion': 1,
+        'updateproportion':0,
+        'scanproportion':0,
+        'insertproportion':0,
     }
 
     load = {
@@ -94,7 +96,7 @@ if __name__ == '__main__':
         }
     }
 
-    RunYCSB(sourceDir, workloads, outputDir, load, setups, runs, status, sifDir)
+    RunYCSB(sourceDir, outputDir, load, setups, runs, status, sifDir)
 
 
 
