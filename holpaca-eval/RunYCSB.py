@@ -106,13 +106,13 @@ cp /tmp/db/* {db_bkp}/
             outdir = build_result_dir(outputDir, setup_name, run)
 
             if sif_path is not None:
-                db = setup_cfg['config']['rocksdb.dbname']
-                setup_cfg['config']['rocksdb.dbname'] = "/tmp/db"
+                db = setup_cfg['rocksdb.dbname']
+                setup_cfg['rocksdb.dbname'] = "/tmp/db"
                 inner = f"""
 mkdir -p /tmp/db && cp -r {db_bkp}/* /tmp/db/
 cd {sourceDir}
 dstat -cdlmnyt > /tmp/dstat.csv 2>&1 &
-{exe} -run -db cachelib-holpaca -s {status} {build_param_str(setup_cfg['config'])} > /tmp/ycsb.txt
+{exe} -run -db cachelib-holpaca -s {status} {build_param_str(setup_cfg)} > /tmp/ycsb.txt
 kill $(pgrep dstat)
 cp /tmp/ycsb.txt {outdir}/ycsb.txt
 cp /tmp/dstat.csv {outdir}/dstat.csv
@@ -129,17 +129,17 @@ cp /tmp/dstat.csv {outdir}/dstat.csv
                 )
                 print(sbatch_cmd)
                 subprocess.run(sbatch_cmd)
-                setup_cfg['config']['rocksdb.dbname'] = db
+                setup_cfg['rocksdb.dbname'] = db
             else:
-                db = setup_cfg['config']['rocksdb.dbname']
+                db = setup_cfg['rocksdb.dbname']
                 shutil.rmtree(db, ignore_errors=True)
                 shutil.copytree(db_bkp, db)
                 dstat_out = os.path.join(outdir, 'dstat.csv')
                 ycsb_out = os.path.join(outdir, 'ycsb.txt')
-                print(f"[LOCAL] Running: {exe} -run -db cachelib-holpaca -s {status} {build_param_str(setup_cfg['config'])}")
+                print(f"[LOCAL] Running: {exe} -run -db cachelib-holpaca -s {status} {build_param_str(setup_cfg)}")
                 dstat_output = open(dstat_out, 'w')
                 dstat = subprocess.Popen(["dstat", "-cdlmnyt"], stdout=dstat_output)
-                cmd = f"{exe} -run -db cachelib-holpaca -s {status} {build_param_str(setup_cfg['config'])}"
+                cmd = f"{exe} -run -db cachelib-holpaca -s {status} {build_param_str(setup_cfg)}"
                 with open(ycsb_out, 'w') as outf:
                     subprocess.run(cmd, shell=True, stdout=outf)
                 dstat.terminate()
