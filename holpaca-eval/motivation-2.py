@@ -96,7 +96,7 @@ if __name__ == '__main__':
         }
     }
 
-    RunYCSB(sourceDir, outputDir, load, setups, runs, status, sifDir)
+    RunYCSB(name, sourceDir, outputDir, load, setups, runs, status, sifDir)
 
 
 

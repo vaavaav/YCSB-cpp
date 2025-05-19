@@ -40,7 +40,7 @@ def build_result_dir(base_dir, setup_name, run):
     return result_dir
 
 
-def RunYCSB(sourceDir, outputDir, load_config, setups, runs, status='READ-FAILED READ-PASSED ALL', sif_path=None):
+def RunYCSB(name, sourceDir, outputDir, load_config, setups, runs, status='READ-FAILED READ-PASSED ALL', sif_path=None):
     exe = os.path.join(sourceDir, 'build-ycsb/ycsb')
 
     if 'cachelib.size' not in load_config:
@@ -64,11 +64,11 @@ singularity run --bind '{sourceDir},/tmp' {sif_path} {load_cmd}
 cp /tmp/db/* {db_bkp}/
 """
         result = subprocess.run(build_sbatch_cmd(
-            name=f"load-{os.path.basename(wl_path)}",
+            name=f"load-{name}",
             mem=mem_mb,
             cmd=wrapped,
-            stdout=f"/tmp/slurm-load-{os.path.basename(wl_path)}.out",
-            stderr=f"/tmp/slurm-load-{os.path.basename(wl_path)}.err"
+            stdout=f"/tmp/slurm-load-{name}.out",
+            stderr=f"/tmp/slurm-load-{name}.err"
         ),
          stdout=subprocess.PIPE, 
          stderr=subprocess.PIPE, 
@@ -101,8 +101,8 @@ cp /tmp/db/* {db_bkp}/
     for setup_name, setup_cfg in setups.items():
 
         for run in range(1, runs + 1):
-            print(f"[RUN] Running {setup_name} for {os.path.basename(wl_path)} (run {run})")
-            rid = f"{setup_name}-{os.path.basename(wl_path)}-run{run}"
+            print(f"[RUN] Running {setup_name} for {name} (run {run})")
+            rid = f"{setup_name}-{name}-run{run}"
             outdir = build_result_dir(outputDir, setup_name, run)
 
             if sif_path is not None:
