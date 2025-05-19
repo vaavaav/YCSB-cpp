@@ -77,22 +77,14 @@ if __name__ == '__main__':
 
     setups = {
         'CacheLib-Optimizer': {
-            'title': 'CacheLib-Optimizer',
-            'resultsDir': f'{outputDir}/cachelib_optimizer',
-            'config' : {
-                **ycsb,
-                'cachelib.eviction': '2q',
-                'cachelib.pooloptimizer': 'on',
-                'cachelib.poolresizer': 'on',
-            }
+            **ycsb,
+            'cachelib.eviction': '2q',
+            'cachelib.pooloptimizer': 'on',
+            'cachelib.poolresizer': 'on',
         },
         'CacheLib': {
-            'title': 'CacheLib',
-            'resultsDir': f'{outputDir}/cachelib',
-            'config': {
-                **ycsb,
-                'cachelib.pool_optimizer': 'off',
-            }
+            **ycsb,
+            'cachelib.pool_optimizer': 'off',
         }
     }
 
