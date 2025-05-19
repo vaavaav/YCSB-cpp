@@ -78,7 +78,6 @@ cp /tmp/db/* {db_bkp}/
         # Parse job ID
         if result.returncode == 0:
             for line in result.stdout.strip().splitlines():
-                print(line)
                 if line.startswith("Submitted batch job"):
                     load_job_id = line.split()[-1]
 

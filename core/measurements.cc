@@ -56,8 +56,6 @@ BasicMeasurements::GetStatusMsg(std::vector<Operation> const &operations) {
   for (auto const &o : operations) {
     Operation op = static_cast<Operation>(o);
     uint64_t cnt = count_[op].load(std::memory_order_relaxed);
-    if (cnt == 0)
-      continue;
     msg_stream << " [" << kOperationString[op] << ":"
                << " Count=" << cnt << " Max="
                << latency_max_[op].load(std::memory_order_relaxed) / 1000.0
@@ -105,8 +103,6 @@ std::string HdrHistogramMeasurements::GetStatusMsg(
   for (auto const &o : operations) {
     Operation op = static_cast<Operation>(o);
     uint64_t cnt = histogram_[op]->total_count;
-    if (cnt == 0)
-      continue;
     msg_stream << " [" << kOperationString[op] << ":"
                << " Count=" << cnt
                << " Max=" << hdr_max(histogram_[op]) / 1000.0

@@ -40,6 +40,8 @@ if __name__ == '__main__':
         'sleepafterload.1': 125,
         'maxexecutiontime.1': 250,
         'cachelib.size': 4_000_000_000,
+        'cachelib.size.0': 2_000_000_000,
+        'cachelib.size.1': 2_000_000_000,
         'cachelib.name.0': 'instance-0',
         'cachelib.name.1': 'instance-1',
         'cachelib.eviction': 'lru',
