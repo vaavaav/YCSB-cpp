@@ -184,6 +184,7 @@ DB::Status CacheLibHolpaca::Read(const std::string &table,
           }
           return kNotFound;
         } else {
+          volatile auto data = handle->getMemory();
           auto size = handle->getSize();
           cache.registerAccess(poolId_, key, size, true, false, false);
         }
