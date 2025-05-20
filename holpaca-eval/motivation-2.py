@@ -38,7 +38,7 @@ if __name__ == '__main__':
         'insertorder': 'nothashed',
         'requestdistribution.0': 'uniform',
         'requestdistribution': 'zipfian',
-        **{f'zipfian_const.{i}': zipf[i] for i in range(threads)},
+        **{f'zipfian_const.{i}': zipf[i-1] for i in range(1,threads)},
         **{f'sleepafterload.{i}': int(i*(maxexecutiontime/phases)) for i in range(threads)},
         **{f'maxexecutiontime.{i}': int((1 - i*2/phases)*maxexecutiontime) for i in range(threads)},
         'cachelib.size': 2_000_000_000*threads, # needed for limiting the size of the memory on the bed
