@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-#!/usr/bin/env python3
 
 from RunYCSB import RunYCSB
 
@@ -9,49 +8,46 @@ import sys
 import os
 import time
 
-name = "motivation-2"
+name = f"motivation-2-{int(time.time()*1e9)}"
 runs = 3
 status = 'READ-FAILED READ-PASSED ALL'
 
 if __name__ == '__main__':
-    sourceDir = os.path.abspath(sys.argv[1])
-    outputDir = os.path.join(os.path.abspath(sys.argv[2]), name)
-    sifDir = os.path.abspath(sys.argv[3]) if len(sys.argv) > 3 else None
+    threads = int(sys.argv[1])
+    maxexecutiontime = int(sys.argv[2])
+    sourceDir = os.path.abspath(sys.argv[3])
+    outputDir = os.path.join(os.path.abspath(sys.argv[4]), name)
+    sifDir = os.path.abspath(sys.argv[5]) if len(sys.argv) > 5 else None
     db_backup = os.path.join(sourceDir, 'db-backup', name)
     db = os.path.join(sourceDir, 'db', name)
 
+    zipf = [0.6, 0.9, 1.2]
+    phases = threads*2-1
+
     ycsb = {
-        'threadcount': 2,
+        'threadcount': threads,
         'sleepafterload': 0,
-        'maxexecutiontime': 500,
+        'maxexecutiontime': maxexecutiontime,
         'operationcount': 1_000_000_000,
-        'recordcount.0': 20_000_000,
-        'recordcount.1': 20_000_000,
-        'request_key_domain_end': 20_000_000,
+        'recordcount': 20_000_000,
+        'request_key_domain_end': 19_999_999,
         'status.interval': 1,
         'readallfields': 'false',
         'fieldcount': 1,
         'fieldlength': 1000,
         'insertorder': 'nothashed',
         'requestdistribution.0': 'uniform',
-        'requestdistribution.1': 'zipfian',
-        'zipfian_const.1': '0.9',
-        'sleepafterload.0': 0,
-        'maxexecutiontime.0': 500,
-        'sleepafterload.1': 125,
-        'maxexecutiontime.1': 250,
-        'cachelib.size': 4_000_000_000,
-        'cachelib.size.0': 2_000_000_000,
-        'cachelib.size.1': 2_000_000_000,
-        'cachelib.name.0': 'instance-0',
-        'cachelib.name.1': 'instance-1',
+        'requestdistribution': 'zipfian',
+        **{f'zipfian_const.{i}': zipf[i] for i in range(threads)},
+        **{f'sleepafterload.{i}': int(i*(maxexecutiontime/phases)) for i in range(threads)},
+        **{f'maxexecutiontime.{i}': int((1 - i*2/phases)*maxexecutiontime) for i in range(threads)},
+        'cachelib.size': 2_000_000_000*threads, # needed for limiting the size of the memory on the bed
+        **{f'cachelib.size.{i}': 2_000_000_000 for i in range(threads)},
+        **{f'cachelib.name.{i}': f'instance-{i}' for i in range(threads)},
         'cachelib.eviction': 'lru',
-        'cachelib.pool.relsize.0': 1,
-        'cachelib.pool.relsize.1': 1,
-        'request_key_prefix.0': 'p0',
-        'request_key_prefix.1': 'p1',
-        'cachelib.pool.name.0': 'p0',
-        'cachelib.pool.name.1': 'p1',
+        'cachelib.pool.relsize': 1,
+        'cachelib.pool.name': 'p0',
+        **{f'request_key_prefix.{i}': f'p{i}' for i in range(threads)},
         # rocksdb
         'rocksdb.compression': 'no',
         'rocksdb.write_buffer_size': 134217728,
@@ -76,7 +72,6 @@ if __name__ == '__main__':
         'rocksdb.dbname': db_backup,
         'rocksdb.destroy': 'true',
     }
-    
 
     setups = {
         'CacheLib-Optimizer': {
@@ -92,7 +87,5 @@ if __name__ == '__main__':
     }
 
     RunYCSB(name, sourceDir, outputDir, load, setups, runs, status, sifDir)
-
-
 
 

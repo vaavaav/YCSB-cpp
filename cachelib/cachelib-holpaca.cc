@@ -17,7 +17,7 @@ const std::string PROP_SIZE_DEFAULT = "1000000000";
 const std::string PROP_CONTROLLER_ADDRESS = "cachelib.controller.address";
 const std::string PROP_CONTROLLER_ADDRESS_DEFAULT = "";
 
-const std::string PROP_STAGE_ADDRESS = "cachelib.stage.address";
+const std::string PROP_STAGE_ADDRESS = "cachelib.holpaca.address";
 const std::string PROP_STAGE_ADDRESS_DEFAULT = "";
 
 const std::string PROP_POOL_NAME = "cachelib.pool.name";

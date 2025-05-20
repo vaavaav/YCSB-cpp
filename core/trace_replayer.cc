@@ -19,10 +19,10 @@
 using std::string;
 using ycsbc::TraceReplayer;
 
-const string TraceReplayer::SCALE_VALUE_SIZE_PROPERTY = "scalevaluesize";
+const string TraceReplayer::SCALE_VALUE_SIZE_PROPERTY = "trace.scale_value";
 const string TraceReplayer::SCALE_VALUE_SIZE_DEFAULT = "1.0";
 
-const string TraceReplayer::FILENAME_PROPERTY = "file";
+const string TraceReplayer::FILENAME_PROPERTY = "trace.file";
 
 namespace ycsbc {
 
