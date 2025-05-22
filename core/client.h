@@ -26,10 +26,13 @@ inline long ClientThread(std::chrono::seconds sleepafterload,
                          const long num_ops, bool load, bool cleanup_db) {
   try {
     db->SetThreadId(threadId);
-    db->Init();
+
     if (sleepafterload.count() > 0) {
       std::this_thread::sleep_for(sleepafterload);
     }
+
+    db->Init();
+
     std::future<void> terminator;
     if (maxexecutiontime.count() > 0) {
       terminator = std::async(std::launch::async, ycsbc::TerminatorThread,

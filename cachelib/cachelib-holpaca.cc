@@ -92,14 +92,21 @@ void CacheLibHolpaca::Init() {
                   props_->GetProperty(PROP_SIZE, PROP_SIZE_DEFAULT))))
               .setCacheName(cacheName_)
               .setAccessConfig({25 /* bucket power */,
-                                10 /* lock power */}); // assuming caching
+                                15 /* lock power */}); // assuming caching
                                                        // 20 million items
           auto address = props_->GetProperty(
+              PROP_STAGE_ADDRESS + "." + std::to_string(threadId_),
+              props_->GetProperty(PROP_STAGE_ADDRESS,
+                                  PROP_STAGE_ADDRESS_DEFAULT));
+          if (!address.empty()) {
+            config.setAddress(address);
+          }
+          auto controllerAddress = props_->GetProperty(
               PROP_CONTROLLER_ADDRESS + "." + std::to_string(threadId_),
               props_->GetProperty(PROP_CONTROLLER_ADDRESS,
                                   PROP_CONTROLLER_ADDRESS_DEFAULT));
-          if (address.empty()) {
-            config.setAddress(address);
+          if (!controllerAddress.empty()) {
+            config.setControllerAddress(controllerAddress);
           }
           // Needed for pool resizing
           if (props_->GetProperty(
@@ -120,7 +127,7 @@ void CacheLibHolpaca::Init() {
             config.enablePoolOptimizer(
                 std::make_shared<
                     facebook::cachelib::MarginalHitsOptimizeStrategy>(),
-                std::chrono::seconds(1), std::chrono::seconds(1), 0);
+                std::chrono::seconds(1), std::chrono::seconds(0), 0);
           }
           config.validate(); // will throw if bad config
         },
@@ -174,19 +181,17 @@ DB::Status CacheLibHolpaca::Read(const std::string &table,
           if (rocksdbs_[cacheName_].Read(table, key, fields, result) == kOK) {
             uint32_t size = result.front().value.size();
             auto new_handle = cache.allocate(poolId_, key, size);
-            if (new_handle == nullptr) {
-              return kError;
+            if (new_handle) {
+              std::memcpy(new_handle->getMemory(), result.front().value.data(),
+                          size);
+              cache.insertOrReplace(new_handle);
             }
-            std::memcpy(new_handle->getMemory(), result.front().value.data(),
-                        size);
-            cache.insertOrReplace(new_handle);
-            cache.registerAccess(poolId_, key, size, true, true, false);
+            return kError;
           }
           return kNotFound;
         } else {
           volatile auto data = handle->getMemory();
           auto size = handle->getSize();
-          cache.registerAccess(poolId_, key, size, true, false, false);
         }
         return kOK;
       },
@@ -213,10 +218,18 @@ DB::Status CacheLibHolpaca::Update(const std::string &table,
   uint32_t size = values.front().value.size();
   auto res = rocksdbs_[cacheName_].Update(table, key, values);
   rocksdbIOPSPerThread_[threadId_]++;
+  // TODO: insert into cache
   if (res == kOK) {
-    std::visit(
-        [&key, &size](auto &&cache) {
-          cache.registerAccess(poolId_, key, size, false, false, true);
+    return std::visit(
+        [&key, &data, &size](auto &&cache) {
+          auto handle = cache.allocate(poolId_, key, size);
+          if (handle) {
+            std::memcpy(handle->getMemory(), data.data(), size);
+            cache.insertOrReplace(handle);
+            return kOK;
+          } else {
+            return kError;
+          }
         },
         *cache_);
   }
@@ -232,9 +245,16 @@ DB::Status CacheLibHolpaca::Insert(const std::string &table,
   auto res = rocksdbs_[cacheName_].Insert(table, key, values);
   rocksdbIOPSPerThread_[threadId_]++;
   if (res == kOK) {
-    std::visit(
-        [&key, &size](auto &&cache) {
-          cache.registerAccess(poolId_, key, size, false, false, true);
+    return std::visit(
+        [&key, &values, &size](auto &&cache) {
+          auto handle = cache.allocate(poolId_, key, size);
+          if (handle) {
+            std::memcpy(handle->getMemory(), values.front().value.data(), size);
+            cache.insertOrReplace(handle);
+            return kOK;
+          } else {
+            return kError;
+          }
         },
         *cache_);
   }
@@ -260,6 +280,7 @@ void CacheLibHolpaca::SetThreadId(int threadId) { threadId_ = threadId; }
 void CacheLibHolpaca::Cleanup() {
   std::lock_guard<std::mutex> lock(mutex_);
   rocksdb_.Cleanup();
+  std::visit([](auto &&cache) { cache.removePool(poolId_); }, *cache_);
   if (--ref_cnt_) {
     return;
   }

@@ -81,7 +81,7 @@ public:
     auto [cache, poolId] = cachesPerThread_[i];
     auto value = std::visit(
         [i, poolId](auto &&c) {
-          c.registerMetrics(
+          c.registerDiskIOPS(
               poolId, rocksdbIOPSPerThread_[i] /
                           std::chrono::duration_cast<std::chrono::milliseconds>(
                               std::chrono::high_resolution_clock::now() -
