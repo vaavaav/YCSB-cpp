@@ -163,6 +163,15 @@ void CoreWorkload::Init(std::string const property_suffix,
   record_count_ =
       std::stol(p.GetProperty(RECORD_COUNT_PROPERTY + property_suffix,
                               p.GetProperty(RECORD_COUNT_PROPERTY)));
+
+  inserts_ = 0;
+
+  operation_count_ = std::stol(p.GetProperty(OPERATION_COUNT_PROPERTY + property_suffix,
+			  p.GetProperty(OPERATION_COUNT_PROPERTY)));
+
+  ops_ = 0;
+
+
   long min_scan_len = std::stol(p.GetProperty(
       MIN_SCAN_LENGTH_PROPERTY + property_suffix,
       p.GetProperty(MIN_SCAN_LENGTH_PROPERTY, MIN_SCAN_LENGTH_DEFAULT)));
@@ -351,6 +360,9 @@ bool CoreWorkload::DoInsert(DB &db) {
   const std::string key = BuildKeyName(insert_key_sequence_->Next());
   std::vector<DB::Field> fields;
   BuildSingleValue(fields);
+  if (++inserts_ >= record_count_) {
+	request_stop();
+  }
   return db.Insert(table_name_, key, fields) == DB::kOK;
 }
 
@@ -375,6 +387,10 @@ bool CoreWorkload::DoTransaction(DB &db) {
   default:
     throw utils::Exception("Operation request is not recognized!");
   }
+  if (++ops_ >= operation_count_) {
+	  request_stop();
+  }
+
   return (status == DB::kOK);
 }
 

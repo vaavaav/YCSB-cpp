@@ -48,28 +48,50 @@ std::string TraceReplayer::BuildValue(size_t size) {
   return result;
 }
 
+std::vector<std::string_view>
+split_csv_line(std::string_view str, char delimiter, size_t expected_columns) {
+    std::vector<std::string_view> result;
+    size_t start = 0, end = 0;
+
+    while ((end = str.find(delimiter, start)) != std::string_view::npos) {
+        result.emplace_back(str.substr(start, end - start));
+        start = end + 1;
+    }
+
+    result.emplace_back(str.substr(start)); // Last token
+
+    // If more columns than expected, fix the second column
+    if (result.size() > expected_columns) {
+        size_t extra_parts = result.size() - expected_columns;
+
+        // Merge extra parts into the second column
+        std::string_view second_column(result[1].data(), result[1].size());
+        for (size_t i = 2; i <= 1 + extra_parts; ++i) {
+            second_column = std::string_view(second_column.data(),
+                result[i].data() + result[i].size() -
+                second_column.data());
+        }
+
+        // Remove merged parts from the vector
+        result[1] = second_column;
+        result.erase(result.begin() + 2, result.begin() + 2 + extra_parts);
+    }
+
+    return result;
+}
+
+
 std::tuple<Operation, std::string, size_t> TraceReplayer::NextOperation() {
   std::string line;
-  file_buffer_ >> line;
-  if (line.empty()) {
+  if (!std::getline(file_buffer_, line)) {
+    request_stop();
     return std::make_tuple(MAXOPTYPE, "", 0);
   }
 
-  std::string del = ",";
-  auto pos = line.find(del);
-  line.erase(0, pos + del.length());
-  pos = line.find(del);
-  std::string key = line.substr(0, pos);
-  line.erase(0, pos + del.length());
-  pos = line.find(del);
-  line.erase(0, pos + del.length());
-  pos = line.find(del);
-  size_t valuesize = std::stoi(line.substr(0, pos)) * scale_value_size;
-  line.erase(0, pos + del.length());
-  pos = line.find(del);
-  line.erase(0, pos + del.length());
-  pos = line.find(del);
-  std::string operation = line.substr(0, pos);
+  auto parts = split_csv_line(line, ',', 7);
+  std::string key {parts[1]};
+  size_t valuesize = std::stoul(std::string(parts[3]));
+  std::string operation {parts[5]};
 
   if (operation == "get") {
     return std::make_tuple(READ, key, valuesize);
@@ -84,6 +106,9 @@ std::tuple<Operation, std::string, size_t> TraceReplayer::NextOperation() {
 
 bool TraceReplayer::DoInsert(DB &db) {
   auto [_, key, size] = NextOperation();
+  if (key.empty()) {
+    return DB::kOK;
+  }
   std::vector<DB::Field> fields;
   auto field = DB::Field();
   field.value = BuildValue(size);

@@ -42,16 +42,13 @@ inline long ClientThread(std::chrono::seconds sleepafterload,
     long ops = 0;
 
     if (load) {
-      for (; ops < num_ops; ++ops) {
-        wl->DoInsert(*db);
-      }
+       while(!wl->is_stop_requested()) {
+	    wl->DoInsert(*db);
+       }
     } else {
-      for (; ops < num_ops; ++ops) {
-        if (wl->is_stop_requested()) {
-          break;
-        }
-        wl->DoTransaction(*db);
-      }
+	    while(!wl->is_stop_requested()) {
+		    wl->DoTransaction(*db);
+	    }
     }
 
     if (cleanup_db) {

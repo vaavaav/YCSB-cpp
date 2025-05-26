@@ -31,14 +31,37 @@ def build_sbatch_cmd(name, mem, cmd, stdout, stderr, jobid=None):
     return cmd
 
 def build_result_dir(base_dir, setup_name, run):
-    # sanitize everything
     setup_name = setup_name.replace(" ", "_").replace(":", "_")
-    # create the directory
     result_dir = os.path.join(base_dir, setup_name, str(run))
     shutil.rmtree(result_dir, ignore_errors=True)
     os.makedirs(result_dir, exist_ok=True)
     return result_dir
 
+def build_workload_copy_snippet(config):
+    snippet = ""
+    original_parts = {}
+    binds = []
+
+    basefile = config.get("trace.file")
+    if basefile:
+        tmp_base = f"/tmp/{os.path.basename(basefile)}"
+        snippet += f"cp {basefile} {tmp_base}; "
+        config["trace.file"] = tmp_base
+        binds.append(os.path.dirname(basefile))
+
+    for i in range(int(config.get("threadcount", 1))):
+        partfile = config.get(f"trace.file.{i}")
+        if partfile:
+            tmp_part = f"/tmp/{os.path.basename(partfile)}"
+            snippet += f"cp {partfile} {tmp_part}; "
+            original_parts[f"trace.file.{i}"] = partfile
+            config[f"trace.file.{i}"] = tmp_part
+            binds.append(os.path.dirname(partfile))
+    return snippet, ','.join(binds), original_parts
+
+def restore_workload_paths(config, original_parts):
+    for key, value in original_parts.items():
+        config[key] = value
 
 def RunYCSB(name, sourceDir, outputDir, load_config, setups, runs, status='READ-FAILED READ-PASSED ALL', sif_path=None):
     exe = os.path.join(sourceDir, 'build-ycsb/ycsb')
@@ -54,13 +77,16 @@ def RunYCSB(name, sourceDir, outputDir, load_config, setups, runs, status='READ-
     os.makedirs(db_bkp, exist_ok=True)
 
     if sif_path is not None:
-        load_config['rocksdb.dbname'] = "/tmp/db"
-        load_cmd = f"{exe} -load -db cachelib-holpaca {build_param_str(load_config)}"
+        load_cfg_tmp = load_config.copy()
+        workload_copy, tracesDirs, original_parts = build_workload_copy_snippet(load_cfg_tmp)
+        load_cfg_tmp['rocksdb.dbname'] = "/tmp/db"
+        load_cmd = f"{exe} -load -db cachelib-holpaca {build_param_str(load_cfg_tmp)}"
         load_job_id = None
         wrapped = f"""
-mkdir -p /tmp/db 
+mkdir -p /tmp/db
+{workload_copy}
 cd {sourceDir}
-singularity run --bind '{sourceDir},/tmp' {sif_path} {load_cmd}
+singularity run --bind '{sourceDir},/tmp,{tracesDirs}' {sif_path} {load_cmd}
 cp /tmp/db/* {db_bkp}/
 """
         result = subprocess.run(build_sbatch_cmd(
@@ -73,9 +99,9 @@ cp /tmp/db/* {db_bkp}/
          stdout=subprocess.PIPE, 
          stderr=subprocess.PIPE, 
          universal_newlines=True)
-        
 
-        # Parse job ID
+        restore_workload_paths(load_cfg_tmp, original_parts)
+
         if result.returncode == 0:
             for line in result.stdout.strip().splitlines():
                 if line.startswith("Submitted batch job"):
@@ -84,8 +110,6 @@ cp /tmp/db/* {db_bkp}/
         if load_job_id is None:
             print("[ERROR] Failed to submit load job")
             return
-        
-        load_config['rocksdb.dbname'] = db_bkp
 
     else:
         load_cmd = f"{exe} -load -db cachelib-holpaca {build_param_str(load_config)}"
@@ -96,27 +120,28 @@ cp /tmp/db/* {db_bkp}/
     with open(os.path.join(outputDir, 'setups.json'), 'w') as f:
         json.dump(setups, f, indent=2)
 
-    # Run phase
     for setup_name, setup_cfg in setups.items():
-
         for run in range(1, runs + 1):
             print(f"[RUN] Running {setup_name} for {name} (run {run})")
             rid = f"{setup_name}-{name}-run{run}"
             outdir = build_result_dir(outputDir, setup_name, run)
 
             if sif_path is not None:
-                db = setup_cfg['rocksdb.dbname']
-                setup_cfg['rocksdb.dbname'] = "/tmp/db"
+                run_cfg_tmp = setup_cfg.copy()
+                db = run_cfg_tmp['rocksdb.dbname']
+                run_cfg_tmp['rocksdb.dbname'] = "/tmp/db"
+                workload_copy, tracesDirs, original_parts = build_workload_copy_snippet(run_cfg_tmp)
                 inner = f"""
 mkdir -p /tmp/db && cp -r {db_bkp}/* /tmp/db/
+{workload_copy}
 cd {sourceDir}
 dstat -cdlmnyt > /tmp/dstat.csv 2>&1 &
-{exe} -run -db cachelib-holpaca -s {status} {build_param_str(setup_cfg)} > /tmp/ycsb.txt
+{exe} -run -db cachelib-holpaca -s {status} {build_param_str(run_cfg_tmp)} > /tmp/ycsb.txt
 kill $(pgrep dstat)
 cp /tmp/ycsb.txt {outdir}/ycsb.txt
 cp /tmp/dstat.csv {outdir}/dstat.csv
 """
-                wrapped = f"singularity run --bind {sourceDir},/tmp {sif_path} bash -c '{inner}'"
+                wrapped = f"singularity run --bind '{sourceDir},/tmp,{tracesDirs}' {sif_path} bash -c '{inner}'"
 
                 sbatch_cmd = build_sbatch_cmd(
                     name=rid,
@@ -128,7 +153,7 @@ cp /tmp/dstat.csv {outdir}/dstat.csv
                 )
                 print(sbatch_cmd)
                 subprocess.run(sbatch_cmd)
-                setup_cfg['rocksdb.dbname'] = db
+                restore_workload_paths(run_cfg_tmp, original_parts)
             else:
                 db = setup_cfg['rocksdb.dbname']
                 shutil.rmtree(db, ignore_errors=True)
@@ -143,5 +168,3 @@ cp /tmp/dstat.csv {outdir}/dstat.csv
                     subprocess.run(cmd, shell=True, stdout=outf)
                 dstat.terminate()
                 dstat_output.close()
-
-

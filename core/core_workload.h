@@ -273,7 +273,10 @@ protected:
                                                                   // gen
   std::string request_key_prefix_;
   bool ordered_inserts_;
-  size_t record_count_;
+  size_t record_count_{0};
+  size_t operation_count_{0};
+  size_t ops_{0};
+  size_t inserts_{0};
   long zero_padding_;
 
   std::atomic_bool stop_requested_ = {false};
