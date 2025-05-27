@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from RunYCSB import RunYCSB, Load, Setup
 import subprocess
 import shutil
