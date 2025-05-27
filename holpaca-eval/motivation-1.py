@@ -1,7 +1,4 @@
-#!/usr/bin/env python3
-
-from RunYCSB import RunYCSB
-
+from RunYCSB import RunYCSB, Load, Setup
 import subprocess
 import shutil
 import sys
@@ -10,21 +7,23 @@ import time
 
 name = f"motivation-1-{int(time.time()*1e9)}"
 runs = 3
-status = 'READ-FAILED READ-PASSED ALL'
 
 if __name__ == '__main__':
     threads = int(sys.argv[1])
     maxexecutiontime = int(sys.argv[2])
     sourceDir = os.path.abspath(sys.argv[3])
     outputDir = os.path.join(os.path.abspath(sys.argv[4]), name)
-    sifDir = os.path.abspath(sys.argv[5]) if len(sys.argv) > 5 else None
+    sifPath = os.path.abspath(sys.argv[5]) if len(sys.argv) > 5 else None
+    
+    # Assuming YCSB executable path - adjust as needed
+    ycsb_executable = os.path.join(sourceDir, 'build-ycsb/ycsb')  # Update this path
+    
     db_backup = os.path.join(sourceDir, 'db-backup', name)
-    db = os.path.join(sourceDir, 'db', name)
-
     zipf = [0.6, 0.9, 1.2]
     phases = threads*2-1
-
-    ycsb = {
+    
+    # Base YCSB configuration
+    ycsb_config = {
         'threadcount': threads,
         'sleepafterload': 0,
         'maxexecutiontime': maxexecutiontime,
@@ -38,7 +37,7 @@ if __name__ == '__main__':
         'insertorder': 'nothashed',
         'requestdistribution.0': 'uniform',
         'requestdistribution': 'zipfian',
-        **{f'zipfian_const.{i}': zipf[i-1] for i in range(1,threads)},
+        **{f'zipfian_const.{i}': zipf[i-1] for i in range(1, min(threads, len(zipf)+1))},
         **{f'sleepafterload.{i}': int(i*(maxexecutiontime/phases)) for i in range(threads)},
         **{f'maxexecutiontime.{i}': int((1 - i*2/phases)*maxexecutiontime) for i in range(threads)},
         'cachelib.size': 2_000_000_000*threads,
@@ -61,28 +60,37 @@ if __name__ == '__main__':
         # workload
         'workload.type': 'synthetic',
         'readproportion': 1,
-        'updateproportion':0,
-        'scanproportion':0,
-        'insertproportion':0,
+        'updateproportion': 0,
+        'scanproportion': 0,
+        'insertproportion': 0,
     }
-
-    load = {
-        **ycsb,
+    
+    # Load configuration (for database initialization)
+    load_setup = Load(ycsb_executable, {
+        **ycsb_config,
         'rocksdb.dbname': db_backup,
         'rocksdb.destroy': 'true',
-    }
-
-    setups = {
-        'CacheLib-Optimizer': {
-            **ycsb,
+    })
+    
+    # Create Setup objects for different configurations
+    setups = [
+        Setup('CacheLib-Optimizer', ycsb_executable, {
+            **ycsb_config,
             'cachelib.eviction': '2q',
             'cachelib.pooloptimizer': 'on',
             'cachelib.poolresizer': 'on',
-        },
-        'CacheLib': {
-            **ycsb,
-            'cachelib.pool_optimizer': 'off',
-        }
-    }
-
-    RunYCSB(name, sourceDir, outputDir, load, setups, runs, status, sifDir)
+        }),
+        Setup('CacheLib', ycsb_executable, {
+            **ycsb_config,
+            'cachelib.pooloptimizer': 'off',  # Fixed typo: was 'pool_optimizer'
+            'cachelib.poolresizer': 'off',
+        })
+        Setup('CacheLib-Holpaca', ycsb_executable, {
+            **ycsb_config,
+            'cachelib.poolresizer': 'on',
+            }, controler_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
+              controller_args='HitRatioMaximization 1000:0.05')
+    ]
+    
+    # Run the benchmark
+    RunYCSB(name, runs, outputDir, load_setup, setups, "READ-PASSED READ-FAILED ALL", sifPath)

@@ -26,6 +26,8 @@ if __name__ == '__main__':
     ycsb = {
         'threadcount': len(traces),
         'status.interval': 1,
+        #tmp
+        'maxexecutiontime': 1800,
         # Cachelib
         'cachelib.size': 2_000_000_000*len(traces),
         'cachelib.name': 'instance-0',
@@ -67,6 +69,11 @@ if __name__ == '__main__':
             **ycsb,
             'cachelib.pool_optimizer': 'off',
         },
+        'CacheLib-Holpaca': {
+            **ycsb,
+            'cachelib.controller.address': 'localhost:11111',
+            'cachelib.holpaca.address': 'localhost:22222',
+            }
     }
 
     RunYCSB(name, sourceDir, outputDir, load, setups, runs, status, sifDir)

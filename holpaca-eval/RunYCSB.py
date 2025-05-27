@@ -3,12 +3,57 @@ import shutil
 import os
 from datetime import datetime
 import json
+import re
+import time
 
-def build_param_str(params):
-    return " ".join(f"-p {k}={v}" for k, v in params.items())
+def RunYCSB(name, runs, output_dir, load_setup, setups, status, sif_path=None):
+    if sif_path:
+        load_job_id = loadSIF(name, load_setup, sif_path)
+        if not load_job_id:
+            print(f"[SIF] Failed to start load job for {name}.")
+            return
+        for setup in setups:
+            for i in range(runs):
+                out = os.path.join(output_dir, setup.name, str(i + 1))
+                os.makedirs(out, exist_ok=True)
+                runSIF(f"{name}-{setup.name}-{i+1}", setup, load_setup.config['rocksdb.dbname'], out, status, load_job_id, sif_path)
+    else:
+        loadLOCAL(name, load_setup)
+        for setup in setups:
+            for i in range(runs):
+                out = os.path.join(output_dir, setup.name, str(i + 1))
+                os.makedirs(out, exist_ok=True)
+                runLOCAL(f"{name}-{setup.name}-{i + 1}", setup, load_setup.config['rocksdb.dbname'], out, status)
 
-def get_mem_mb(cachesize):
-    return int(cachesize * 1.2 / 1024 / 1024)
+class Load:
+    def __init__(self, executable, config):
+        self.executable = executable
+        self.config = config
+        self.threads = int(config.get('threadcount', 1))
+        self.traces = [config.get(f'trace.file.{i}', config.get('trace.file')) for i in range(self.threads)]
+
+    def build_cmd(self):
+        return f"{self.executable} -load -db cachelib-holpaca {' '.join(f'-p {k}={v}' for k, v in self.config.items())}"
+
+
+class Setup:
+    def __init__(self, name, executable, config, controller_exec=None, controller_args=None):
+        self.name = name
+        self.config = config
+        self.executable = executable
+        self.total_cache_size = int(sum([
+            int(config.get(f'cachelib.size.{i}', config.get('cachelib.size', 0)))
+            for i in range(int(config.get('threadcount', 1)))
+        ]) * 1.2) # 20% overhead
+        self.controller_exec = controller_exec
+        self.controller_ip = config.get('cachelib.controller.address', None)
+        self.controller_args = controller_args or ""
+        self.threads = int(config.get('threadcount', 1))
+        self.traces = [config.get(f'trace.file.{i}', config.get('trace.file')) for i in range(int(config.get('threadcount', 1)))]
+
+    def build_cmd(self, status=None):
+        return f"{self.executable} -run -db cachelib-holpaca {f'-s {status}' if status else ''} {' '.join(f'-p {k}={v}' for k, v in self.config.items())}"
+
 
 def build_sbatch_cmd(name, mem, cmd, stdout, stderr, jobid=None):
     cmd = [
@@ -30,141 +75,173 @@ def build_sbatch_cmd(name, mem, cmd, stdout, stderr, jobid=None):
         cmd.insert(1, f"--dependency=afterok:{jobid}")
     return cmd
 
-def build_result_dir(base_dir, setup_name, run):
-    setup_name = setup_name.replace(" ", "_").replace(":", "_")
-    result_dir = os.path.join(base_dir, setup_name, str(run))
-    shutil.rmtree(result_dir, ignore_errors=True)
-    os.makedirs(result_dir, exist_ok=True)
-    return result_dir
+# LOCAL 
+def loadLOCAL(name, setup: Load): 
+    print(f"[LOCAL] Loading for {name}: {setup.build_cmd()}")
+    db = setup.config['rocksdb.dbname']
+    shutil.rmtree(db, ignore_errors=True)
+    os.makedirs(db, exist_ok=True)
+    subprocess.run(setup.build_cmd(), shell=True)
 
-def build_workload_copy_snippet(config):
-    snippet = ""
-    original_parts = {}
-    binds = []
+def runLOCAL(name, setup: Setup, db_backup, outdir, status):
+    db = setup.config['rocksdb.dbname']
+    shutil.rmtree(db, ignore_errors=True)
+    shutil.copytree(db_backup, db) # Restore the database from backup
+    print(f"[LOCAL] Running {name}: {setup.build_cmd(status)}")
+    controller = None
+    with open(os.path.join(outdir, 'dstat.csv'), 'w') as dstat_output:
+        dstat = subprocess.Popen(["dstat", "-cdlmnyt"], stdout=dstat_output)
+        if setup.controller_exec:
+            controller = subprocess.Popen([setup.controller_exec, setup.controller_ip, *setup.controller_args.split()], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        with open(os.path.join(outdir, 'ycsb.txt'), 'w') as ycsb_output:
+            subprocess.run(setup.build_cmd(status), shell=True, stdout=ycsb_output)
+        if controller:
+            controller.terminate()
+        dstat.terminate()
 
-    basefile = config.get("trace.file")
-    if basefile:
-        tmp_base = f"/tmp/{os.path.basename(basefile)}"
-        snippet += f"cp {basefile} {tmp_base}; "
-        config["trace.file"] = tmp_base
-        binds.append(os.path.dirname(basefile))
+# SLURM
 
-    for i in range(int(config.get("threadcount", 1))):
-        partfile = config.get(f"trace.file.{i}")
-        if partfile:
-            tmp_part = f"/tmp/{os.path.basename(partfile)}"
-            snippet += f"cp {partfile} {tmp_part}; "
-            original_parts[f"trace.file.{i}"] = partfile
-            config[f"trace.file.{i}"] = tmp_part
-            binds.append(os.path.dirname(partfile))
-    return snippet, ','.join(binds), original_parts
+# Returns the job ID of the load job
+def loadSIF(name, setup: Load, sif_path):
+    if not os.path.exists(sif_path):
+        raise FileNotFoundError(f"SIF file not found: {sif_path}")
+    # ---
+    db = setup.config['rocksdb.dbname']
+    fake_db = "/tmp/db"
+    if os.path.exists(db):
+        print(f"[SIF] Removing existing database at {db}")
+        shutil.rmtree(db, ignore_errors=True)
+    print(f"[SIF] Creating database directory at {db}")
+    os.makedirs(db, exist_ok=True)
+    setup.config['rocksdb.dbname'] = fake_db
+    # ---
+    copy_workloads_cmd = "" 
+    for thread,tracefile in enumerate(setup.traces):
+        setup.config[f"trace.file.{thread}"] = f"/tmp/{os.path.basename(tracefile)}"
+        copy_workloads_cmd += f"cp '{tracefile}' /tmp; "
+    # ---
+    load_cmd = setup.build_cmd()
+    load_job_id = None
+    executable_dir = os.path.dirname(setup.executable)
+    wrapped = f"""
+        mkdir -p {fake_db}
+        {copy_workloads_cmd}
+        singularity run --bind '{executable_dir},/tmp' {sif_path} {load_cmd}
+        cp {fake_db}/* {db}/
+    """
+    print(f"[SIF] Submitting load job for {name} with command")
+    result = subprocess.run(build_sbatch_cmd(
+        name=f"load-{name}",
+        mem=196,
+        cmd=wrapped,
+        stdout=f"/tmp/slurm-load-{name}.out",
+        stderr=f"/tmp/slurm-load-{name}.err"
+    ),
+     stdout=subprocess.PIPE, 
+     stderr=subprocess.PIPE, 
+     universal_newlines=True)
 
-def restore_workload_paths(config, original_parts):
-    for key, value in original_parts.items():
-        config[key] = value
+    if result.returncode == 0:
+        for line in result.stdout.strip().splitlines():
+            if line.startswith("Submitted batch job"):
+                load_job_id = line.split()[-1]
 
-def RunYCSB(name, sourceDir, outputDir, load_config, setups, runs, status='READ-FAILED READ-PASSED ALL', sif_path=None):
-    exe = os.path.join(sourceDir, 'build-ycsb/ycsb')
+    return load_job_id
 
-    if 'cachelib.size' not in load_config:
-        print("[ERROR] Missing cache size in load_config")
-        return
+def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path):
+    if not os.path.exists(sif_path):
+        raise FileNotFoundError(f"SIF file not found: {sif_path}")
+    # ---
+    controller_job_id = None
+    if setup.controller_exec:
+        controller_dir = os.path.dirname(setup.controller_exec)
+        inner = f"""dstat -cdlmnyt > {outdir}/controller_dstat.csv 2>&1 & \
+                    {setup.controller_exec} $(hostname -I | awk '{{print $1}}') {setup.controller_args}""" 
 
-    mem_mb = get_mem_mb(load_config['cachelib.size'])
-
-    db_bkp = load_config['rocksdb.dbname']
-    shutil.rmtree(db_bkp, ignore_errors=True)
-    os.makedirs(db_bkp, exist_ok=True)
-
-    if sif_path is not None:
-        load_cfg_tmp = load_config.copy()
-        workload_copy, tracesDirs, original_parts = build_workload_copy_snippet(load_cfg_tmp)
-        load_cfg_tmp['rocksdb.dbname'] = "/tmp/db"
-        load_cmd = f"{exe} -load -db cachelib-holpaca {build_param_str(load_cfg_tmp)}"
-        load_job_id = None
-        wrapped = f"""
-mkdir -p /tmp/db
-{workload_copy}
-cd {sourceDir}
-singularity run --bind '{sourceDir},/tmp,{tracesDirs}' {sif_path} {load_cmd}
-cp /tmp/db/* {db_bkp}/
-"""
+        wrapped = f"singularity run --bind '{controller_dir},{outdir}' {sif_path} bash -c '{inner}'"
+        print(f"[SIF] Submitting controller job for {setup.name} with command")
         result = subprocess.run(build_sbatch_cmd(
-            name=f"load-{name}",
-            mem=mem_mb,
+            name=f"controller-{name}",
+            mem=196,
             cmd=wrapped,
-            stdout=f"/tmp/slurm-load-{name}.out",
-            stderr=f"/tmp/slurm-load-{name}.err"
+            stdout=f"/tmp/slurm-controller-{name}.out",
+            stderr=f"/tmp/slurm-controller-{name}.err",
+            jobid=load_job_id
         ),
-         stdout=subprocess.PIPE, 
-         stderr=subprocess.PIPE, 
-         universal_newlines=True)
-
-        restore_workload_paths(load_cfg_tmp, original_parts)
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True)
 
         if result.returncode == 0:
             for line in result.stdout.strip().splitlines():
                 if line.startswith("Submitted batch job"):
-                    load_job_id = line.split()[-1]
+                    controller_job_id = line.split()[-1]
 
-        if load_job_id is None:
-            print("[ERROR] Failed to submit load job")
+        if controller_job_id is None:
+            print(f"[SIF] Failed to start controller job for {setup.name}.")
             return
 
-    else:
-        load_cmd = f"{exe} -load -db cachelib-holpaca {build_param_str(load_config)}"
-        print(f"[LOCAL] Running load: {load_cmd}")
-        subprocess.run(load_cmd, shell=True)
+        controller_compute_node = None
+        while controller_compute_node is None:
+            try:
+                output = subprocess.check_output(
+                    ["squeue", "-j", controller_job_id, "-o", "%N"],
+                    text=True
+                ).strip()
 
-    os.makedirs(outputDir, exist_ok=True)
-    with open(os.path.join(outputDir, 'setups.json'), 'w') as f:
-        json.dump(setups, f, indent=2)
+                if output and output != "(null)":
+                    match = re.match(r'cx(\d+)', output)
+                    if match:
+                        controller_compute_node = int(match.group(1))
+            except subprocess.CalledProcessError as e:
+                pass
+            time.sleep(1)
 
-    for setup_name, setup_cfg in setups.items():
-        for run in range(1, runs + 1):
-            print(f"[RUN] Running {setup_name} for {name} (run {run})")
-            rid = f"{setup_name}-{name}-run{run}"
-            outdir = build_result_dir(outputDir, setup_name, run)
+        print(f"[SIF] Controller job {controller_job_id} is running on compute node {controller_compute_node}.")
+        setup.config['cachelib.controller.address'] = f"10.12.1.{controller_compute_node}:11110"
+    # ---
+    copy_workloads_cmd = "" 
+    for thread,tracefile in enumerate(setup.traces):
+        setup.config[f"trace.file.{thread}"] = f"/tmp/{os.path.basename(tracefile)}"
+        copy_workloads_cmd += f"cp '{tracefile}' /tmp; "
+    # ---
+    db = "/tmp/db"
+    setup.config['rocksdb.dbname'] = db
+    executable_dir = os.path.dirname(setup.executable)
+    local_dstat_output = "/tmp/dstat.csv"
+    local_ycsb_output = "/tmp/ycsb.txt"
+    dstat_output = os.path.join(outdir, 'dstat.csv')
+    ycsb_output = os.path.join(outdir, 'ycsb.txt')
+    # remove holpaca.address if it exists
+    override_ips = "IPS=''"
+    if controller_job_id:
+        override_ips = f"""
+        IP=$(hostname -I | awk '{{print $1}}') 
+        IPS=''
+        for i in $(seq 1 {setup.threads}); do
+            IPS+=" -p cachelib.holpaca.address.$i=$IP:$(($i + 11110))"
+        done
+        """
+    wrapped = f"""
+        {override_ips}
+        mkdir -p {db} && cp -r {db_backup}/* {db}/
+        {copy_workloads_cmd}
+        singularity run --bind '{executable_dir},/tmp' {sif_path} bash -c '\
+            dstat -cdlmnyt > {local_dstat_output} 2>&1 & \
+            {setup.build_cmd(status)} $IPS > {local_ycsb_output} 2>&1; \
+            kill $(pgrep dstat)'
+        {f'scancel {controller_job_id}' if controller_job_id else ''}
+        cp {local_ycsb_output} {ycsb_output}
+        cp {local_dstat_output} {dstat_output}
+    """
 
-            if sif_path is not None:
-                run_cfg_tmp = setup_cfg.copy()
-                db = run_cfg_tmp['rocksdb.dbname']
-                run_cfg_tmp['rocksdb.dbname'] = "/tmp/db"
-                workload_copy, tracesDirs, original_parts = build_workload_copy_snippet(run_cfg_tmp)
-                inner = f"""
-mkdir -p /tmp/db && cp -r {db_bkp}/* /tmp/db/
-{workload_copy}
-cd {sourceDir}
-dstat -cdlmnyt > /tmp/dstat.csv 2>&1 &
-{exe} -run -db cachelib-holpaca -s {status} {build_param_str(run_cfg_tmp)} > /tmp/ycsb.txt
-kill $(pgrep dstat)
-cp /tmp/ycsb.txt {outdir}/ycsb.txt
-cp /tmp/dstat.csv {outdir}/dstat.csv
-"""
-                wrapped = f"singularity run --bind '{sourceDir},/tmp,{tracesDirs}' {sif_path} bash -c '{inner}'"
+    print(f"[SIF] Submitting run job for {name}, setup: {setup.name}")
+    subprocess.run(build_sbatch_cmd(
+        name=name,
+        mem=f"{int(setup.total_cache_size / (1024 * 1024))}M",
+        cmd=wrapped,
+        stdout=f"/tmp/slurm-{name}.out",
+        stderr=f"/tmp/slurm-{name}.err",
+        jobid=load_job_id
+    ))
 
-                sbatch_cmd = build_sbatch_cmd(
-                    name=rid,
-                    mem=mem_mb,
-                    cmd=wrapped,
-                    stdout=f"/tmp/slurm-{rid}.out",
-                    stderr=f"/tmp/slurm-{rid}.err",
-                    jobid=load_job_id
-                )
-                print(sbatch_cmd)
-                subprocess.run(sbatch_cmd)
-                restore_workload_paths(run_cfg_tmp, original_parts)
-            else:
-                db = setup_cfg['rocksdb.dbname']
-                shutil.rmtree(db, ignore_errors=True)
-                shutil.copytree(db_bkp, db)
-                dstat_out = os.path.join(outdir, 'dstat.csv')
-                ycsb_out = os.path.join(outdir, 'ycsb.txt')
-                print(f"[LOCAL] Running: {exe} -run -db cachelib-holpaca -s {status} {build_param_str(setup_cfg)}")
-                dstat_output = open(dstat_out, 'w')
-                dstat = subprocess.Popen(["dstat", "-cdlmnyt"], stdout=dstat_output)
-                cmd = f"{exe} -run -db cachelib-holpaca -s {status} {build_param_str(setup_cfg)}"
-                with open(ycsb_out, 'w') as outf:
-                    subprocess.run(cmd, shell=True, stdout=outf)
-                dstat.terminate()
-                dstat_output.close()
