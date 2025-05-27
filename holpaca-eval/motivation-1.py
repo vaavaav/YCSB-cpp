@@ -21,6 +21,7 @@ if __name__ == '__main__':
     ycsb_executable = os.path.join(sourceDir, 'build-ycsb/ycsb')  # Update this path
     
     db_backup = os.path.join(sourceDir, 'db-backup', name)
+    db = os.path.join(sourceDir, 'db', name)
     zipf = [0.6, 0.9, 1.2]
     phases = threads*2-1
     
