@@ -117,8 +117,9 @@ def loadSIF(name, setup: Load, sif_path):
     # ---
     copy_workloads_cmd = "" 
     for thread,tracefile in enumerate(setup.traces):
-        setup.config[f"trace.file.{thread}"] = f"/tmp/{os.path.basename(tracefile)}"
-        copy_workloads_cmd += f"cp '{tracefile}' /tmp; "
+        if tracefile:
+            setup.config[f"trace.file.{thread}"] = f"/tmp/{os.path.basename(tracefile)}"
+            copy_workloads_cmd += f"cp '{tracefile}' /tmp; "
     # ---
     load_cmd = setup.build_cmd()
     load_job_id = None
@@ -202,8 +203,9 @@ def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path)
     # ---
     copy_workloads_cmd = "" 
     for thread,tracefile in enumerate(setup.traces):
-        setup.config[f"trace.file.{thread}"] = f"/tmp/{os.path.basename(tracefile)}"
-        copy_workloads_cmd += f"cp '{tracefile}' /tmp; "
+        if tracefile:
+            setup.config[f"trace.file.{thread}"] = f"/tmp/{os.path.basename(tracefile)}"
+            copy_workloads_cmd += f"cp '{tracefile}' /tmp; "
     # ---
     db = "/tmp/db"
     setup.config['rocksdb.dbname'] = db
