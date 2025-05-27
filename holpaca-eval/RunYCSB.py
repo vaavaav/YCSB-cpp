@@ -187,7 +187,7 @@ def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path)
             try:
                 output = subprocess.check_output(
                     ["squeue", "-j", controller_job_id, "-o", "%N"],
-                    text=True
+                    universal_newlines=True
                 ).strip()
 
                 if output and output != "(null)":
@@ -240,7 +240,7 @@ def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path)
     print(f"[SIF] Submitting run job for {name}, setup: {setup.name}")
     subprocess.run(build_sbatch_cmd(
         name=name,
-        mem=f"{int(setup.total_cache_size / (1024 * 1024))}M",
+        mem=int(setup.total_cache_size / (1024 * 1024)),
         cmd=wrapped,
         stdout=f"/tmp/slurm-{name}.out",
         stderr=f"/tmp/slurm-{name}.err",
