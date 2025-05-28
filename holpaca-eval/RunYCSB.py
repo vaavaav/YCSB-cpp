@@ -157,7 +157,7 @@ def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path)
     if setup.controller_exec:
         controller_dir = os.path.dirname(setup.controller_exec)
         inner = f"""dstat -cdlmnyt > {outdir}/controller_dstat.csv 2>&1 & \
-                    {setup.controller_exec} $(hostname -I | awk '{{print $1}}') {setup.controller_args}""" 
+                {setup.controller_exec} $(hostname -I | awk '{{print $1}}'):11110 {setup.controller_args}""" 
 
         wrapped = f"singularity run --bind '{controller_dir},{outdir}' {sif_path} bash -c '{inner}'"
         print(f"[SIF] Submitting controller job for {setup.name} with command")
@@ -181,25 +181,6 @@ def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path)
         if controller_job_id is None:
             print(f"[SIF] Failed to start controller job for {setup.name}.")
             return
-
-        controller_compute_node = None
-        while controller_compute_node is None:
-            try:
-                output = subprocess.check_output(
-                    ["squeue", "-j", controller_job_id, "-o", "%N"],
-                    universal_newlines=True
-                ).strip()
-
-                if output and output != "(null)":
-                    match = re.match(r'cx(\d+)', output)
-                    if match:
-                        controller_compute_node = int(match.group(1))
-            except subprocess.CalledProcessError as e:
-                pass
-            time.sleep(1)
-
-        print(f"[SIF] Controller job {controller_job_id} is running on compute node {controller_compute_node}.")
-        setup.config['cachelib.controller.address'] = f"10.12.1.{controller_compute_node}:11110"
     # ---
     copy_workloads_cmd = "" 
     for thread,tracefile in enumerate(setup.traces):
@@ -218,11 +199,22 @@ def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path)
     override_ips = "IPS=''"
     if controller_job_id:
         override_ips = f"""
-        IP=$(hostname -I | awk '{{print $1}}') 
-        IPS=''
-        for i in $(seq 1 {setup.threads}); do
-            IPS+=" -p cachelib.holpaca.address.$i=$IP:$(($i + 11110))"
+        CONTROLLER_COMPUTE_NODE=''
+        while [[ -z '$CONTROLLER_COMPUTE_NODE' ]]; do
+            output=$(squeue -j '{controller_job_id}' -o '%N' 2>/dev/null | tail -n 1 | xargs)
+            if [[ -n '$output' && '$output' != "(null)" ]]; then
+                if [[ '$output' =~ ^cx([0-9]+) ]]; then
+                    CONTROLLER_COMPUTE_NODE=${{BASH_REMATCH[1]}}
+                fi
+            fi 
+            sleep 1
         done
+        IPS=' -p cachelib.controller.address=10.12.1.$CONTROLLER_COMPUTE_NODE:11110'
+        IP=$(hostname -I | awk '{{print $1}}') 
+        for i in $(seq 1 {setup.threads}); do
+            IPS+=' -p cachelib.holpaca.address.$i=$IP:$(($i + 11110))'
+        done
+        echo $IPS
         """
     wrapped = f"""
         {override_ips}
@@ -242,8 +234,8 @@ def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path)
         name=name,
         mem=int(setup.total_cache_size / (1024 * 1024)),
         cmd=wrapped,
-        stdout=f"/tmp/slurm-{name}.out",
-        stderr=f"/tmp/slurm-{name}.err",
+        stdout=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-{name}.out",
+        stderr=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-{name}.err",
         jobid=load_job_id
     ))
 
