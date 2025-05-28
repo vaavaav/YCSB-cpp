@@ -6,9 +6,9 @@ import json
 import re
 import time
 
-def RunYCSB(name, runs, output_dir, load_setup, setups, status, sif_path=None):
+def RunYCSB(name, runs, output_dir, load_setup, setups, status, sif_path=None, binds=[]):
     if sif_path:
-        load_job_id = loadSIF(name, load_setup, sif_path)
+        load_job_id = loadSIF(name, load_setup, sif_path, binds)
         if not load_job_id:
             print(f"[SIF] Failed to start load job for {name}.")
             return
@@ -16,7 +16,7 @@ def RunYCSB(name, runs, output_dir, load_setup, setups, status, sif_path=None):
             for i in range(runs):
                 out = os.path.join(output_dir, setup.name, str(i + 1))
                 os.makedirs(out, exist_ok=True)
-                runSIF(f"{name}-{setup.name}-{i+1}", setup, load_setup.config['rocksdb.dbname'], out, status, load_job_id, sif_path)
+                runSIF(f"{name}-{setup.name}-{i+1}", setup, load_setup.config['rocksdb.dbname'], out, status, load_job_id, sif_path, binds)
     else:
         loadLOCAL(name, load_setup)
         for setup in setups:
@@ -55,7 +55,7 @@ class Setup:
         return f"{self.executable} -run -db cachelib-holpaca {f'-s {status}' if status else ''} {' '.join(f'-p {k}={v}' for k, v in self.config.items())}"
 
 
-def build_sbatch_cmd(name, mem, cmd, stdout, stderr, jobid=None):
+def build_sbatch_cmd(name, cmd, stdout, stderr, mem=None, jobid=None):
     cmd = [
         "sbatch",
         f"--job-name={name}",
@@ -63,7 +63,6 @@ def build_sbatch_cmd(name, mem, cmd, stdout, stderr, jobid=None):
         "--nodes=1",
         "--ntasks=1",
         "--cpus-per-task=1",
-        f"--mem={mem}M",
         "--partition=large-x86",
         "--mail-type=END",
         "--mail-user=jose.p.peixoto@inesctec.pt",
@@ -71,6 +70,8 @@ def build_sbatch_cmd(name, mem, cmd, stdout, stderr, jobid=None):
         f"--error={stderr}",
         "--wrap", cmd
     ]
+    if mem:
+        cmd.insert(1, f"--mem={mem}M")
     if jobid:
         cmd.insert(1, f"--dependency=afterok:{jobid}")
     return cmd
@@ -102,7 +103,7 @@ def runLOCAL(name, setup: Setup, db_backup, outdir, status):
 # SLURM
 
 # Returns the job ID of the load job
-def loadSIF(name, setup: Load, sif_path):
+def loadSIF(name, setup: Load, sif_path, binds=[]):
     if not os.path.exists(sif_path):
         raise FileNotFoundError(f"SIF file not found: {sif_path}")
     # ---
@@ -127,13 +128,12 @@ def loadSIF(name, setup: Load, sif_path):
     wrapped = f"""
         mkdir -p {fake_db}
         {copy_workloads_cmd}
-        singularity run --bind '{executable_dir},/tmp' {sif_path} {load_cmd}
+        singularity run --bind '{executable_dir},/tmp,{','.join(binds)}' {sif_path} {load_cmd}
         cp {fake_db}/* {db}/
     """
-    print(f"[SIF] Submitting load job for {name} with command")
+    print(f"[SIF] Submitting load job for {name} with command: {wrapped}")
     result = subprocess.run(build_sbatch_cmd(
         name=f"load-{name}",
-        mem=128,
         cmd=wrapped,
         stdout=f"/tmp/slurm-load-{name}.out",
         stderr=f"/tmp/slurm-load-{name}.err"
@@ -159,11 +159,10 @@ def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path)
         inner = f"""dstat -cdlmnyt > {outdir}/controller_dstat.csv 2>&1 & \
                 {setup.controller_exec} $(hostname -I | awk '{{print $1}}'):11110 {setup.controller_args}""" 
 
-        wrapped = f"singularity run --bind '{controller_dir},{outdir}' {sif_path} bash -c '{inner}'"
+        wrapped = f"singularity run --bind '{controller_dir},{outdir},{','.join(binds)}' {sif_path} bash -c '{inner}'"
         print(f"[SIF] Submitting controller job for {setup.name} with command")
         result = subprocess.run(build_sbatch_cmd(
             name=f"controller-{name}",
-            mem=128,
             cmd=wrapped,
             stdout=f"/tmp/slurm-controller-{name}.out",
             stderr=f"/tmp/slurm-controller-{name}.err",
@@ -220,7 +219,7 @@ def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path)
         {override_ips}
         mkdir -p {db} && cp -r {db_backup}/* {db}/
         {copy_workloads_cmd}
-        singularity run --bind '{executable_dir},/tmp' {sif_path} bash -c '\
+        singularity run --bind '{executable_dir},/tmp,{','.join(binds)}' {sif_path} bash -c '\
             dstat -cdlmnyt > {local_dstat_output} 2>&1 & \
             {setup.build_cmd(status)} $IPS > {local_ycsb_output} 2>&1; \
             kill $(pgrep dstat)'
@@ -232,10 +231,10 @@ def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path)
     print(f"[SIF] Submitting run job for {name}, setup: {setup.name}")
     subprocess.run(build_sbatch_cmd(
         name=name,
-        mem=int(setup.total_cache_size / (1024 * 1024)),
         cmd=wrapped,
         stdout=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-{name}.out",
         stderr=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-{name}.err",
+        mem=int(setup.total_cache_size / (1024 * 1024)),
         jobid=load_job_id
     ))
 

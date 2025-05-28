@@ -80,5 +80,5 @@ if __name__ == '__main__':
     ]
     
     # Run the benchmark
-    RunYCSB(name, runs, outputDir, load_setup, setups, "READ-PASSED READ-FAILED ALL", sifPath)
+    RunYCSB(name, runs, outputDir, load_setup, setups, "READ-PASSED READ-FAILED ALL", sifPath, binds=[sourceDir])
 
