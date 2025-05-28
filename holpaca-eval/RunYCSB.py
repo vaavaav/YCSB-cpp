@@ -23,7 +23,7 @@ def RunYCSB(name, runs, output_dir, load_setup, setups, status, sif_path=None, b
             for i in range(runs):
                 out = os.path.join(output_dir, setup.name, str(i + 1))
                 os.makedirs(out, exist_ok=True)
-                runLOCAL(f"{name}-{setup.name}-{i + 1}", setup, load_setup.config['rocksdb.dbname'], out, status)
+                runLOCAL(f"{name}-{setup.name}-{i + 1}", setup, setup.config['rocksdb.dbname'], out, status)
 
 class Load:
     def __init__(self, executable, config):
@@ -147,6 +147,8 @@ def loadSIF(name, setup: Load, sif_path=None, binds=[]):
             if line.startswith("Submitted batch job"):
                 load_job_id = line.split()[-1]
 
+    setup.config['rocksdb.dbname'] = db  # Restore the original database path in the setup config
+
     return load_job_id
 
 def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path=None, binds=[]):
@@ -164,8 +166,8 @@ def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path=
         result = subprocess.run(build_sbatch_cmd(
             name=f"controller-{name}",
             cmd=wrapped,
-            stdout=f"/tmp/slurm-controller-{name}.out",
-            stderr=f"/tmp/slurm-controller-{name}.err",
+            stdout=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-controller-{name}.out",
+            stderr=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-controller-{name}.err",
             jobid=load_job_id
         ),
         stdout=subprocess.PIPE,
@@ -200,18 +202,17 @@ def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path=
         override_ips = f"""
         CONTROLLER_COMPUTE_NODE=''
         while [[ -z '$CONTROLLER_COMPUTE_NODE' ]]; do
-            output=$(squeue -j '{controller_job_id}' -o '%N' 2>/dev/null | tail -n 1 | xargs)
-            if [[ -n '$output' && '$output' != "(null)" ]]; then
-                if [[ '$output' =~ ^cx([0-9]+) ]]; then
-                    CONTROLLER_COMPUTE_NODE=${{BASH_REMATCH[1]}}
-                fi
-            fi 
+            output=$(squeue -j '{controller_job_id}' -o '%N' --noheader 2>/dev/null | xargs)
+            if [[ '$output' =~ cx([0-9]+) ]]; then
+                CONTROLLER_COMPUTE_NODE=${{BASH_REMATCH[1]}}
+            fi
             sleep 1
         done
         IPS=' -p cachelib.controller.address=10.12.1.$CONTROLLER_COMPUTE_NODE:11110'
         IP=$(hostname -I | awk '{{print $1}}') 
         for i in $(seq 1 {setup.threads}); do
-            IPS+=' -p cachelib.holpaca.address.$i=$IP:$(($i + 11110))'
+            PORT=
+            IPS+=' -p cachelib.holpaca.address.$i=$IP:$((11110 + $i))'
         done
         echo $IPS
         """
