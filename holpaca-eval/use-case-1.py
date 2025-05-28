@@ -19,11 +19,11 @@ if __name__ == '__main__':
     traces = sys.argv[3].split(':')
     tracesDir = os.path.abspath(sys.argv[4])
     outputDir = os.path.join(os.path.abspath(sys.argv[5]), name)
-    sifDir = os.path.abspath(sys.argv[6]) if len(sys.argv) > 6 else None
+    sifPath = os.path.abspath(sys.argv[6]) if len(sys.argv) > 6 else None
     db_backup = os.path.join(sourceDir, 'db-backup', name)
     db = os.path.join(sourceDir, 'db', name)
 
-    ycsb = {
+    ycsb_config = {
         'threadcount': len(traces),
         'status.interval': 1,
         #tmp
@@ -72,11 +72,16 @@ if __name__ == '__main__':
             'cachelib.pooloptimizer': 'off',  # Fixed typo: was 'pool_optimizer'
             'cachelib.poolresizer': 'off',
         }),
-        Setup('CacheLib-Holpaca', ycsb_executable, {
+        Setup('CacheLib-Holpaca-HR', ycsb_executable, {
             **ycsb_config,
             'cachelib.poolresizer': 'on',
             }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
-              controller_args='HitRatioMaximization 1000:0.05')
+              controller_args='HitRatioMaximization 1000:0.05'),
+        Setup('CacheLib-Holpaca-T', ycsb_executable, {
+            **ycsb_config,
+            'cachelib.poolresizer': 'on',
+            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
+              controller_args='ThroughputMaximization 1000:0.05')
     ]
     
     # Run the benchmark

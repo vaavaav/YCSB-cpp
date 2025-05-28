@@ -63,7 +63,7 @@ def build_sbatch_cmd(name, cmd, stdout, stderr, mem=None, jobid=None):
         "--nodes=1",
         "--ntasks=1",
         "--cpus-per-task=1",
-        "--partition=large-x86",
+        "--partition=dev-x86",
         "--mail-type=END",
         "--mail-user=jose.p.peixoto@inesctec.pt",
         f"--output={stdout}",
