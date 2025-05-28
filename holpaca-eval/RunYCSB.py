@@ -103,7 +103,7 @@ def runLOCAL(name, setup: Setup, db_backup, outdir, status):
 # SLURM
 
 # Returns the job ID of the load job
-def loadSIF(name, setup: Load, sif_path, binds=[]):
+def loadSIF(name, setup: Load, sif_path=None, binds=[]):
     if not os.path.exists(sif_path):
         raise FileNotFoundError(f"SIF file not found: {sif_path}")
     # ---
@@ -131,7 +131,7 @@ def loadSIF(name, setup: Load, sif_path, binds=[]):
         singularity run --bind '{executable_dir},/tmp,{','.join(binds)}' {sif_path} {load_cmd}
         cp {fake_db}/* {db}/
     """
-    print(f"[SIF] Submitting load job for {name} with command: {wrapped}")
+    print(f"[SIF] Submitting load job for {name}")
     result = subprocess.run(build_sbatch_cmd(
         name=f"load-{name}",
         cmd=wrapped,
@@ -149,7 +149,7 @@ def loadSIF(name, setup: Load, sif_path, binds=[]):
 
     return load_job_id
 
-def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path):
+def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path=None, binds=[]):
     if not os.path.exists(sif_path):
         raise FileNotFoundError(f"SIF file not found: {sif_path}")
     # ---
@@ -160,7 +160,7 @@ def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path)
                 {setup.controller_exec} $(hostname -I | awk '{{print $1}}'):11110 {setup.controller_args}""" 
 
         wrapped = f"singularity run --bind '{controller_dir},{outdir},{','.join(binds)}' {sif_path} bash -c '{inner}'"
-        print(f"[SIF] Submitting controller job for {setup.name} with command")
+        print(f"[SIF] Submitting controller job for {setup.name}")
         result = subprocess.run(build_sbatch_cmd(
             name=f"controller-{name}",
             cmd=wrapped,
