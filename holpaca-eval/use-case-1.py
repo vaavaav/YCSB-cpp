@@ -23,6 +23,8 @@ if __name__ == '__main__':
     db_backup = os.path.join(sourceDir, 'db-backup', name)
     db = os.path.join(sourceDir, 'db', name)
 
+    ycsb_executable = os.path.join(sourceDir, 'build-ycsb/ycsb')  # Update this path
+
     ycsb_config = {
         'threadcount': len(traces),
         'status.interval': 1,
