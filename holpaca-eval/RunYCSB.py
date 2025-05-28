@@ -125,12 +125,12 @@ def loadSIF(name, setup: Load, sif_path=None, binds=[]):
     load_cmd = setup.build_cmd()
     load_job_id = None
     executable_dir = os.path.dirname(setup.executable)
-    wrapped = f"""
+    wrapped = f'''
         mkdir -p {fake_db}
         {copy_workloads_cmd}
-        singularity run --bind '{executable_dir},/tmp,{','.join(binds)}' {sif_path} {load_cmd}
+        singularity run --bind "{executable_dir},/tmp,{",".join(binds)}" {sif_path} {load_cmd}
         cp {fake_db}/* {db}/
-    """
+    '''
     print(f"[SIF] Submitting load job for {name}")
     result = subprocess.run(build_sbatch_cmd(
         name=f"load-{name}",
@@ -158,10 +158,10 @@ def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path=
     controller_job_id = None
     if setup.controller_exec:
         controller_dir = os.path.dirname(setup.controller_exec)
-        inner = f"""dstat -cdlmnyt > {outdir}/controller_dstat.csv 2>&1 & \
-                {setup.controller_exec} $(hostname -I | awk '{{print $1}}'):11110 {setup.controller_args}""" 
+        inner = f'''dstat -cdlmnyt > {outdir}/controller_dstat.csv 2>&1 & \
+                {setup.controller_exec} $(hostname -I | awk "{{print $1}}" | xargs):11110 {setup.controller_args}'''
 
-        wrapped = f"singularity run --bind '{controller_dir},{outdir},{','.join(binds)}' {sif_path} bash -c '{inner}'"
+        wrapped = f'singularity run --bind "{controller_dir},{outdir},{",".join(binds)}" {sif_path} bash -c "{inner}"'
         print(f"[SIF] Submitting controller job for {setup.name}")
         result = subprocess.run(build_sbatch_cmd(
             name=f"controller-{name}",
@@ -199,35 +199,35 @@ def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path=
     # remove holpaca.address if it exists
     override_ips = "IPS=''"
     if controller_job_id:
-        override_ips = f"""
-        CONTROLLER_COMPUTE_NODE=''
-        while [[ -z '$CONTROLLER_COMPUTE_NODE' ]]; do
-            output=$(squeue -j '{controller_job_id}' -o '%N' --noheader 2>/dev/null | xargs)
-            if [[ '$output' =~ cx([0-9]+) ]]; then
+        override_ips = f'''
+        CONTROLLER_COMPUTE_NODE=""
+        while [[ -z "$CONTROLLER_COMPUTE_NODE" ]]; do
+            output=$(squeue -j "{controller_job_id}" -o "%N" --noheader 2>/dev/null | xargs)
+            if [[ "$output" =~ cx([0-9]+) ]]; then
                 CONTROLLER_COMPUTE_NODE=${{BASH_REMATCH[1]}}
             fi
             sleep 1
         done
-        IPS=' -p cachelib.controller.address=10.12.1.$CONTROLLER_COMPUTE_NODE:11110'
-        IP=$(hostname -I | awk '{{print $1}}') 
+        IPS=" -p cachelib.controller.address=10.12.1.$CONTROLLER_COMPUTE_NODE:11110"
+        IP=$(hostname -I | awk "{{print $1}}" | xargs) 
         for i in $(seq 1 {setup.threads}); do
-            PORT=
-            IPS+=' -p cachelib.holpaca.address.$i=$IP:$((11110 + $i))'
+            PORT=$((11110 + $i))
+            IPS+=" -p cachelib.holpaca.address.$i=$IP:$PORT"
         done
         echo $IPS
-        """
-    wrapped = f"""
+        '''
+    wrapped = f'''
         {override_ips}
         mkdir -p {db} && cp -r {db_backup}/* {db}/
         {copy_workloads_cmd}
-        singularity run --bind '{executable_dir},/tmp,{','.join(binds)}' {sif_path} bash -c '\
+        singularity run --bind "{executable_dir},/tmp,{",".join(binds)}" {sif_path} bash -c "\
             dstat -cdlmnyt > {local_dstat_output} 2>&1 & \
             {setup.build_cmd(status)} $IPS > {local_ycsb_output} 2>&1; \
-            kill $(pgrep dstat)'
-        {f'scancel {controller_job_id}' if controller_job_id else ''}
+            kill $(pgrep dstat)"
+        {f"scancel {controller_job_id}" if controller_job_id else ""}
         cp {local_ycsb_output} {ycsb_output}
         cp {local_dstat_output} {dstat_output}
-    """
+    '''
 
     print(f"[SIF] Submitting run job for {name}, setup: {setup.name}")
     subprocess.run(build_sbatch_cmd(

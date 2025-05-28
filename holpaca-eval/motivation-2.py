@@ -88,7 +88,7 @@ if __name__ == '__main__':
             'cachelib.pooloptimizer': 'off',  # Fixed typo: was 'pool_optimizer'
             'cachelib.poolresizer': 'off',
         }),
-        Setup('CacheLib-Holpaca', ycsb_executable, {
+        Setup('CacheLib-Holpaca-HR', ycsb_executable, {
             **ycsb_config,
             'cachelib.poolresizer': 'on',
             }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
