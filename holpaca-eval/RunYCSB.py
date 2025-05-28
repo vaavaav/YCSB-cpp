@@ -42,7 +42,7 @@ class Setup:
         self.config = config
         self.executable = executable
         self.total_cache_size = int(sum([
-            int(config.get(f'cachelib.size.{i}', config.get('cachelib.size', 0)))
+            int(config.get(f'cachelib.size.{i}', config.get('cachelib.size', 0))*config.get(f'cachelib.pool.relsize.{i}', config.get('cachelib.pool.relsize', 1)))
             for i in range(int(config.get('threadcount', 1)))
         ]) * 1.2) # 20% overhead
         self.controller_exec = controller_exec
@@ -133,7 +133,7 @@ def loadSIF(name, setup: Load, sif_path):
     print(f"[SIF] Submitting load job for {name} with command")
     result = subprocess.run(build_sbatch_cmd(
         name=f"load-{name}",
-        mem=196,
+        mem=128,
         cmd=wrapped,
         stdout=f"/tmp/slurm-load-{name}.out",
         stderr=f"/tmp/slurm-load-{name}.err"
@@ -163,7 +163,7 @@ def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path)
         print(f"[SIF] Submitting controller job for {setup.name} with command")
         result = subprocess.run(build_sbatch_cmd(
             name=f"controller-{name}",
-            mem=196,
+            mem=128,
             cmd=wrapped,
             stdout=f"/tmp/slurm-controller-{name}.out",
             stderr=f"/tmp/slurm-controller-{name}.err",

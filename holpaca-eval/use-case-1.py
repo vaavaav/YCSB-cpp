@@ -51,33 +51,34 @@ if __name__ == '__main__':
         **{f'trace.file.{i}': os.path.join(tracesDir, trace) for i, trace in enumerate(traces)},
     }
 
-    load = {
-        **ycsb,
+    # Load configuration (for database initialization)
+    load_setup = Load(ycsb_executable, {
+        **ycsb_config,
         'rocksdb.dbname': db_backup,
         'rocksdb.destroy': 'true',
-        **{f'trace.file.{i}': os.path.join(tracesDir, loadTrace) for i, loadTrace in enumerate(loadTraces)},
-    }
-
-    setups = {
-        'CacheLib-Optimizer': {
-            **ycsb,
+        **{f'trace.file.{i}': os.path.join(tracesDir, trace) for i, trace in enumerate(loadTraces)},
+    })
+    
+    # Create Setup objects for different configurations
+    setups = [
+        Setup('CacheLib-Optimizer', ycsb_executable, {
+            **ycsb_config,
             'cachelib.eviction': '2q',
             'cachelib.pooloptimizer': 'on',
             'cachelib.poolresizer': 'on',
-        },
-        'CacheLib': {
-            **ycsb,
-            'cachelib.pool_optimizer': 'off',
-        },
-        'CacheLib-Holpaca': {
-            **ycsb,
-            'cachelib.controller.address': 'localhost:11111',
-            'cachelib.holpaca.address': 'localhost:22222',
-            }
-    }
-
-    RunYCSB(name, sourceDir, outputDir, load, setups, runs, status, sifDir)
-
-
-
+        }),
+        Setup('CacheLib', ycsb_executable, {
+            **ycsb_config,
+            'cachelib.pooloptimizer': 'off',  # Fixed typo: was 'pool_optimizer'
+            'cachelib.poolresizer': 'off',
+        }),
+        Setup('CacheLib-Holpaca', ycsb_executable, {
+            **ycsb_config,
+            'cachelib.poolresizer': 'on',
+            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
+              controller_args='HitRatioMaximization 1000:0.05')
+    ]
+    
+    # Run the benchmark
+    RunYCSB(name, runs, outputDir, load_setup, setups, "READ-PASSED READ-FAILED ALL", sifPath)
 
