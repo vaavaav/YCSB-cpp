@@ -159,7 +159,7 @@ def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path=
     if setup.controller_exec:
         controller_dir = os.path.dirname(setup.controller_exec)
         inner = f"""dstat -cdlmnyt > {outdir}/controller_dstat.csv 2>&1 & \
-        {setup.controller_exec} $(hostname -I | awk '{{print $1}}' | xargs):11110 {setup.controller_args}"
+        {setup.controller_exec} $(hostname -I | awk '{{print $1}}' | xargs):11110 {setup.controller_args}"""
 
         wrapped = f'singularity run --bind "{controller_dir},{outdir},{",".join(binds)}" {sif_path} bash -c "{inner}"'
         print(f"[SIF] Submitting controller job for {setup.name}")
