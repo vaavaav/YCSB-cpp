@@ -199,23 +199,26 @@ def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path=
     # remove holpaca.address if it exists
     override_ips = "IPS=''"
     if controller_job_id:
-        override_ips = f'''
-        CONTROLLER_COMPUTE_NODE=""
-        while [[ -z "$CONTROLLER_COMPUTE_NODE" ]]; do
-            output=$(squeue -j "{controller_job_id}" -o "%N" --noheader 2>/dev/null | xargs)
-            if [[ "$output" =~ cx([0-9]+) ]]; then
-                CONTROLLER_COMPUTE_NODE=${{BASH_REMATCH[1]}}
-            fi
-            sleep 1
-        done
-        IPS=" -p cachelib.controller.address=10.12.1.$CONTROLLER_COMPUTE_NODE:11110"
-        IP=$(hostname -I | awk \'{{print $1}}\' | xargs) 
-        for i in $(seq 1 {setup.threads}); do
-            PORT=$((11110 + $i))
-            IPS+=" -p cachelib.holpaca.address.$i=$IP:$PORT"
-        done
-        echo $IPS
-        '''
+        override_ips = f"""\
+CONTROLLER_COMPUTE_NODE=""
+while [[ -z "$CONTROLLER_COMPUTE_NODE" ]]; do
+    output=$(squeue -j "{controller_job_id}" -o "%N" --noheader 2>/dev/null | xargs)
+    if [[ "$output" =~ cx([0-9]+) ]]; then
+        CONTROLLER_COMPUTE_NODE="${{BASH_REMATCH[1]}}"
+    fi
+    sleep 1
+done
+
+IPS=" -p cachelib.controller.address=10.12.1.$CONTROLLER_COMPUTE_NODE:11110"
+
+IP=$(hostname -I | awk '{{print $1}}' | xargs)
+for i in $(seq 1 {setup.threads}); do
+    PORT=$((11110 + i))
+    IPS+=" -p cachelib.holpaca.address.$i=$IP:$PORT"
+done
+
+echo "$IPS"
+"""
     wrapped = f'''
         {override_ips}
         mkdir -p {db} && cp -r {db_backup}/* {db}/
