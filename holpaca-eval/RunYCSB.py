@@ -203,7 +203,7 @@ def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path=
 CONTROLLER_COMPUTE_NODE=""
 while [[ -z "$CONTROLLER_COMPUTE_NODE" ]]; do
     output=$(squeue -j "{controller_job_id}" -o "%N" --noheader 2>/dev/null | xargs)
-    if [[ "$output" =~ cx([0-9]+) ]]; then
+    if [[ "$output" =~ cnx([0-9]+) ]]; then
         CONTROLLER_COMPUTE_NODE="${{BASH_REMATCH[1]}}"
     fi
     sleep 1
