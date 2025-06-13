@@ -7,22 +7,26 @@ import re
 import time
 
 def RunYCSB(name, runs, output_dir, load_setup, setups, status, sif_path=None, binds=[]):
+    with open(os.path.join(output_dir, 'setups.json'), 'w') as f:
+        json.dump({setup.name:setup.config for setup in setups}, f, indent=4)
+
+    load_job_id = None
     if sif_path:
         load_job_id = loadSIF(name, load_setup, sif_path, binds)
         if not load_job_id:
             print(f"[SIF] Failed to start load job for {name}.")
             return
-        for setup in setups:
-            for i in range(runs):
-                out = os.path.join(output_dir, setup.name, str(i + 1))
-                os.makedirs(out, exist_ok=True)
-                runSIF(f"{name}-{setup.name}-{i+1}", setup, load_setup.config['rocksdb.dbname'], out, status, load_job_id, sif_path, binds)
     else:
         loadLOCAL(name, load_setup)
-        for setup in setups:
-            for i in range(runs):
-                out = os.path.join(output_dir, setup.name, str(i + 1))
-                os.makedirs(out, exist_ok=True)
+
+    for setup in setups:
+        for i in range(runs):
+            out = os.path.join(output_dir, setup.name, str(i + 1))
+            os.makedirs(out, exist_ok=True)
+
+            if sif_path:
+                runSIF(f"{name}-{setup.name}-{i + 1}", setup, load_setup.config['rocksdb.dbname'], out, status, load_job_id, sif_path, binds)
+            else:
                 runLOCAL(f"{name}-{setup.name}-{i + 1}", setup, setup.config['rocksdb.dbname'], out, status)
 
 class Load:
@@ -161,7 +165,7 @@ def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path=
         inner = f"""dstat -cdlmnyt > {outdir}/controller_dstat.csv 2>&1 & \
         {setup.controller_exec} $(hostname -I | awk '{{print $1}}' | xargs):11110 {setup.controller_args}"""
 
-        wrapped = f'singularity run --bind "{controller_dir},{outdir},{",".join(binds)}" {sif_path} bash -c "{inner}"'
+        wrapped = f'singularity run --network host --bind "{controller_dir},{outdir},{",".join(binds)}" {sif_path} bash -c "{inner}"'
         print(f"[SIF] Submitting controller job for {setup.name}")
         result = subprocess.run(build_sbatch_cmd(
             name=f"controller-{name}",
@@ -223,7 +227,7 @@ echo "$IPS"
         {override_ips}
         mkdir -p {db} && cp -r {db_backup}/* {db}/
         {copy_workloads_cmd}
-        singularity run --bind "{executable_dir},/tmp,{",".join(binds)}" {sif_path} bash -c "\
+        singularity run --network host --bind "{executable_dir},/tmp,{",".join(binds)}" {sif_path} bash -c "\
             dstat -cdlmnyt > {local_dstat_output} 2>&1 & \
             {setup.build_cmd(status)} $IPS > {local_ycsb_output} 2>&1; \
             kill $(pgrep dstat)"
