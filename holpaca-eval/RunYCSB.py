@@ -7,6 +7,7 @@ import re
 import time
 
 def RunYCSB(name, runs, output_dir, load_setup, setups, status, sif_path=None, binds=[]):
+    os.makedirs(output_dir, exist_ok=True)
     with open(os.path.join(output_dir, 'setups.json'), 'w') as f:
         json.dump({setup.name:setup.config for setup in setups}, f, indent=4)
 
@@ -227,7 +228,7 @@ echo "$IPS"
         {override_ips}
         mkdir -p {db} && cp -r {db_backup}/* {db}/
         {copy_workloads_cmd}
-        singularity run --network host --bind "{executable_dir},/tmp,{",".join(binds)}" {sif_path} bash -c "\
+        singularity run --bind "{executable_dir},/tmp,{",".join(binds)}" {sif_path} bash -c "\
             dstat -cdlmnyt > {local_dstat_output} 2>&1 & \
             {setup.build_cmd(status)} $IPS > {local_ycsb_output} 2>&1; \
             kill $(pgrep dstat)"
