@@ -217,8 +217,8 @@ done
 IPS=" -p cachelib.controller.address=10.12.1.$CONTROLLER_COMPUTE_NODE:11110"
 
 IP=$(hostname -I | awk '{{print $1}}' | xargs)
-for i in $(seq 1 {setup.threads}); do
-    PORT=$((11110 + i))
+for i in $(seq 0 {setup.threads-1}); do
+    PORT=$((11111 + i))
     IPS+=" -p cachelib.holpaca.address.$i=$IP:$PORT"
 done
 
