@@ -228,7 +228,7 @@ echo "$IPS"
         {override_ips}
         mkdir -p {db} && cp -r {db_backup}/* {db}/
         {copy_workloads_cmd}
-        singularity run --bind "{executable_dir},/tmp,{",".join(binds)}" {sif_path} bash -c "\
+        singularity run --network host --bind "{executable_dir},/tmp,{",".join(binds)}" {sif_path} bash -c "\
             dstat -cdlmnyt > {local_dstat_output} 2>&1 & \
             {setup.build_cmd(status)} $IPS > {local_ycsb_output} 2>&1; \
             kill $(pgrep dstat)"
