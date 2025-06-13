@@ -26,6 +26,9 @@ const std::string PROP_POOL_NAME_DEFAULT = "default";
 const std::string PROP_POOL_SIZE = "cachelib.pool.relsize";
 const std::string PROP_POOL_SIZE_DEFAULT = "1";
 
+const std::string PROP_POOL_NO_INITIAL_SIZE = "cachelib.pool.noinitialsize";
+const std::string PROP_POOL_NO_INITIAL_SIZE_DEFAULT = "off";
+
 const std::string PROP_POOL_OPTIMIZER = "cachelib.pooloptimizer";
 const std::string PROP_POOL_OPTIMIZER_DEFAULT = "off";
 
@@ -157,11 +160,21 @@ void CacheLibHolpaca::Init() {
   auto poolSize = std::stod(props_->GetProperty(
       PROP_POOL_SIZE + "." + std::to_string(threadId_),
       props_->GetProperty(PROP_POOL_SIZE, PROP_POOL_SIZE_DEFAULT)));
+  bool dontSetPoolSize =
+      props_->GetProperty(
+          PROP_POOL_NO_INITIAL_SIZE + "." + std::to_string(threadId_),
+          props_->GetProperty(PROP_POOL_NO_INITIAL_SIZE,
+                              PROP_POOL_NO_INITIAL_SIZE_DEFAULT)) == "on";
   std::visit(
-      [&poolName, &poolSize](auto &&cache) {
-        CacheLibHolpaca::poolId_ = cache.addPool(
-            poolName, static_cast<long>(
-                          cache.getCacheMemoryStats().ramCacheSize * poolSize));
+      [&poolName, &poolSize, dontSetPoolSize](auto &&cache) {
+        if (!dontSetPoolSize) {
+          CacheLibHolpaca::poolId_ = cache.addPool(poolName);
+        } else {
+          CacheLibHolpaca::poolId_ = cache.addPool(
+              poolName,
+              static_cast<long>(cache.getCacheMemoryStats().ramCacheSize *
+                                poolSize));
+        }
       },
       *cache_);
   cachesPerThread_[threadId_] =
@@ -172,7 +185,7 @@ DB::Status CacheLibHolpaca::Read(const std::string &table,
                                  const std::string &key,
                                  const std::vector<std::string> *fields,
                                  std::vector<Field> &result) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  //  std::lock_guard<std::mutex> lock(mutex_);
   return std::visit(
       [&table, &key, &fields, &result](auto &&cache) {
         auto handle = cache.find(key);
@@ -212,7 +225,7 @@ DB::Status CacheLibHolpaca::Scan(const std::string &table,
 DB::Status CacheLibHolpaca::Update(const std::string &table,
                                    const std::string &key,
                                    std::vector<Field> &values) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  //  std::lock_guard<std::mutex> lock(mutex_);
   std::string data = values.front().value;
   auto key_ = key;
   uint32_t size = values.front().value.size();
@@ -240,7 +253,7 @@ DB::Status CacheLibHolpaca::Update(const std::string &table,
 DB::Status CacheLibHolpaca::Insert(const std::string &table,
                                    const std::string &key,
                                    std::vector<Field> &values) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  // std::lock_guard<std::mutex> lock(mutex_);
   uint32_t size = values.front().value.size();
   auto res = rocksdbs_[cacheName_].Insert(table, key, values);
   rocksdbIOPSPerThread_[threadId_]++;

@@ -77,6 +77,12 @@ if __name__ == '__main__':
     
     # Create Setup objects for different configurations
     setups = [
+        Setup('CacheLib-Holpaca-T', ycsb_executable, {
+            **ycsb_config,
+            'cachelib.poolresizer': 'on',
+            'cachelib.pool.noinitialsize': 'on',
+            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
+              controller_args=f'ThroughputMaximization 1000:0.05:{ycsb_config["cachelib.size"]}'),
         Setup('CacheLib-Optimizer', ycsb_executable, {
             **ycsb_config,
             'cachelib.eviction': '2q',
@@ -91,13 +97,9 @@ if __name__ == '__main__':
         Setup('CacheLib-Holpaca-HR', ycsb_executable, {
             **ycsb_config,
             'cachelib.poolresizer': 'on',
+            'cachelib.pool.noinitialsize': 'on',
             }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
-              controller_args='HitRatioMaximization 1000:0.05'),
-        Setup('CacheLib-Holpaca-T', ycsb_executable, {
-            **ycsb_config,
-            'cachelib.poolresizer': 'on',
-            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
-              controller_args='ThroughputMaximization 1000:0.05')
+              controller_args=f'HitRatioMaximization 1000:0.05:{ycsb_config["cachelib.size"]}'),
     ]
     
     # Run the benchmark
