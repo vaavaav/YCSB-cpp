@@ -167,7 +167,7 @@ void CacheLibHolpaca::Init() {
                               PROP_POOL_NO_INITIAL_SIZE_DEFAULT)) == "on";
   std::visit(
       [&poolName, &poolSize, dontSetPoolSize](auto &&cache) {
-        if (!dontSetPoolSize) {
+        if (dontSetPoolSize) {
           CacheLibHolpaca::poolId_ = cache.addPool(poolName);
         } else {
           CacheLibHolpaca::poolId_ = cache.addPool(
