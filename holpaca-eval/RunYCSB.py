@@ -64,11 +64,11 @@ def build_sbatch_cmd(name, cmd, stdout, stderr, mem=None, jobid=None):
     cmd = [
         "sbatch",
         f"--job-name={name}",
-        "--account=f202400014testdeucalionx",
+        "--account=2024.0005",
         "--nodes=1",
         "--ntasks=1",
         "--cpus-per-task=1",
-        "--partition=dev-x86",
+        "--partition=large-x86",
         "--mail-type=END",
         "--mail-user=jose.p.peixoto@inesctec.pt",
         f"--output={stdout}",

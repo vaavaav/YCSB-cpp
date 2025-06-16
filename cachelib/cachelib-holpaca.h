@@ -81,13 +81,8 @@ public:
     auto [cache, poolId] = cachesPerThread_[i];
     auto value = std::visit(
         [i, poolId](auto &&c) {
-          c.registerDiskIOPS(
-              poolId, rocksdbIOPSPerThread_[i] /
-                          std::chrono::duration_cast<std::chrono::milliseconds>(
-                              std::chrono::high_resolution_clock::now() -
-                              lastTimePerThread_[i])
-                              .count() *
-                          1000);
+          c.registerDiskIOPS(poolId, rocksdbIOPSPerThread_[i]);
+
           const auto &pool = c.getPool(poolId);
           auto cms = c.getCacheMemoryStats();
           return std::make_tuple(c.getCacheName(), c.getPoolName(poolId),
