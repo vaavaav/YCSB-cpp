@@ -209,7 +209,7 @@ CONTROLLER_COMPUTE_NODE=""
 while [[ -z "$CONTROLLER_COMPUTE_NODE" ]]; do
     output=$(squeue -j "{controller_job_id}" -o "%N" --noheader 2>/dev/null | xargs)
     if [[ "$output" =~ cnx([0-9]+) ]]; then
-        CONTROLLER_COMPUTE_NODE="${{BASH_REMATCH[1]}}"
+        CONTROLLER_COMPUTE_NODE=$((10#${{BASH_REMATCH[1]}}))
     fi
     sleep 1
 done
