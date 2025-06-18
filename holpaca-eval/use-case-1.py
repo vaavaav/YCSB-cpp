@@ -28,10 +28,13 @@ if __name__ == '__main__':
     ycsb_config = {
         'threadcount': len(traces),
         'status.interval': 1,
-        #tmp
-        'maxexecutiontime': 1800,
+        'operationcount.0': 13_000_000,  
+        'operationcount.1': 5_000_000,
+        'operationcount.2': 22_000_000,
+        'operationcount.3': 48_000_000,
         # Cachelib
         'cachelib.size': 2_000_000_000*len(traces),
+        'cachelib.virtualsize': 2_000_000_000*len(traces),
         'cachelib.name': 'instance-0',
         'cachelib.eviction': 'lru',
         'cachelib.pool.relsize': 1 / len(traces),
@@ -79,13 +82,13 @@ if __name__ == '__main__':
             'cachelib.poolresizer': 'on',
             'cachelib.pool.noinitialsize': 'on',
             }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
-              controller_args=f'HitRatioMaximization 1000:0.05:{ycsb_config["cachelib.size"]}'),
+              controller_args=f'HitRatioMaximization 1000:0.05:{ycsb_config["cachelib.virtualsize"]}:false'),
         Setup('CacheLib-Holpaca-T', ycsb_executable, {
             **ycsb_config,
             'cachelib.poolresizer': 'on',
             'cachelib.pool.noinitialsize': 'on',
             }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
-              controller_args=f'ThroughputMaximization 1000:0.05:{ycsb_config["cachelib.size"]}'),
+              controller_args=f'ThroughputMaximization 1000:0.05:{ycsb_config["cachelib.virtualsize"]}:false'),
     ]
     
     # Run the benchmark

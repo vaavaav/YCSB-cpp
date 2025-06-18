@@ -38,6 +38,8 @@ void TraceReplayer::Init(std::string const property_suffix,
   scale_value_size = std::stod(p.GetProperty(
       SCALE_VALUE_SIZE_PROPERTY + property_suffix,
       p.GetProperty(SCALE_VALUE_SIZE_PROPERTY, SCALE_VALUE_SIZE_DEFAULT)));
+
+  ops_ = 0;
 }
 
 std::string TraceReplayer::BuildValue(size_t size) {
@@ -50,36 +52,35 @@ std::string TraceReplayer::BuildValue(size_t size) {
 
 std::vector<std::string_view>
 split_csv_line(std::string_view str, char delimiter, size_t expected_columns) {
-    std::vector<std::string_view> result;
-    size_t start = 0, end = 0;
+  std::vector<std::string_view> result;
+  size_t start = 0, end = 0;
 
-    while ((end = str.find(delimiter, start)) != std::string_view::npos) {
-        result.emplace_back(str.substr(start, end - start));
-        start = end + 1;
+  while ((end = str.find(delimiter, start)) != std::string_view::npos) {
+    result.emplace_back(str.substr(start, end - start));
+    start = end + 1;
+  }
+
+  result.emplace_back(str.substr(start)); // Last token
+
+  // If more columns than expected, fix the second column
+  if (result.size() > expected_columns) {
+    size_t extra_parts = result.size() - expected_columns;
+
+    // Merge extra parts into the second column
+    std::string_view second_column(result[1].data(), result[1].size());
+    for (size_t i = 2; i <= 1 + extra_parts; ++i) {
+      second_column = std::string_view(second_column.data(),
+                                       result[i].data() + result[i].size() -
+                                           second_column.data());
     }
 
-    result.emplace_back(str.substr(start)); // Last token
+    // Remove merged parts from the vector
+    result[1] = second_column;
+    result.erase(result.begin() + 2, result.begin() + 2 + extra_parts);
+  }
 
-    // If more columns than expected, fix the second column
-    if (result.size() > expected_columns) {
-        size_t extra_parts = result.size() - expected_columns;
-
-        // Merge extra parts into the second column
-        std::string_view second_column(result[1].data(), result[1].size());
-        for (size_t i = 2; i <= 1 + extra_parts; ++i) {
-            second_column = std::string_view(second_column.data(),
-                result[i].data() + result[i].size() -
-                second_column.data());
-        }
-
-        // Remove merged parts from the vector
-        result[1] = second_column;
-        result.erase(result.begin() + 2, result.begin() + 2 + extra_parts);
-    }
-
-    return result;
+  return result;
 }
-
 
 std::tuple<Operation, std::string, size_t> TraceReplayer::NextOperation() {
   std::string line;
@@ -89,9 +90,9 @@ std::tuple<Operation, std::string, size_t> TraceReplayer::NextOperation() {
   }
 
   auto parts = split_csv_line(line, ',', 7);
-  std::string key {parts[1]};
+  std::string key{parts[1]};
   size_t valuesize = std::stoul(std::string(parts[3]));
-  std::string operation {parts[5]};
+  std::string operation{parts[5]};
 
   if (operation == "get") {
     return std::make_tuple(READ, key, valuesize);
@@ -134,6 +135,11 @@ bool TraceReplayer::DoTransaction(DB &db) {
     status = DB::kOK;
     break;
   }
+
+  if (++ops_ >= operation_count_) {
+    request_stop();
+  }
+
   return (status == DB::kOK);
 }
 

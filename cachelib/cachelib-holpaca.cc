@@ -53,9 +53,6 @@ thread_local std::shared_ptr<CacheLibHolpaca::Cache> CacheLibHolpaca::cache_;
 thread_local int CacheLibHolpaca::threadId_;
 thread_local static facebook::cachelib::PoolId poolId_;
 thread_local RocksDB CacheLibHolpaca::rocksdb_;
-std::unordered_map<int,
-                   std::chrono::time_point<std::chrono::high_resolution_clock>>
-    CacheLibHolpaca::lastTimePerThread_;
 
 void CacheLibHolpaca::Init() {
 
@@ -148,7 +145,6 @@ void CacheLibHolpaca::Init() {
       cache_ = std::make_shared<Cache>(std::get<Cache2Q::Config>(config));
     }
     rocksdbIOPSPerThread_[threadId_] = 0;
-    lastTimePerThread_[threadId_] = std::chrono::high_resolution_clock::now();
     rocksdb_.SetProps(props_);
     rocksdb_.Init();
     rocksdbs_[cacheName_] = rocksdb_;
@@ -304,7 +300,6 @@ void CacheLibHolpaca::Cleanup() {
   rocksdbs_.clear();
   cachesPerThread_.clear();
   rocksdbIOPSPerThread_.clear();
-  lastTimePerThread_.clear();
 }
 
 } // namespace ycsbc

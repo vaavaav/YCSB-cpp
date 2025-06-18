@@ -40,14 +40,15 @@ inline long ClientThread(std::chrono::seconds sleepafterload,
     }
 
     long ops = 0;
-
     if (load) {
       while (!wl->is_stop_requested()) {
         wl->DoInsert(*db);
+        ops++;
       }
     } else {
       while (!wl->is_stop_requested()) {
         wl->DoTransaction(*db);
+        ops++;
       }
     }
 

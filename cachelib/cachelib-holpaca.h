@@ -30,9 +30,6 @@ private:
   thread_local static facebook::cachelib::PoolId poolId_;
   static int ref_cnt_;
   static std::unordered_map<int, int> rocksdbIOPSPerThread_;
-  static std::unordered_map<
-      int, std::chrono::time_point<std::chrono::high_resolution_clock>>
-      lastTimePerThread_;
 
 public:
   void Init();
@@ -93,7 +90,6 @@ public:
         },
         *cache);
     rocksdbIOPSPerThread_[i] = 0;
-    lastTimePerThread_[i] = std::chrono::high_resolution_clock::now();
     return value;
   }
 };
