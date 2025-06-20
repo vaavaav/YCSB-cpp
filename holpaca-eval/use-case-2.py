@@ -8,7 +8,7 @@ import sys
 import os
 import time
 
-name = f"use-case-1-{int(time.time()*1e9)}"
+name = f"use-case-2-{int(time.time()*1e9)}"
 runs = 3
 status = 'READ-FAILED READ-PASSED INSERT-FAILED INSERT-PASSED UPDATE-FAILED UPDATE-PASSED ALL'
 

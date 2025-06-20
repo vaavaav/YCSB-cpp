@@ -18,6 +18,8 @@
 #include "terminator_thread.h"
 #include "utils.h"
 
+using namespace std::chrono_literals;
+
 namespace ycsbc {
 
 inline long ClientThread(std::chrono::seconds sleepafterload,
@@ -27,14 +29,17 @@ inline long ClientThread(std::chrono::seconds sleepafterload,
   try {
     db->SetThreadId(threadId);
 
-    if (sleepafterload.count() > 0) {
+    if (sleepafterload > 0s) {
       std::this_thread::sleep_for(sleepafterload);
     }
 
     db->Init();
 
     std::future<void> terminator;
-    if (maxexecutiontime.count() > 0) {
+    if (maxexecutiontime > 0s) {
+      std::cout << "Max execution time: " << maxexecutiontime.count()
+                << " seconds" << std::endl;
+      std::cout << "TESTE " << std::endl;
       terminator = std::async(std::launch::async, ycsbc::TerminatorThread,
                               maxexecutiontime, wl);
     }
