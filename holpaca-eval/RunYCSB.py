@@ -26,7 +26,10 @@ def RunYCSB(name, runs, output_dir, load_setup, setups, status, sif_path=None, b
             os.makedirs(out, exist_ok=True)
 
             if sif_path:
-                runSIF(f"{name}-{setup.name}-{i + 1}", setup, load_setup.config['rocksdb.dbname'], out, status, load_job_id, sif_path, binds)
+                if setup.controller_exec:
+                    runSIFController(f"{name}-{setup.name}-{i + 1}", setup, load_setup.config['rocksdb.dbname'], out, status, load_job_id, sif_path, binds)
+                else:
+                    runSIF(f"{name}-{setup.name}-{i + 1}", setup, load_setup.config['rocksdb.dbname'], out, status, load_job_id, sif_path, binds)
             else:
                 runLOCAL(f"{name}-{setup.name}-{i + 1}", setup, setup.config['rocksdb.dbname'], out, status)
 
@@ -64,7 +67,7 @@ def build_sbatch_cmd(name, cmd, stdout, stderr, mem=None, jobid=None):
     cmd = [
         "sbatch",
         f"--job-name={name}",
-        "--account=2024.0005",
+        "--account=I20240005X",
         "--nodes=1",
         "--ntasks=1",
         "--cpus-per-task=1",
@@ -175,7 +178,6 @@ def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path=
     ycsb_output = os.path.join(outdir, 'ycsb.txt')
     # remove holpaca.address if it exists
     wrapped = f'''
-        {override_ips}
         mkdir -p {db} && cp -r {db_backup}/* {db}/
         {copy_workloads_cmd}
         singularity run --bind "{executable_dir},/tmp,{",".join(binds)}" {sif_path} bash -c "\
@@ -196,71 +198,88 @@ def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path=
         jobid=load_job_id
     ))
 
-def runSIFController(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path=None, binds=[], controller_exec=None):
+def runSIFController(name, setup, db_backup, outdir, status, load_job_id, sif_path=None, binds=[]):
     if not os.path.exists(sif_path):
         raise FileNotFoundError(f"SIF file not found: {sif_path}")
+    if not setup.controller_exec:
+        raise ValueError("Controller executable not provided in setup.")
 
     controller_dir = os.path.dirname(setup.controller_exec)
     executable_dir = os.path.dirname(setup.executable)
+    db = "/tmp/db"
+    local_dstat_output = "/tmp/dstat.csv"
+    local_ycsb_output = "/tmp/ycsb.txt"
+    dstat_output = os.path.join(outdir, 'dstat.csv')
+    ycsb_output = os.path.join(outdir, 'ycsb.txt')
 
-    # Prepare trace copy commands
     copy_workloads_cmd = ""
     for thread, tracefile in enumerate(setup.traces):
         if tracefile:
             setup.config[f"trace.file.{thread}"] = f"/tmp/{os.path.basename(tracefile)}"
             copy_workloads_cmd += f"cp '{tracefile}' /tmp; "
 
-    # Prepare paths
-    db = "/tmp/db"
-    setup.config['rocksdb.dbname'] = db
-    local_dstat_output = "/tmp/dstat.csv"
-    local_ycsb_output = "/tmp/ycsb.txt"
-    dstat_output = os.path.join(outdir, 'dstat.csv')
-    ycsb_output = os.path.join(outdir, 'ycsb.txt')
+    build_cmd_str = setup.build_cmd(status)
 
-    # Prepare the actual client command string
-    client_inner = f'''
-        mkdir -p {db} && cp -r {db_backup}/* {db}/
-        {copy_workloads_cmd}
-        singularity run --network host --bind "{executable_dir},/tmp,{",".join(binds)}" {sif_path} bash -c "\
-            dstat -cdlmnyt > {local_dstat_output} 2>&1 & \
-            {setup.build_cmd(status)} $IPS > {local_ycsb_output} 2>&1; \
-            kill $(pgrep dstat)"
-        cp {local_ycsb_output} {ycsb_output}
-        cp {local_dstat_output} {dstat_output}
-    '''.strip().replace('\n', ' ')
+    # === Controller job script ===
+    controller_inner_script = f"""#!/bin/bash
+set -e
 
-    # Controller job script that also submits the client via sbatch
-    controller_inner = f'''
-        CONTROLLER_IP=$(hostname -I | awk '{{print $1}}' | xargs)
-        singularity run --network host --bind "{controller_dir},{outdir},{",".join(binds)}" {sif_path} bash -c "\
-            dstat -cdlmnyt > {outdir}/controller_dstat.csv 2>&1 & \
-            {setup.controller_exec} $CONTROLLER_IP:11110 {setup.controller_args}" &
+CONTROLLER_IP=$(hostname -I | awk '{{print $1}}' | xargs)
 
-        IPS=" -p cachelib.controller.address=$CONTROLLER_IP:11110"
-        for i in $(seq 0 {setup.threads - 1}); do
-            PORT=$((11111 + i))
-            IPS+=" -p cachelib.holpaca.address.$i=$CONTROLLER_IP:$PORT"
-        done
+# Start controller inside Singularity in background
+singularity run --network host --bind "{controller_dir},{outdir},{','.join(binds)}" {sif_path} bash -c \\
+"dstat -cdlmnyt > {outdir}/controller_dstat.csv 2>&1 & \\
+{setup.controller_exec} $CONTROLLER_IP:11110 {setup.controller_args}" &
 
-        CLIENT_CMD="{client_inner}"
-        # sbatch
-        {" ".join(build_sbatch_cmd(
-            name=f"client-{name}",
-            cmd='"$CLIENT_CMD"',
-            stdout=f"{outdir}/slurm-client-{name}.out",
-            stderr=f"{outdir}/slurm-client-{name}.err",
-            mem=int(setup.total_cache_size / (1024 * 1024))
-        ))}
-    '''
+CONTROLLER_JOB_ID=$SLURM_JOB_ID
 
-    # Properly escape and flatten into a bash command
-    wrapped_controller = f'bash -c "{controller_inner.strip().replace("\\", "\\\\").replace(\'"\', \'\\\"\').replace("\n", " ")}"'
+# Write client script
+cat <<'EOF' > /tmp/client.sh
+#!/bin/bash
+set -e
 
-    print(f"[SIF] Submitting combined controller-wrapper job for {setup.name}")
+CLIENT_IP=\$(hostname -I | awk '{{print $1}}' | xargs)
+IPS=" -p cachelib.controller.address=$CONTROLLER_IP:11110"
+for i in $(seq 0 {setup.threads - 1}); do
+    PORT=$((11111 + i))
+    IPS+=" -p cachelib.holpaca.address.$i=\$CLIENT_IP:$PORT"
+done
+
+mkdir -p {db} && cp -r {db_backup}/* {db}/
+{copy_workloads_cmd}
+singularity run --network host --bind "{executable_dir},/tmp,{','.join(binds)}" {sif_path} bash -c \\
+"dstat -cdlmnyt > {local_dstat_output} 2>&1 & \\
+{build_cmd_str} \$IPS > {local_ycsb_output} 2>&1; \\
+kill \$(pgrep dstat)"
+cp {local_ycsb_output} {ycsb_output}
+cp {local_dstat_output} {dstat_output}
+
+# Stop controller job
+scancel {{"$CONTROLLER_JOB_ID"}}
+EOF
+
+chmod +x /tmp/client.sh
+
+# Submit client job
+{" ".join(build_sbatch_cmd(
+        name=f"client-{name}",
+        cmd="/tmp/client.sh",
+        stdout=f"{outdir}/slurm-client-{name}.out",
+        stderr=f"{outdir}/slurm-client-{name}.err",
+        mem=int(setup.total_cache_size / (1024 * 1024))
+))}
+
+# Keep controller job alive until cancelled
+sleep infinity
+"""
+
+    # Wrap script for sbatch
+    wrapped_cmd = f"bash -c '{controller_inner_script.strip().replace(\"'\", \"'\\''\")}'"
+
+    print(f"[SIF] Submitting combined controller+client job for {setup.name}")
     subprocess.run(build_sbatch_cmd(
         name=f"controller-{name}",
-        cmd=wrapped_controller,
+        cmd=wrapped_cmd,
         stdout=f"{outdir}/slurm-controller-{name}.out",
         stderr=f"{outdir}/slurm-controller-{name}.err",
         jobid=load_job_id
