@@ -274,7 +274,8 @@ sleep infinity
 """
 
     # Wrap script for sbatch
-    wrapped_cmd = f"bash -c '{controller_inner_script.strip().replace(\"'\", \"'\\''\")}'"
+    escape_string = controller_inner_script.strip().replace("'", "'\\''")
+    wrapped_cmd = f"bash -c '{escape_string}'"
 
     print(f"[SIF] Submitting combined controller+client job for {setup.name}")
     subprocess.run(build_sbatch_cmd(
