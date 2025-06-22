@@ -264,8 +264,8 @@ chmod +x /tmp/client.sh
 {" ".join(build_sbatch_cmd(
         name=f"client-{name}",
         cmd="/tmp/client.sh",
-        stdout=f"{outdir}/slurm-client-{name}.out",
-        stderr=f"{outdir}/slurm-client-{name}.err",
+        stdout=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-client-{name}.out",
+        stderr=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-client-{name}.err",
         mem=int(setup.total_cache_size / (1024 * 1024))
 ))}
 
@@ -274,14 +274,11 @@ sleep infinity
 """
 
     # Wrap script for sbatch
-    escape_string = controller_inner_script.strip().replace("'", "'\\''")
-    wrapped_cmd = f"bash -c '{escape_string}'"
-
     print(f"[SIF] Submitting combined controller+client job for {setup.name}")
     subprocess.run(build_sbatch_cmd(
         name=f"controller-{name}",
-        cmd=wrapped_cmd,
-        stdout=f"{outdir}/slurm-controller-{name}.out",
-        stderr=f"{outdir}/slurm-controller-{name}.err",
+        cmd=controller_inner_script.strip(),
+        stdout=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-controller-{name}.out",
+        stderr=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-controller-{name}.err",
         jobid=load_job_id
     ))
