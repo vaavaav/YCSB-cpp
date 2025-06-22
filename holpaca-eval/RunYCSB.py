@@ -224,53 +224,51 @@ def runSIFController(name, setup, db_backup, outdir, status, load_job_id, sif_pa
     controller_inner_script = f"""#!/bin/bash
 set -e
 
-CONTROLLER_IP=$(hostname -I | awk '{{print $1}}' | xargs)
+CONTROLLER_IP=$(hostname -I | awk '{{print $1}}' | tr -d '[:space:]')
+[[ -z "$CONTROLLER_IP" ]] && exit 1
 
-# Start controller inside Singularity in background
 singularity run --network host --bind "{controller_dir},{outdir},{','.join(binds)}" {sif_path} bash -c \\
 "dstat -cdlmnyt > {outdir}/controller_dstat.csv 2>&1 & \\
-{setup.controller_exec} $$CONTROLLER_IP:11110 {setup.controller_args}" &
+{setup.controller_exec} $CONTROLLER_IP:11110 {setup.controller_args}" &
 
-CONTROLLER_JOB_ID=$$SLURM_JOB_ID
+CONTROLLER_PID=$!
+CONTROLLER_JOB_ID=$SLURM_JOB_ID
+sleep 5
 
-# Write client script
-cat <<'EOF' > /tmp/client.sh
+cat > /tmp/client.sh << 'EOF'
 #!/bin/bash
 set -e
+CLIENT_IP=$(hostname -I | awk '{{print $1}}' | tr -d '[:space:]')
+[[ -z "$CLIENT_IP" || -z "$CONTROLLER_IP" ]] && exit 1
 
-CLIENT_IP=$$(hostname -I | awk '{{print $$1}}' | xargs)
-IPS=" -p cachelib.controller.address=$$CONTROLLER_IP:11110"
-for i in $$(seq 0 {setup.threads - 1}); do
-    PORT=$$((11111 + i))
-    IPS+=" -p cachelib.holpaca.address.$$i=$$CLIENT_IP:$$PORT"
+IPS=" -p cachelib.controller.address=$CONTROLLER_IP:11110"
+for i in $(seq 0 {setup.threads - 1}); do
+    PORT=$((11111 + i))
+    IPS+=" -p cachelib.holpaca.address.$i=$CLIENT_IP:$PORT"
 done
 
 mkdir -p {db} && cp -r {db_backup}/* {db}/
 {copy_workloads_cmd}
 singularity run --network host --bind "{executable_dir},/tmp,{','.join(binds)}" {sif_path} bash -c \\
 "dstat -cdlmnyt > {local_dstat_output} 2>&1 & \\
-{build_cmd_str} $$IPS > {local_ycsb_output} 2>&1; \\
-kill $$(pgrep dstat)"
+{build_cmd_str} $IPS > {local_ycsb_output} 2>&1; \\
+kill \\$(pgrep dstat) 2>/dev/null || true"
 cp {local_ycsb_output} {ycsb_output}
 cp {local_dstat_output} {dstat_output}
-
-# Stop controller job
-scancel "$$CONTROLLER_JOB_ID"
+scancel "$CONTROLLER_JOB_ID" 2>/dev/null || true
 EOF
 
 chmod +x /tmp/client.sh
 
-# Submit client job
 {" ".join(build_sbatch_cmd(
         name=f"client-{name}",
-        cmd="/tmp/client.sh",
+        cmd=f"export CONTROLLER_IP=$CONTROLLER_IP && /tmp/client.sh",
         stdout=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-client-{name}.out",
         stderr=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-client-{name}.err",
         mem=int(setup.total_cache_size / (1024 * 1024))
 ))}
 
-# Keep controller job alive until cancelled
-sleep infinity
+wait $CONTROLLER_PID
 """
 
     # Wrap script for sbatch
