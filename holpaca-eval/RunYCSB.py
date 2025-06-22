@@ -63,7 +63,7 @@ class Setup:
         return f"{self.executable} -run -db cachelib-holpaca {f'-s {status}' if status else ''} {' '.join(f'-p {k}={v}' for k, v in self.config.items())}"
 
 
-def build_sbatch_cmd(name, cmd, stdout, stderr, mem=None, jobid=None):
+def build_sbatch_cmd(name, cmd, stdout, stderr, mem=None, jobid=None, export=None):
     cmd = [
         "sbatch",
         f"--job-name={name}",
@@ -82,6 +82,8 @@ def build_sbatch_cmd(name, cmd, stdout, stderr, mem=None, jobid=None):
         cmd.insert(1, f"--mem={mem}M")
     if jobid:
         cmd.insert(1, f"--dependency=afterok:{jobid}")
+    if export:
+        cmd.insert(1, f"--export={export}")
     return cmd
 
 # LOCAL 
@@ -220,10 +222,29 @@ def runSIFController(name, setup, db_backup, outdir, status, load_job_id, sif_pa
 
     build_cmd_str = setup.build_cmd(status)
 
-    # === Controller job script ===
-    controller_inner_script = f"""#!/bin/bash
-set -e
+    client_inner_script = f"""
+        CLIENT_IP=$(hostname -I | awk '{{print $1}}' | xargs)
+        [[ -z "$CLIENT_IP" || -z "$CONTROLLER_IP" ]] && exit 1
 
+        IPS=" -p cachelib.controller.address=$CONTROLLER_IP:11110"
+        for i in $(seq 0 {setup.threads - 1}); do
+            PORT=$((11111 + i))
+            IPS+=" -p cachelib.holpaca.address.$i=$CLIENT_IP:$PORT"
+        done
+
+        mkdir -p {db} && cp -r {db_backup}/* {db}/
+        {copy_workloads_cmd}
+        singularity run --network host --bind "{executable_dir},/tmp,{','.join(binds)}" {sif_path} bash -c \\
+        "dstat -cdlmnyt > {local_dstat_output} 2>&1 & \\
+        {build_cmd_str} $IPS > {local_ycsb_output} 2>&1; \\
+        kill \\$(pgrep dstat) 2>/dev/null || true"
+        cp {local_ycsb_output} {ycsb_output}
+        cp {local_dstat_output} {dstat_output}
+        scancel "$CONTROLLER_JOB_ID" 2>/dev/null || true
+    """
+
+    # === Controller job script ===
+    controller_inner_script = f"""
 CONTROLLER_IP=$(hostname -I | awk '{{print $1}}' | tr -d '[:space:]')
 [[ -z "$CONTROLLER_IP" ]] && exit 1
 
@@ -233,39 +254,14 @@ singularity run --network host --bind "{controller_dir},{outdir},{','.join(binds
 
 CONTROLLER_PID=$!
 CONTROLLER_JOB_ID=$SLURM_JOB_ID
-sleep 5
-
-cat > /tmp/client.sh << 'EOF'
-#!/bin/bash
-set -e
-CLIENT_IP=$(hostname -I | awk '{{print $1}}' | tr -d '[:space:]')
-[[ -z "$CLIENT_IP" || -z "$CONTROLLER_IP" ]] && exit 1
-
-IPS=" -p cachelib.controller.address=$CONTROLLER_IP:11110"
-for i in $(seq 0 {setup.threads - 1}); do
-    PORT=$((11111 + i))
-    IPS+=" -p cachelib.holpaca.address.$i=$CLIENT_IP:$PORT"
-done
-
-mkdir -p {db} && cp -r {db_backup}/* {db}/
-{copy_workloads_cmd}
-singularity run --network host --bind "{executable_dir},/tmp,{','.join(binds)}" {sif_path} bash -c \\
-"dstat -cdlmnyt > {local_dstat_output} 2>&1 & \\
-{build_cmd_str} $IPS > {local_ycsb_output} 2>&1; \\
-kill \\$(pgrep dstat) 2>/dev/null || true"
-cp {local_ycsb_output} {ycsb_output}
-cp {local_dstat_output} {dstat_output}
-scancel "$CONTROLLER_JOB_ID" 2>/dev/null || true
-EOF
-
-chmod +x /tmp/client.sh
 
 {" ".join(build_sbatch_cmd(
         name=f"client-{name}",
-        cmd=f"export CONTROLLER_IP=$CONTROLLER_IP && /tmp/client.sh",
+        cmd=client_inner_script.strip(),
         stdout=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-client-{name}.out",
         stderr=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-client-{name}.err",
-        mem=int(setup.total_cache_size / (1024 * 1024))
+        mem=int(setup.total_cache_size / (1024 * 1024)),
+        export=f"CONTROLLER_IP=$CONTROLLER_IP,CONTROLLER_JOB_ID=$CONTROLLER_JOB_ID"
 ))}
 
 wait $CONTROLLER_PID
