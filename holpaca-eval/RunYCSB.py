@@ -234,10 +234,11 @@ def runSIFController(name, setup, db_backup, outdir, status, load_job_id, sif_pa
 
         mkdir -p {db} && cp -r {db_backup}/* {db}/
         {copy_workloads_cmd}
-        singularity run --network host --bind "{executable_dir},/tmp,{','.join(binds)}" {sif_path} bash -c \\
-        "dstat -cdlmnyt > {local_dstat_output} 2>&1 & \\
-        {build_cmd_str} $IPS > {local_ycsb_output} 2>&1; \\
-        kill \\$(pgrep dstat) 2>/dev/null || true"
+        singularity run --network host --bind "{executable_dir},/tmp,{','.join(binds)}" {sif_path} bash -c \
+        "dstat -cdlmnyt > {local_dstat_output} 2>&1 & \
+        {build_cmd_str} $IPS > {local_ycsb_output} 2>&1; \
+        echo -e '{build_cmd_str} $IPS' \
+        kill $(pgrep dstat) 2>/dev/null || true"
         cp {local_ycsb_output} {ycsb_output}
         cp {local_dstat_output} {dstat_output}
         scancel "$CONTROLLER_JOB_ID" 2>/dev/null || true
