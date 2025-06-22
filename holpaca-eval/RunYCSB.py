@@ -229,33 +229,33 @@ CONTROLLER_IP=$(hostname -I | awk '{{print $1}}' | xargs)
 # Start controller inside Singularity in background
 singularity run --network host --bind "{controller_dir},{outdir},{','.join(binds)}" {sif_path} bash -c \\
 "dstat -cdlmnyt > {outdir}/controller_dstat.csv 2>&1 & \\
-{setup.controller_exec} $CONTROLLER_IP:11110 {setup.controller_args}" &
+{setup.controller_exec} $$CONTROLLER_IP:11110 {setup.controller_args}" &
 
-CONTROLLER_JOB_ID=$SLURM_JOB_ID
+CONTROLLER_JOB_ID=$$SLURM_JOB_ID
 
 # Write client script
 cat <<'EOF' > /tmp/client.sh
 #!/bin/bash
 set -e
 
-CLIENT_IP=\$(hostname -I | awk '{{print $1}}' | xargs)
-IPS=" -p cachelib.controller.address=$CONTROLLER_IP:11110"
-for i in $(seq 0 {setup.threads - 1}); do
-    PORT=$((11111 + i))
-    IPS+=" -p cachelib.holpaca.address.$i=\$CLIENT_IP:$PORT"
+CLIENT_IP=$$(hostname -I | awk '{{print $$1}}' | xargs)
+IPS=" -p cachelib.controller.address=$$CONTROLLER_IP:11110"
+for i in $$(seq 0 {setup.threads - 1}); do
+    PORT=$$((11111 + i))
+    IPS+=" -p cachelib.holpaca.address.$$i=$$CLIENT_IP:$$PORT"
 done
 
 mkdir -p {db} && cp -r {db_backup}/* {db}/
 {copy_workloads_cmd}
 singularity run --network host --bind "{executable_dir},/tmp,{','.join(binds)}" {sif_path} bash -c \\
 "dstat -cdlmnyt > {local_dstat_output} 2>&1 & \\
-{build_cmd_str} \$IPS > {local_ycsb_output} 2>&1; \\
-kill \$(pgrep dstat)"
+{build_cmd_str} $$IPS > {local_ycsb_output} 2>&1; \\
+kill $$(pgrep dstat)"
 cp {local_ycsb_output} {ycsb_output}
 cp {local_dstat_output} {dstat_output}
 
 # Stop controller job
-scancel {{"$CONTROLLER_JOB_ID"}}
+scancel "$$CONTROLLER_JOB_ID"
 EOF
 
 chmod +x /tmp/client.sh
