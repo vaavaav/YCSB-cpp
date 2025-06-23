@@ -28,6 +28,7 @@ namespace ycsbc {
 
 void TraceReplayer::Init(std::string const property_suffix,
                          const utils::Properties &p) {
+  CoreWorkload::Init(property_suffix, p);
   table_name_ =
       p.GetProperty(TABLENAME_PROPERTY + property_suffix,
                     p.GetProperty(TABLENAME_PROPERTY, TABLENAME_DEFAULT));

@@ -180,7 +180,6 @@ def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path=
     local_ycsb_output = "/tmp/ycsb.txt"
     dstat_output = os.path.join(outdir, 'dstat.csv')
     ycsb_output = os.path.join(outdir, 'ycsb.txt')
-    # remove holpaca.address if it exists
     copy_workloads_cmd = '\n'.join(copy_workloads_cmd) 
     wrapped = f"""
 mkdir -p {db}
@@ -194,6 +193,8 @@ singularity run --bind '{executable_dir},/tmp,{','.join(binds)}' {sif_path} bash
 cp {local_ycsb_output} {ycsb_output}
 cp {local_dstat_output} {dstat_output}
 """
+print(wrapped)
+
 
     print(f"[SIF] Submitting run job for {name}, setup: {setup.name}")
     subprocess.run(build_sbatch_cmd(
@@ -267,8 +268,6 @@ CONTROLLER_JOB_ID=$SLURM_JOB_ID
 {controller_sbatch}
 sleep infinity
 """
-
-    print(controller_inner_script)
 
     # Wrap script for sbatch
     print(f"[SIF] Submitting combined controller+client job for {setup.name}")
