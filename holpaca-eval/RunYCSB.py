@@ -193,8 +193,6 @@ singularity run --bind '{executable_dir},/tmp,{','.join(binds)}' {sif_path} bash
 cp {local_ycsb_output} {ycsb_output}
 cp {local_dstat_output} {dstat_output}
 """
-print(wrapped)
-
 
     print(f"[SIF] Submitting run job for {name}, setup: {setup.name}")
     subprocess.run(build_sbatch_cmd(
