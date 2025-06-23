@@ -74,7 +74,7 @@ if __name__ == '__main__':
         }),
         Setup('CacheLib', ycsb_executable, {
             **ycsb_config,
-            'cachelib.pooloptimizer': 'off',  # Fixed typo: was 'pool_optimizer'
+            'cachelib.pooloptimizer': 'off',  
             'cachelib.poolresizer': 'off',
         }),
         Setup('CacheLib-Holpaca-HR', ycsb_executable, {

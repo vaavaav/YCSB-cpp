@@ -37,9 +37,6 @@ inline long ClientThread(std::chrono::seconds sleepafterload,
 
     std::future<void> terminator;
     if (maxexecutiontime > 0s) {
-      std::cout << "Max execution time: " << maxexecutiontime.count()
-                << " seconds" << std::endl;
-      std::cout << "TESTE " << std::endl;
       terminator = std::async(std::launch::async, ycsbc::TerminatorThread,
                               maxexecutiontime, wl);
     }
@@ -61,7 +58,7 @@ inline long ClientThread(std::chrono::seconds sleepafterload,
       db->Cleanup();
     }
 
-    if (maxexecutiontime.count() > 0) {
+    if (maxexecutiontime > 0s) {
       terminator.wait();
     }
 

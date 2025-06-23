@@ -64,7 +64,7 @@ class Setup:
 
 
 def build_sbatch_cmd(name, cmd, stdout, stderr, mem=None, jobid=None, export=None):
-    cmd = [
+    sbatch_cmd = [
         "sbatch",
         f"--job-name={name}",
         "--account=I20240005X",
@@ -76,15 +76,16 @@ def build_sbatch_cmd(name, cmd, stdout, stderr, mem=None, jobid=None, export=Non
         "--mail-user=jose.p.peixoto@inesctec.pt",
         f"--output={stdout}",
         f"--error={stderr}",
-        "--wrap", cmd
+        f"--wrap", 
+        cmd
     ]
     if mem:
-        cmd.insert(1, f"--mem={mem}M")
+        sbatch_cmd.insert(1, f"--mem={mem}M")
     if jobid:
-        cmd.insert(1, f"--dependency=afterok:{jobid}")
+        sbatch_cmd.insert(1, f"--dependency=afterok:{jobid}")
     if export:
-        cmd.insert(1, f"--export={export}")
-    return cmd
+        sbatch_cmd.insert(1, f"--export={export}")
+    return sbatch_cmd
 
 # LOCAL 
 def loadLOCAL(name, setup: Load): 
@@ -126,27 +127,28 @@ def loadSIF(name, setup: Load, sif_path=None, binds=[]):
     os.makedirs(db, exist_ok=True)
     setup.config['rocksdb.dbname'] = fake_db
     # ---
-    copy_workloads_cmd = "" 
+    copy_workloads_cmd = []
     for thread,tracefile in enumerate(setup.traces):
         if tracefile:
             setup.config[f"trace.file.{thread}"] = f"/tmp/{os.path.basename(tracefile)}"
-            copy_workloads_cmd += f"cp '{tracefile}' /tmp; "
+            copy_workloads_cmd.append(f"cp '{tracefile}' /tmp")
     # ---
     load_cmd = setup.build_cmd()
     load_job_id = None
     executable_dir = os.path.dirname(setup.executable)
-    wrapped = f'''
-        mkdir -p {fake_db}
-        {copy_workloads_cmd}
-        singularity run --bind "{executable_dir},/tmp,{",".join(binds)}" {sif_path} {load_cmd}
-        cp {fake_db}/* {db}/
-    '''
+    copy_workloads_cmd = '\n'.join(copy_workloads_cmd)
+    wrapped=f"""
+mkdir -p {fake_db}
+{copy_workloads_cmd}
+singularity run --bind '{executable_dir},/tmp,{','.join(binds)}' {sif_path} bash -c "{load_cmd}"
+cp {fake_db}/* {db}/
+"""
     print(f"[SIF] Submitting load job for {name}")
     result = subprocess.run(build_sbatch_cmd(
         name=f"load-{name}",
         cmd=wrapped,
-        stdout=f"/tmp/slurm-load-{name}.out",
-        stderr=f"/tmp/slurm-load-{name}.err"
+        stdout=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-load-{name}.out",
+        stderr=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-load-{name}.err",
     ),
      stdout=subprocess.PIPE, 
      stderr=subprocess.PIPE, 
@@ -165,11 +167,11 @@ def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path=
     if not os.path.exists(sif_path):
         raise FileNotFoundError(f"SIF file not found: {sif_path}")
     # ---
-    copy_workloads_cmd = "" 
-    for thread,tracefile in enumerate(setup.traces):
+    copy_workloads_cmd = []
+    for thread, tracefile in enumerate(setup.traces):
         if tracefile:
             setup.config[f"trace.file.{thread}"] = f"/tmp/{os.path.basename(tracefile)}"
-            copy_workloads_cmd += f"cp '{tracefile}' /tmp; "
+            copy_workloads_cmd.append(f"cp '{tracefile}' /tmp")
     # ---
     db = "/tmp/db"
     setup.config['rocksdb.dbname'] = db
@@ -179,16 +181,19 @@ def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path=
     dstat_output = os.path.join(outdir, 'dstat.csv')
     ycsb_output = os.path.join(outdir, 'ycsb.txt')
     # remove holpaca.address if it exists
-    wrapped = f'''
-        mkdir -p {db} && cp -r {db_backup}/* {db}/
-        {copy_workloads_cmd}
-        singularity run --bind "{executable_dir},/tmp,{",".join(binds)}" {sif_path} bash -c "\
-            dstat -cdlmnyt > {local_dstat_output} 2>&1 & \
-            {setup.build_cmd(status)} > {local_ycsb_output} 2>&1; \
-            kill $(pgrep dstat)"
-        cp {local_ycsb_output} {ycsb_output}
-        cp {local_dstat_output} {dstat_output}
-    '''
+    copy_workloads_cmd = '\n'.join(copy_workloads_cmd) 
+    wrapped = f"""
+mkdir -p {db}
+cp -r {db_backup}/* {db}/
+{copy_workloads_cmd}
+singularity run --bind '{executable_dir},/tmp,{','.join(binds)}' {sif_path} bash -c "
+    dstat -cdlmnyt > {local_dstat_output} 2>&1 &
+    {setup.build_cmd(status)} > {local_ycsb_output}
+    kill $(pgrep dstat)
+"
+cp {local_ycsb_output} {ycsb_output}
+cp {local_dstat_output} {dstat_output}
+"""
 
     print(f"[SIF] Submitting run job for {name}, setup: {setup.name}")
     subprocess.run(build_sbatch_cmd(
@@ -209,70 +214,67 @@ def runSIFController(name, setup, db_backup, outdir, status, load_job_id, sif_pa
     controller_dir = os.path.dirname(setup.controller_exec)
     executable_dir = os.path.dirname(setup.executable)
     db = "/tmp/db"
+    setup.config['rocksdb.dbname'] = db
     local_dstat_output = "/tmp/dstat.csv"
     local_ycsb_output = "/tmp/ycsb.txt"
     dstat_output = os.path.join(outdir, 'dstat.csv')
     ycsb_output = os.path.join(outdir, 'ycsb.txt')
 
-    copy_workloads_cmd = ""
+    copy_workloads_cmd = []
     for thread, tracefile in enumerate(setup.traces):
         if tracefile:
             setup.config[f"trace.file.{thread}"] = f"/tmp/{os.path.basename(tracefile)}"
-            copy_workloads_cmd += f"cp '{tracefile}' /tmp; "
+            copy_workloads_cmd.append(f"cp '{tracefile}' /tmp")
 
+    copy_workloads_cmd = '\n'.join(copy_workloads_cmd)
     build_cmd_str = setup.build_cmd(status)
 
-    client_inner_script = f"""
-        CLIENT_IP=$(hostname -I | awk '{{print $1}}' | xargs)
-        [[ -z "$CLIENT_IP" || -z "$CONTROLLER_IP" ]] && exit 1
+    client_inner_script = f""" "
+CLIENT_IP=\\$(hostname -I | awk '{{print $1}}' | xargs)
+IPS=\\"-p cachelib.controller.address=\\$CONTROLLER_IP:11110\\"
+for i in \\$(seq 0 {setup.threads - 1}); do
+  PORT=\\$((11111+i))
+  IPS+=\\" -p cachelib.holpaca.address.\\$i=\\$CLIENT_IP:\\$PORT\\"
+done
+mkdir -p {db} && cp -r {db_backup}/* {db}/
+{copy_workloads_cmd}
+singularity run --network host --bind '{executable_dir},/tmp,{','.join(binds)}' {sif_path} bash -c \\"
+    dstat -cdlmnyt > {local_dstat_output} 2>&1 &
+    {build_cmd_str} \\$IPS > {local_ycsb_output}
+    kill \\$(pgrep dstat) 2>/dev/null || true
+\\"
+scancel \\"\\$CONTROLLER_JOB_ID\\" 2>/dev/null || true
+cp {local_ycsb_output} {ycsb_output}
+cp {local_dstat_output} {dstat_output}
+" """
 
-        IPS=" -p cachelib.controller.address=$CONTROLLER_IP:11110"
-        for i in $(seq 0 {setup.threads - 1}); do
-            PORT=$((11111 + i))
-            IPS+=" -p cachelib.holpaca.address.$i=$CLIENT_IP:$PORT"
-        done
-
-        mkdir -p {db} && cp -r {db_backup}/* {db}/
-        {copy_workloads_cmd}
-        singularity run --network host --bind "{executable_dir},/tmp,{','.join(binds)}" {sif_path} bash -c \
-        "dstat -cdlmnyt > {local_dstat_output} 2>&1 & \
-        {build_cmd_str} $IPS > {local_ycsb_output} 2>&1; \
-        echo -e '{build_cmd_str} $IPS' \
-        kill $(pgrep dstat) 2>/dev/null || true"
-        cp {local_ycsb_output} {ycsb_output}
-        cp {local_dstat_output} {dstat_output}
-        scancel "$CONTROLLER_JOB_ID" 2>/dev/null || true
-    """
-
-    # === Controller job script ===
-    controller_inner_script = f"""
-CONTROLLER_IP=$(hostname -I | awk '{{print $1}}' | tr -d '[:space:]')
-[[ -z "$CONTROLLER_IP" ]] && exit 1
-
-singularity run --network host --bind "{controller_dir},{outdir},{','.join(binds)}" {sif_path} bash -c \\
-"dstat -cdlmnyt > {outdir}/controller_dstat.csv 2>&1 & \\
-{setup.controller_exec} $CONTROLLER_IP:11110 {setup.controller_args}" &
-
-CONTROLLER_PID=$!
-CONTROLLER_JOB_ID=$SLURM_JOB_ID
-
-{" ".join(build_sbatch_cmd(
+    controller_sbatch = " ".join(build_sbatch_cmd(
         name=f"client-{name}",
-        cmd=client_inner_script.strip(),
+        cmd=client_inner_script,
         stdout=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-client-{name}.out",
         stderr=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-client-{name}.err",
         mem=int(setup.total_cache_size / (1024 * 1024)),
-        export=f"CONTROLLER_IP=$CONTROLLER_IP,CONTROLLER_JOB_ID=$CONTROLLER_JOB_ID"
-))}
+        export="CONTROLLER_IP=$CONTROLLER_IP,CONTROLLER_JOB_ID=$CONTROLLER_JOB_ID"
+        ))
 
-wait $CONTROLLER_PID
+    controller_inner_script = f"""
+CONTROLLER_IP=$(hostname -I | awk '{{print $1}}' | xargs)
+singularity run --network host --bind '{controller_dir},{executable_dir},{outdir},{','.join(binds)}' {sif_path} bash -c "
+    dstat -cdlmnyt > {outdir}/controller_dstat.csv 2>&1 &
+    {setup.controller_exec} $CONTROLLER_IP:11110 {setup.controller_args}
+" &
+CONTROLLER_JOB_ID=$SLURM_JOB_ID
+{controller_sbatch}
+sleep infinity
 """
+
+    print(controller_inner_script)
 
     # Wrap script for sbatch
     print(f"[SIF] Submitting combined controller+client job for {setup.name}")
     subprocess.run(build_sbatch_cmd(
         name=f"controller-{name}",
-        cmd=controller_inner_script.strip(),
+        cmd=controller_inner_script,
         stdout=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-controller-{name}.out",
         stderr=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-controller-{name}.err",
         jobid=load_job_id
