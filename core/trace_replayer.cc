@@ -28,7 +28,6 @@ namespace ycsbc {
 
 void TraceReplayer::Init(std::string const property_suffix,
                          const utils::Properties &p) {
-  CoreWorkload::Init(property_suffix, p);
   table_name_ =
       p.GetProperty(TABLENAME_PROPERTY + property_suffix,
                     p.GetProperty(TABLENAME_PROPERTY, TABLENAME_DEFAULT));
@@ -41,6 +40,10 @@ void TraceReplayer::Init(std::string const property_suffix,
       p.GetProperty(SCALE_VALUE_SIZE_PROPERTY, SCALE_VALUE_SIZE_DEFAULT)));
 
   ops_ = 0;
+
+  operation_count_ =
+      std::stol(p.GetProperty(OPERATION_COUNT_PROPERTY + property_suffix,
+                              p.GetProperty(OPERATION_COUNT_PROPERTY, "0")));
 }
 
 std::string TraceReplayer::BuildValue(size_t size) {
