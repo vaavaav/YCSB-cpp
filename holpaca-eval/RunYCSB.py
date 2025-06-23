@@ -140,7 +140,7 @@ def loadSIF(name, setup: Load, sif_path=None, binds=[]):
     wrapped=f"""
 mkdir -p {fake_db}
 {copy_workloads_cmd}
-singularity run --bind '{executable_dir},/tmp,{','.join(binds)}' {sif_path} bash -c "{load_cmd}"
+singularity run --bind '{executable_dir},/tmp,{','.join(binds)}' {sif_path} {load_cmd}
 cp {fake_db}/* {db}/
 """
     print(f"[SIF] Submitting load job for {name}")
