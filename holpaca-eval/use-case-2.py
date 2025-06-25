@@ -16,11 +16,11 @@ if __name__ == '__main__':
     sourceDir = os.path.abspath(sys.argv[1])
     maxexecutiontime = int(sys.argv[2])
     # traces as the third argument, separated by colon
-    loadTraces = sys.argv[2].split(':')
-    traces = sys.argv[3].split(':')
-    tracesDir = os.path.abspath(sys.argv[4])
-    outputDir = os.path.join(os.path.abspath(sys.argv[5]), name)
-    sifPath = os.path.abspath(sys.argv[6]) if len(sys.argv) > 6 else None
+    loadTraces = sys.argv[3].split(':')
+    traces = sys.argv[4].split(':')
+    tracesDir = os.path.abspath(sys.argv[5])
+    outputDir = os.path.join(os.path.abspath(sys.argv[6]), name)
+    sifPath = os.path.abspath(sys.argv[7]) if len(sys.argv) > 7 else None
     db_backup = os.path.join(sourceDir, 'db-backup', name)
     db = os.path.join(sourceDir, 'db', name)
 
