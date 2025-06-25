@@ -9,7 +9,7 @@ import os
 import time
 
 name = f"use-case-2-{int(time.time()*1e9)}"
-runs = 3
+runs = 1
 status = 'READ-FAILED READ-PASSED INSERT-FAILED INSERT-PASSED UPDATE-FAILED UPDATE-PASSED ALL'
 
 if __name__ == '__main__':
