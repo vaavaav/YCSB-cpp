@@ -14,7 +14,8 @@ status = 'READ-FAILED READ-PASSED INSERT-FAILED INSERT-PASSED UPDATE-FAILED UPDA
 
 if __name__ == '__main__':
     sourceDir = os.path.abspath(sys.argv[1])
-    # traces as the second argument, separated by colon
+    maxexecutiontime = int(sys.argv[2])
+    # traces as the third argument, separated by colon
     loadTraces = sys.argv[2].split(':')
     traces = sys.argv[3].split(':')
     tracesDir = os.path.abspath(sys.argv[4])
