@@ -26,6 +26,9 @@ const std::string PROP_POOL_NAME_DEFAULT = "default";
 const std::string PROP_POOL_SIZE = "cachelib.pool.relsize";
 const std::string PROP_POOL_SIZE_DEFAULT = "1";
 
+const std::string PROP_POOL_QOS_LEVEL = "cachelib.pool.qos";
+const std::string PROP_POOL_QOS_LEVEL_DEFAULT = "0.0";
+
 const std::string PROP_POOL_NO_INITIAL_SIZE = "cachelib.pool.noinitialsize";
 const std::string PROP_POOL_NO_INITIAL_SIZE_DEFAULT = "off";
 
@@ -161,15 +164,19 @@ void CacheLibHolpaca::Init() {
           PROP_POOL_NO_INITIAL_SIZE + "." + std::to_string(threadId_),
           props_->GetProperty(PROP_POOL_NO_INITIAL_SIZE,
                               PROP_POOL_NO_INITIAL_SIZE_DEFAULT)) == "on";
+  double qosLevel = std::stod(props_->GetProperty(
+      PROP_POOL_QOS_LEVEL + "." + std::to_string(threadId_),
+      props_->GetProperty(PROP_POOL_QOS_LEVEL, PROP_POOL_QOS_LEVEL_DEFAULT)));
   std::visit(
-      [&poolName, &poolSize, dontSetPoolSize](auto &&cache) {
+      [&poolName, &poolSize, dontSetPoolSize, &qosLevel](auto &&cache) {
         if (dontSetPoolSize) {
-          CacheLibHolpaca::poolId_ = cache.addPool(poolName);
+          CacheLibHolpaca::poolId_ = cache.addPool(poolName, 0, qosLevel);
         } else {
           CacheLibHolpaca::poolId_ = cache.addPool(
               poolName,
               static_cast<long>(cache.getCacheMemoryStats().ramCacheSize *
-                                poolSize));
+                                poolSize),
+              qosLevel);
         }
       },
       *cache_);

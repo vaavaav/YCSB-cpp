@@ -229,7 +229,7 @@ def runSIFController(name, setup, db_backup, outdir, status, load_job_id, sif_pa
     build_cmd_str = setup.build_cmd(status)
 
     client_inner_script = f""" "
-CLIENT_IP=\\$(hostname -I | awk '{{print $1}}' | xargs)
+CLIENT_IP=\\$(hostname -I | awk '{{print \\$1}}' | xargs)
 IPS=\\"-p cachelib.controller.address=\\$CONTROLLER_IP:11110\\"
 for i in \\$(seq 0 {setup.threads - 1}); do
   PORT=\\$((11111+i))
@@ -257,7 +257,7 @@ cp {local_dstat_output} {dstat_output}
         ))
 
     controller_inner_script = f"""
-CONTROLLER_IP=$(hostname -I | awk '{{print $1}}' | xargs)
+CONTROLLER_IP=$(hostname -I | awk '{{print \\$1}}' | xargs)
 singularity run --network host --bind '{controller_dir},{executable_dir},{outdir},{','.join(binds)}' {sif_path} bash -c "
     dstat -cdlmnyt > {outdir}/controller_dstat.csv 2>&1 &
     {setup.controller_exec} $CONTROLLER_IP:11110 {setup.controller_args}
