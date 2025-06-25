@@ -112,7 +112,6 @@ if __name__ == '__main__':
             **{f'cachelib.pool.qos.{i}': x for i, x in enumerate([4000, 0, 0, 0])},
             }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
               controller_args=f'ThroughputMaximization 1000:0.05:{ycsb_config["cachelib.virtualsize"]}:false'),
-    ]
         Setup('CacheLib-Holpaca-T-4', ycsb_executable, {
             **ycsb_config,
             'cachelib.poolresizer': 'on',
@@ -127,6 +126,7 @@ if __name__ == '__main__':
             **{f'cachelib.pool.qos.{i}': x for i, x in enumerate([2000, 6000, 4000, 2000])},
             }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
               controller_args=f'ThroughputMaximization 1000:0.05:{ycsb_config["cachelib.virtualsize"]}:false'),
+    ]
     
     # Run the benchmark
     RunYCSB(name, runs, outputDir, load_setup, setups, "READ-PASSED READ-FAILED ALL", sifPath, binds=[sourceDir])
