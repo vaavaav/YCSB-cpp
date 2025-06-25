@@ -192,7 +192,8 @@ DB::Status CacheLibHolpaca::Read(const std::string &table,
   return std::visit(
       [&table, &key, &fields, &result](auto &&cache) {
         auto handle = cache.find(key);
-        if (handle == nullptr) {
+        auto status = handle != nullptr ? kOK : kNotFound;
+        if (status == kNotFound) {
           rocksdbIOPSPerThread_[threadId_]++;
           if (rocksdbs_[cacheName_].Read(table, key, fields, result) == kOK) {
             uint32_t size = result.front().value.size();
@@ -202,14 +203,12 @@ DB::Status CacheLibHolpaca::Read(const std::string &table,
                           size);
               cache.insertOrReplace(new_handle);
             }
-            return kError;
           }
-          return kNotFound;
         } else {
           volatile auto data = handle->getMemory();
           auto size = handle->getSize();
         }
-        return kOK;
+        return status;
       },
       *cache_);
 }

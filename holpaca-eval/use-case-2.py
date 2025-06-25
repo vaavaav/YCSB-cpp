@@ -24,14 +24,17 @@ if __name__ == '__main__':
     db = os.path.join(sourceDir, 'db', name)
 
     ycsb_executable = os.path.join(sourceDir, 'build-ycsb/ycsb')  # Update this path
+    threads = len(traces)
+    phases = threads * 2 - 1
 
     ycsb_config = {
         'threadcount': len(traces),
         'status.interval': 1,
-        'operationcount.0': 13_000_000,  
-        'operationcount.1': 5_000_000,
-        'operationcount.2': 22_000_000,
-        'operationcount.3': 48_000_000,
+        'operationcount.0': 35_300_000,
+        'operationcount.1': 6_644_507,
+        'operationcount.2': 14_265_238,
+        'operationcount.3': 11_759_781,
+        **{f'sleepafterload.{i}': int(i*(maxexecutiontime/phases)) for i in range(threads)},
         # Cachelib
         'cachelib.size': 8_000_000_000,
         'cachelib.virtualsize': 2_000_000_000,
