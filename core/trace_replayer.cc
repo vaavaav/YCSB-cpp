@@ -39,6 +39,10 @@ void TraceReplayer::Init(std::string const property_suffix,
       SCALE_VALUE_SIZE_PROPERTY + property_suffix,
       p.GetProperty(SCALE_VALUE_SIZE_PROPERTY, SCALE_VALUE_SIZE_DEFAULT)));
 
+  request_key_prefix_ = p.GetProperty(
+      REQUEST_KEY_PREFIX_PROPERTY + property_suffix,
+      p.GetProperty(REQUEST_KEY_PREFIX_PROPERTY, REQUEST_KEY_PREFIX_DEFAULT));
+
   ops_ = 0;
 
   operation_count_ =
@@ -109,11 +113,17 @@ std::tuple<Operation, std::string, size_t> TraceReplayer::NextOperation() {
   }
 }
 
+std::string TraceReplayer::BuildKeyName(const std::string &k) {
+  std::string key;
+  return key.append(request_key_prefix_).append(k);
+}
+
 bool TraceReplayer::DoInsert(DB &db) {
-  auto [_, key, size] = NextOperation();
-  if (key.empty()) {
+  auto [_, k_, size] = NextOperation();
+  if (k_.empty()) {
     return DB::kOK;
   }
+  const std::string key = BuildKeyName(k_);
   std::vector<DB::Field> fields;
   auto field = DB::Field();
   field.value = BuildValue(size);
@@ -123,7 +133,8 @@ bool TraceReplayer::DoInsert(DB &db) {
 
 bool TraceReplayer::DoTransaction(DB &db) {
   DB::Status status;
-  auto [op, key, size] = NextOperation();
+  auto [op, k_, size] = NextOperation();
+  const std::string key = BuildKeyName(k_);
   switch (op) {
   case READ:
     status = TransactionRead(db, key);

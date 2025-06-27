@@ -35,12 +35,14 @@ protected:
 
   // for productiont traces
   std::string BuildValue(size_t size) override final;
+  std::string BuildKeyName(std::string const &k);
 
   std::tuple<Operation, std::string, size_t> NextOperation();
 
   // file buffer
   std::ifstream file_buffer_;
   double scale_value_size{1.0};
+  std::string request_key_prefix_;
 };
 
 } // namespace ycsbc

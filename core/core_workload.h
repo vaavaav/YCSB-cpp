@@ -230,10 +230,11 @@ public:
 
   bool is_stop_requested() { return stop_requested_.load(); }
 
+  std::string BuildKeyName(uint64_t key_num);
+
 protected:
   static Generator<uint64_t> *GetFieldLenGenerator(std::string property_suffix,
                                                    const utils::Properties &p);
-  std::string BuildKeyName(uint64_t key_num);
   void BuildValues(std::vector<DB::Field> &values);
   void BuildSingleValue(std::vector<DB::Field> &update);
 

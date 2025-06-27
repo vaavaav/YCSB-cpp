@@ -72,6 +72,7 @@ def build_sbatch_cmd(name, cmd, stdout, stderr, mem=None, jobid=None, export=Non
         "--ntasks=1",
         "--cpus-per-task=1",
         "--partition=large-x86",
+        "--time=48:00:00",
         "--mail-type=END",
         "--mail-user=jose.p.peixoto@inesctec.pt",
         f"--output={stdout}",
@@ -96,20 +97,21 @@ def loadLOCAL(name, setup: Load):
     subprocess.run(setup.build_cmd(), shell=True)
 
 def runLOCAL(name, setup: Setup, db_backup, outdir, status):
-    db = setup.config['rocksdb.dbname']
-    shutil.rmtree(db, ignore_errors=True)
-    shutil.copytree(db_backup, db) # Restore the database from backup
     print(f"[LOCAL] Running {name}: {setup.build_cmd(status)}")
-    controller = None
-    with open(os.path.join(outdir, 'dstat.csv'), 'w') as dstat_output:
-        dstat = subprocess.Popen(["dstat", "-cdlmnyt"], stdout=dstat_output)
-        if setup.controller_exec:
-            controller = subprocess.Popen([setup.controller_exec, setup.controller_ip, *setup.controller_args.split()], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        with open(os.path.join(outdir, 'ycsb.txt'), 'w') as ycsb_output:
-            subprocess.run(setup.build_cmd(status), shell=True, stdout=ycsb_output)
-        if controller:
-            controller.terminate()
-        dstat.terminate()
+#    db = setup.config['rocksdb.dbname']
+#    shutil.rmtree(db, ignore_errors=True)
+#    shutil.copytree(db_backup, db) # Restore the database from backup
+#    print(f"[LOCAL] Running {name}: {setup.build_cmd(status)}")
+#    controller = None
+#    with open(os.path.join(outdir, 'dstat.csv'), 'w') as dstat_output:
+#        dstat = subprocess.Popen(["dstat", "-cdlmnyt"], stdout=dstat_output)
+#        if setup.controller_exec:
+#            controller = subprocess.Popen([setup.controller_exec, setup.controller_ip, *setup.controller_args.split()], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+#        with open(os.path.join(outdir, 'ycsb.txt'), 'w') as ycsb_output:
+#            subprocess.run(setup.build_cmd(status), shell=True, stdout=ycsb_output)
+#        if controller:
+#            controller.terminate()
+#        dstat.terminate()
 
 # SLURM
 

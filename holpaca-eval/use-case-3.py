@@ -31,10 +31,10 @@ if __name__ == '__main__':
     ycsb_config = {
         'threadcount': len(traces),
         'status.interval': 1,
-        'operationcount.0': 35_300_000,
-        'operationcount.1': 6_644_507,
-        'operationcount.2': 14_265_238,
-        'operationcount.3': 11_759_781,
+        'operationcount.0': 30_436_000,
+        'operationcount.1': 6_879_000,
+        'operationcount.2': 14_789_000,
+        'operationcount.3': 13_175_000,
         **{f'sleepafterload.{i}': int(i*(maxexecutiontime/phases)) for i in range(threads)},
         # Cachelib
         'cachelib.size': 2_000_000_000*len(traces),
@@ -57,6 +57,7 @@ if __name__ == '__main__':
         'rocksdb.dbname': db,
         # workload
         'workload.type': 'trace',
+        'trace.scale_value': '10',
         **{f'trace.file.{i}': os.path.join(tracesDir, trace) for i, trace in enumerate(traces)},
     }
 

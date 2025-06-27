@@ -1,49 +1,55 @@
 #!/usr/bin/env python3
 
 from RunYCSB import RunYCSB, Load, Setup
-
 import subprocess
 import shutil
 import sys
 import os
 import time
 
-name = f"use-case-2-{int(time.time()*1e9)}"
-runs = 1
-status = 'READ-FAILED READ-PASSED INSERT-FAILED INSERT-PASSED UPDATE-FAILED UPDATE-PASSED ALL'
+name = f"motivation-1-long-{int(time.time()*1e9)}"
+runs = 3
 
 if __name__ == '__main__':
-    sourceDir = os.path.abspath(sys.argv[1])
+    threads = int(sys.argv[1])
     maxexecutiontime = int(sys.argv[2])
-    # traces as the third argument, separated by colon
-    loadTraces = sys.argv[3].split(':')
-    traces = sys.argv[4].split(':')
-    tracesDir = os.path.abspath(sys.argv[5])
-    outputDir = os.path.join(os.path.abspath(sys.argv[6]), name)
-    sifPath = os.path.abspath(sys.argv[7]) if len(sys.argv) > 7 else None
+    sourceDir = os.path.abspath(sys.argv[3])
+    outputDir = os.path.join(os.path.abspath(sys.argv[4]), name)
+    sifPath = os.path.abspath(sys.argv[5]) if len(sys.argv) > 5 else None
+    
+    # Assuming YCSB executable path - adjust as needed
+    ycsb_executable = os.path.join(sourceDir, 'build-ycsb/ycsb')  # Update this path
+    
     db_backup = os.path.join(sourceDir, 'db-backup', name)
     db = os.path.join(sourceDir, 'db', name)
-
-    ycsb_executable = os.path.join(sourceDir, 'build-ycsb/ycsb')  # Update this path
-    threads = len(traces)
-    phases = threads * 2 - 1
-
+    zipf = [0.6, 0.9, 1.2]
+    phases = threads*2-1
+    
+    # Base YCSB configuration
     ycsb_config = {
-        'threadcount': len(traces),
+        'threadcount': threads,
+        'sleepafterload': 0,
+        'maxexecutiontime': maxexecutiontime,
+        'operationcount': 1_000_000_000,
+        'recordcount': 200_000_000,
+        'request_key_domain_end': 19_999_999,
         'status.interval': 1,
-        'operationcount.0': 30_436_000,
-        'operationcount.1': 6_879_000,
-        'operationcount.2': 14_789_000,
-        'operationcount.3': 13_175_000,
+        'readallfields': 'false',
+        'fieldcount': 1,
+        'fieldlength': 1000,
+        'insertorder': 'nothashed',
+        'requestdistribution.0': 'uniform',
+        'requestdistribution': 'zipfian',
+        **{f'zipfian_const.{i}': zipf[i-1] for i in range(1, min(threads, len(zipf)+1))},
         **{f'sleepafterload.{i}': int(i*(maxexecutiontime/phases)) for i in range(threads)},
-        # Cachelib
-        'cachelib.size': 8_000_000_000,
-        'cachelib.virtualsize': 2_000_000_000,
-        **{f'cachelib.name.{i}': f'instance-{i}' for i in range(len(traces))},
+        **{f'maxexecutiontime.{i}': int((1 - i*2/phases)*maxexecutiontime) for i in range(threads)},
+        'cachelib.size': 2_000_000_000*threads,
+        'cachelib.virtualsize': 2_000_000_000*threads,
+        'cachelib.name': 'instance-0',
         'cachelib.eviction': 'lru',
-        'cachelib.pool.relsize': 1, 
-        **{f'request_key_prefix.{i}': f'p{i}' for i in range(len(traces))},
-        **{f'cachelib.pool.name.{i}': f'p{i}' for i in range(len(traces))},
+        'cachelib.pool.relsize': 1/threads,
+        **{f'cachelib.pool.name.{i}': f'p{i}' for i in range(threads)},
+        **{f'request_key_prefix.{i}': f'p{i}' for i in range(threads)},
         # rocksdb
         'rocksdb.compression': 'no',
         'rocksdb.write_buffer_size': 134217728,
@@ -56,20 +62,28 @@ if __name__ == '__main__':
         'rocksdb.use_direct_io_for_flush_compaction': 'true',
         'rocksdb.dbname': db,
         # workload
-        'workload.type': 'trace',
-        'trace.scale_value': '10',
-        **{f'trace.file.{i}': os.path.join(tracesDir, trace) for i, trace in enumerate(traces)},
+        'workload.type': 'synthetic',
+        'readproportion': 1,
+        'updateproportion': 0,
+        'scanproportion': 0,
+        'insertproportion': 0,
     }
+    
     # Load configuration (for database initialization)
     load_setup = Load(ycsb_executable, {
         **ycsb_config,
         'rocksdb.dbname': db_backup,
         'rocksdb.destroy': 'true',
-        **{f'trace.file.{i}': os.path.join(tracesDir, trace) for i, trace in enumerate(loadTraces)},
     })
     
     # Create Setup objects for different configurations
     setups = [
+        Setup('CacheLib-Holpaca-T', ycsb_executable, {
+            **ycsb_config,
+            'cachelib.poolresizer': 'on',
+            'cachelib.pool.noinitialsize': 'on',
+            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
+              controller_args=f'ThroughputMaximization 1000:0.05:{ycsb_config["cachelib.virtualsize"]}:false'),
         Setup('CacheLib-Optimizer', ycsb_executable, {
             **ycsb_config,
             'cachelib.eviction': '2q',
@@ -78,7 +92,7 @@ if __name__ == '__main__':
         }),
         Setup('CacheLib', ycsb_executable, {
             **ycsb_config,
-            'cachelib.pooloptimizer': 'off',  
+            'cachelib.pooloptimizer': 'off',  # Fixed typo: was 'pool_optimizer'
             'cachelib.poolresizer': 'off',
         }),
         Setup('CacheLib-Holpaca-HR', ycsb_executable, {
@@ -87,14 +101,7 @@ if __name__ == '__main__':
             'cachelib.pool.noinitialsize': 'on',
             }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
               controller_args=f'HitRatioMaximization 1000:0.05:{ycsb_config["cachelib.virtualsize"]}:false'),
-        Setup('CacheLib-Holpaca-T', ycsb_executable, {
-            **ycsb_config,
-            'cachelib.poolresizer': 'on',
-            'cachelib.pool.noinitialsize': 'on',
-            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
-              controller_args=f'ThroughputMaximization 1000:0.05:{ycsb_config["cachelib.virtualsize"]}:false'),
     ]
     
     # Run the benchmark
     RunYCSB(name, runs, outputDir, load_setup, setups, "READ-PASSED READ-FAILED ALL", sifPath, binds=[sourceDir])
-
