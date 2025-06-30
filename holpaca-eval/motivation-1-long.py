@@ -8,7 +8,7 @@ import os
 import time
 
 name = f"motivation-1-long-{int(time.time()*1e9)}"
-runs = 3
+runs = 1
 
 if __name__ == '__main__':
     threads = int(sys.argv[1])

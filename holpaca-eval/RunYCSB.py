@@ -6,6 +6,8 @@ import json
 import re
 import time
 
+getMem = lambda cache_size: int(cache_size * 1.4 / (1024 * 1024))
+
 def RunYCSB(name, runs, output_dir, load_setup, setups, status, sif_path=None, binds=[]):
     os.makedirs(output_dir, exist_ok=True)
     with open(os.path.join(output_dir, 'setups.json'), 'w') as f:
@@ -49,10 +51,10 @@ class Setup:
         self.name = name
         self.config = config
         self.executable = executable
-        self.total_cache_size = int(sum([
+        self.used_mem = getMem(sum([
             int(config.get(f'cachelib.size.{i}', config.get('cachelib.size', 0))*config.get(f'cachelib.pool.relsize.{i}', config.get('cachelib.pool.relsize', 1)))
             for i in range(int(config.get('threadcount', 1)))
-        ]) * 1.2) # 20% overhead
+        ]))
         self.controller_exec = controller_exec
         self.controller_ip = config.get('cachelib.controller.address', None)
         self.controller_args = controller_args or ""
@@ -72,7 +74,6 @@ def build_sbatch_cmd(name, cmd, stdout, stderr, mem=None, jobid=None, export=Non
         "--ntasks=1",
         "--cpus-per-task=1",
         "--partition=large-x86",
-        "--time=48:00:00",
         "--mail-type=END",
         "--mail-user=jose.p.peixoto@inesctec.pt",
         f"--output={stdout}",
@@ -98,20 +99,20 @@ def loadLOCAL(name, setup: Load):
 
 def runLOCAL(name, setup: Setup, db_backup, outdir, status):
     print(f"[LOCAL] Running {name}: {setup.build_cmd(status)}")
-#    db = setup.config['rocksdb.dbname']
-#    shutil.rmtree(db, ignore_errors=True)
-#    shutil.copytree(db_backup, db) # Restore the database from backup
-#    print(f"[LOCAL] Running {name}: {setup.build_cmd(status)}")
-#    controller = None
-#    with open(os.path.join(outdir, 'dstat.csv'), 'w') as dstat_output:
-#        dstat = subprocess.Popen(["dstat", "-cdlmnyt"], stdout=dstat_output)
-#        if setup.controller_exec:
-#            controller = subprocess.Popen([setup.controller_exec, setup.controller_ip, *setup.controller_args.split()], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-#        with open(os.path.join(outdir, 'ycsb.txt'), 'w') as ycsb_output:
-#            subprocess.run(setup.build_cmd(status), shell=True, stdout=ycsb_output)
-#        if controller:
-#            controller.terminate()
-#        dstat.terminate()
+    db = setup.config['rocksdb.dbname']
+    shutil.rmtree(db, ignore_errors=True)
+    shutil.copytree(db_backup, db) # Restore the database from backup
+    print(f"[LOCAL] Running {name}: {setup.build_cmd(status)}")
+    controller = None
+    with open(os.path.join(outdir, 'dstat.csv'), 'w') as dstat_output:
+        dstat = subprocess.Popen(["dstat", "-cdlmnyt"], stdout=dstat_output)
+        if setup.controller_exec:
+            controller = subprocess.Popen([setup.controller_exec, setup.controller_ip, *setup.controller_args.split()], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        with open(os.path.join(outdir, 'ycsb.txt'), 'w') as ycsb_output:
+            subprocess.run(setup.build_cmd(status), shell=True, stdout=ycsb_output)
+        if controller:
+            controller.terminate()
+        dstat.terminate()
 
 # SLURM
 
@@ -202,7 +203,7 @@ cp {local_dstat_output} {dstat_output}
         cmd=wrapped,
         stdout=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-{name}.out",
         stderr=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-{name}.err",
-        mem=int(setup.total_cache_size / (1024 * 1024)),
+        mem=setup.used_mem,
         jobid=load_job_id
     ))
 
@@ -254,7 +255,7 @@ cp {local_dstat_output} {dstat_output}
         cmd=client_inner_script,
         stdout=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-client-{name}.out",
         stderr=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-client-{name}.err",
-        mem=int(setup.total_cache_size / (1024 * 1024)),
+        mem=setup.used_mem,
         export="CONTROLLER_IP=$CONTROLLER_IP,CONTROLLER_JOB_ID=$CONTROLLER_JOB_ID"
         ))
 
