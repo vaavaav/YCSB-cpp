@@ -493,4 +493,4 @@ cp {local_dstat} {dstat_out}
         print(f"[DRY-RUN] [SIF-Colocated] {' '.join(sbatch_cmd)}")
         return
 
-    subprocess.run()
+    subprocess.run(sbatch_cmd)
