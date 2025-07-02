@@ -435,6 +435,8 @@ singularity run --bind '/tmp,{','.join(binds)}' {sif_path} {load_cmd}
                         copy_workloads_cmd.append(f"cp '{tracefile}' /tmp")
 
                 copy_cmds = "\n".join(copy_workloads_cmd)
+                controller_prefix = ""
+                controller_cleanup = ""
 
                 if setup.controller_exec:
                     controller_port = 11110 + task_id * 1000
@@ -446,16 +448,11 @@ singularity run --bind '/tmp,{','.join(binds)}' {sif_path} {load_cmd}
                     for j in range(setup.threads):
                         ip_args += f" -p cachelib.holpaca.address.{j}={controller_ip}:{base_client_port + j}"
 
-                    build_cmd_str = f"{setup.build_cmd(case.status)} {ip_args}"
                     controller_prefix = f"""
 {setup.controller_exec} {setup.controller_ip} {setup.controller_args} > /tmp/controller_{task_id}.log 2>&1 &
 CONTROLLER_PID=$!
 """
                     controller_cleanup = "kill $CONTROLLER_PID 2>/dev/null || true"
-                else:
-                    build_cmd_str = setup.build_cmd(case.status)
-                    controller_prefix = ""
-                    controller_cleanup = ""
 
                 setup.config['rocksdb.dbname'] = db_paths[case]
 
@@ -464,7 +461,7 @@ srun --exclusive -N1 -n1 bash -c "
 {controller_prefix}
 {copy_cmds}
 dstat -cdlmnyt > {local_dstat} 2>&1 &
-singularity run --bind '/tmp,{','.join(binds)}' {sif_path} {build_cmd_str} > {local_ycsb}
+singularity run --bind '/tmp,{','.join(binds)}' {sif_path} {setup.build_cmd(case.status)} > {local_ycsb}
 kill $(pgrep dstat) 2>/dev/null || true
 {controller_cleanup}
 cp {local_ycsb} {ycsb_out}
