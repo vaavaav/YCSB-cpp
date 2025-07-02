@@ -408,11 +408,11 @@ def colocate(cases, output_dir, sif_path=None, binds=[]):
         load_cmd = setup.build_cmd()
 
         load_block = f"""
-srun --exclusive -N1 -n1 bash -c '
+srun --exclusive -N1 -n1 bash -c "
 mkdir -p {db_tmp}
 {copy_cmds}
-singularity run --bind "/tmp,{','.join(binds)}" {sif_path} {load_cmd}
-' &
+singularity run --bind '/tmp,{','.join(binds)}' {sif_path} {load_cmd}
+" &
 """
         load_cmds.append(load_block)
 
@@ -460,16 +460,16 @@ CONTROLLER_PID=$!
                 setup.config['rocksdb.dbname'] = db_paths[case]
 
                 run_block = f"""
-srun --exclusive -N1 -n1 bash -c '
+srun --exclusive -N1 -n1 bash -c "
 {controller_prefix}
 {copy_cmds}
 dstat -cdlmnyt > {local_dstat} 2>&1 &
-singularity run --bind "/tmp,{','.join(binds)}" {sif_path} {build_cmd_str} > {local_ycsb}
+singularity run --bind '/tmp,{','.join(binds)}' {sif_path} {build_cmd_str} > {local_ycsb}
 kill $(pgrep dstat) 2>/dev/null || true
 {controller_cleanup}
 cp {local_ycsb} {ycsb_out}
 cp {local_dstat} {dstat_out}
-' &
+" &
 """
                 run_cmds.append(run_block)
                 total_mem += setup.used_mem
