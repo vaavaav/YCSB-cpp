@@ -358,6 +358,8 @@ cp {local_dstat_output} {dstat_output}
         export="CONTROLLER_IP=$CONTROLLER_IP,CONTROLLER_JOB_ID=$CONTROLLER_JOB_ID"
         ))
     
+    controller_dir = os.path.dirname(setup.controller_exec)
+    executable_dir = os.path.dirname(setup.executable)
     # Prepare the command to run the SIF container of the controller
     controller_inner_script = f"""
 CONTROLLER_IP=$(hostname -I | awk '{{print $1}}' | xargs)
@@ -414,11 +416,11 @@ def colocate(cases, output_dir, sif_path=None, binds=[]):
         load_cmd = setup.build_cmd()
 
         load_block = f"""
-srun --overlap bash -c "
+srun --ntasks=1 --overlap bash -c \\"
 mkdir -p {db_tmp}
 {copy_cmds}
 singularity run --bind '/tmp,{','.join(binds)}' {sif_path} {load_cmd}
-" &
+\\" &
 """
         load_cmds.append(load_block)
 
@@ -464,7 +466,7 @@ CONTROLLER_PID=$!
                 setup.config['rocksdb.dbname'] = db_paths[case]
 
                 run_block = f"""
-srun --exclusive -N1 -n1 bash -c "
+srun --ntasks=1 --overlap bash -c \\"
 {controller_prefix}
 {copy_cmds}
 dstat -cdlmnyt > {local_dstat} 2>&1 &
@@ -473,14 +475,15 @@ kill $(pgrep dstat) 2>/dev/null || true
 {controller_cleanup}
 cp {local_ycsb} {ycsb_out}
 cp {local_dstat} {dstat_out}
-" &
+\\" &
 """
                 run_cmds.append(run_block)
                 total_mem += setup.used_mem
                 task_id += 1
 
     # Combine full job script
-    script = "\n".join(load_cmds) + "\nwait\n\n" + "\n".join(run_cmds) + "\nwait\n"
+    
+    script = "\n".join(load_cmds) + f"\nwait\n\n" + "\n".join(run_cmds) + "\nwait\n"
 
     print(f"[SIF-Colocated] Submitting single-node full pipeline with {len(cases)} loads and {task_id} run tasks")
 
