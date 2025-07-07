@@ -41,7 +41,6 @@ if __name__ == '__main__':
         **{f'sleepafterload.{i}': int(i*(maxexecutiontime/phases)) for i in range(threads)},
         **{f'maxexecutiontime.{i}': int((1 - i*2/phases)*maxexecutiontime) for i in range(threads)},
         'cachelib.size': 2_000_000_00*threads,
-        'cachelib.virtualsize': 2_000_000_00*threads,
         'cachelib.name': 'instance-0',
         'cachelib.eviction': 'lru',
         'cachelib.pool.relsize': 1/threads,
@@ -85,7 +84,16 @@ if __name__ == '__main__':
             **ycsb_config_motivation_1,
             'cachelib.pooloptimizer': 'off',  # Fixed typo: was 'pool_optimizer'
             'cachelib.poolresizer': 'off',
-        })
+        }),
+        Setup('CacheLib-Better', ycsb_executable, {
+            **ycsb_config_motivation_1,
+            'cachelib.pooloptimizer': 'off',
+            'cachelib.poolresizer': 'off',
+            'cachelib.pool.proportion.0': 0.15,
+            'cachelib.pool.proportion.1': 0.23,
+            'cachelib.pool.proportion.2': 0.29,
+            'cachelib.pool.proportion.3': 0.33,
+            })
     ]
 
 
@@ -106,8 +114,7 @@ if __name__ == '__main__':
         **{f'zipfian_const.{i}': zipf[i-1] for i in range(1,threads)},
         **{f'sleepafterload.{i}': int(i*(maxexecutiontime/phases)) for i in range(threads)},
         **{f'maxexecutiontime.{i}': int((1 - i*2/phases)*maxexecutiontime) for i in range(threads)},
-        'cachelib.size': 9_000_000_000,
-        'cachelib.virtualsize': 2_000_000_000,
+        'cachelib.size': 2_000_000_000,
         **{f'cachelib.name.{i}': f'instance-{i}' for i in range(threads)},
         'cachelib.eviction': 'lru',
         'cachelib.pool.relsize': 1,
@@ -151,15 +158,15 @@ if __name__ == '__main__':
             **ycsb_config_motivation_2,
             'cachelib.pooloptimizer': 'off',  
             'cachelib.poolresizer': 'off',
-        }),
+        })
     ]
 
     ## Cases
     cases = [
             Case('motivation-1', runs, load_setup_motivation_1, setups_motivation_1, "READ-PASSED READ-FAILED ALL"),
-            Case('motivation-2', runs, load_setup_motivation_2, setups_motivation_2, "READ-PASSED READ-FAILED ALL"),
+            Case('motivation-2', runs, load_setup_motivation_2, setups_motivation_2, "READ-PASSED READ-FAILED ALL")
     ]
 
     
     # Run the benchmark
-    RunYCSB(cases, outputDir, sif_path=sifPath, binds=[sourceDir], dry_run=True, colocated=True)
+    RunYCSB(cases, outputDir, dry_run=True)

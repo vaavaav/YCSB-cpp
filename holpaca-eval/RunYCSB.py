@@ -11,6 +11,7 @@ getMem = lambda cache_size: int(cache_size * 1.4 / (1024 * 1024))
 sanitize = lambda name: re.sub(r'\W+', '_', name)
 
 DRY_RUN = False
+TIMEOUT = None
 
 class Load:
     def __init__(self, executable, config):
@@ -71,11 +72,16 @@ def build_sbatch_cmd(name, cmd, stdout, stderr, mem=None, jobid=None, export=Non
         sbatch_cmd.insert(1, f"--dependency=afterok:{jobid}")
     if export:
         sbatch_cmd.insert(1, f"--export={export}")
+    global TIMEOUT
+    if TIMEOUT:
+        sbatch_cmd.insert(1, f"--time={TIMEOUT}")
+
     return sbatch_cmd
 
-def RunYCSB(cases, output_dir, sif_path=None, binds=[], colocated=False, dry_run=False):
-    global DRY_RUN 
+def RunYCSB(cases, output_dir, sif_path=None, binds=[], colocated=False, dry_run=False, timeout=None):
+    global DRY_RUN, TIMEOUT 
     DRY_RUN = dry_run
+    TIMEOUT = timeout
     if not DRY_RUN:
         # Create output directory if it doesn't exist
         os.makedirs(output_dir, exist_ok=True)
@@ -408,7 +414,7 @@ def colocate(cases, output_dir, sif_path=None, binds=[]):
         load_cmd = setup.build_cmd()
 
         load_block = f"""
-srun --exclusive -N1 -n1 bash -c "
+srun --overlap bash -c "
 mkdir -p {db_tmp}
 {copy_cmds}
 singularity run --bind '/tmp,{','.join(binds)}' {sif_path} {load_cmd}
