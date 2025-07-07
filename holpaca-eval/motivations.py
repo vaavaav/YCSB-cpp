@@ -93,7 +93,8 @@ if __name__ == '__main__':
             'cachelib.pool.proportion.1': 0.23,
             'cachelib.pool.proportion.2': 0.29,
             'cachelib.pool.proportion.3': 0.33,
-            })
+            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
+              controller_args='Motivation 1000')
     ]
 
 
