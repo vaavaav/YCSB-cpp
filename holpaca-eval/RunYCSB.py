@@ -467,7 +467,7 @@ srun --exclusive -N1 -n1 bash -c "
 {controller_prefix}
 {copy_cmds}
 dstat -cdlmnyt > {local_dstat} 2>&1 &
-singularity run --bind '/tmp,{','.join(binds)}' {sif_path} {setup.build_cmd(case.status)} > {local_ycsb}
+singularity run --bind '/tmp,{','.join(binds)}' {sif_path} {setup.build_cmd(case.status)} {ip_args} > {local_ycsb}
 kill $(pgrep dstat) 2>/dev/null || true
 {controller_cleanup}
 cp {local_ycsb} {ycsb_out}
