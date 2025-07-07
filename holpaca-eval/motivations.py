@@ -82,7 +82,7 @@ if __name__ == '__main__':
         }),
         Setup('CacheLib', ycsb_executable, {
             **ycsb_config_motivation_1,
-            'cachelib.pooloptimizer': 'off',  # Fixed typo: was 'pool_optimizer'
+            'cachelib.pooloptimizer': 'off',  
             'cachelib.poolresizer': 'off',
         }),
         Setup('CacheLib-Better', ycsb_executable, {
@@ -170,4 +170,4 @@ if __name__ == '__main__':
 
     
     # Run the benchmark
-    RunYCSB(cases, outputDir, dry_run=True)
+    RunYCSB(cases, outputDir, sif_path=sifPath, binds=[sourceDir], colocated=True, dry_run=True, timeout='03:00:00')
