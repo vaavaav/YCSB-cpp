@@ -448,12 +448,12 @@ singularity run --bind '/tmp,{','.join(binds)}' {sif_path} {load_cmd}
                 if setup.controller_exec:
                     controller_port = 11110 + task_id * 1000
                     base_client_port = 11111 + task_id * 1000
-                    controller_ip = "$HOSTNAME"
+                    controller_ip = "localhost"
                     setup.controller_ip = f"{controller_ip}:{controller_port}"
 
                     ip_args = f"-p cachelib.controller.address={controller_ip}:{controller_port}"
                     for j in range(setup.threads):
-                        ip_args += f" -p cachelib.holpaca.address.{j}={controller_ip}:{base_client_port + j}"
+                        ip_args += f" -p cachelib.holpaca.address.{j}=localhost:{base_client_port + j}"
 
                     controller_prefix = f"""
 {setup.controller_exec} {setup.controller_ip} {setup.controller_args} > /tmp/controller_{task_id}.log 2>&1 &
