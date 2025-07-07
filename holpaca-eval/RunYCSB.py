@@ -443,6 +443,7 @@ singularity run --bind '/tmp,{','.join(binds)}' {sif_path} {load_cmd}
                 copy_cmds = "\n".join(copy_workloads_cmd)
                 controller_prefix = ""
                 controller_cleanup = ""
+                ip_args = ""
 
                 if setup.controller_exec:
                     controller_port = 11110 + task_id * 1000
