@@ -111,6 +111,7 @@ def RunYCSB(cases, output_dir, sif_path=None, binds=[], colocated=False, dry_run
                 loadLOCAL(case.name, case.load)
 
         db_backup = case.load.config['rocksdb.dbname']
+        os.makedirs(db_backup, exist_ok=True)
 
         for setup in case.setups:
             for run_idx in range(case.runs):
