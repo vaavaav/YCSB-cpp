@@ -19,7 +19,6 @@ if __name__ == '__main__':
     # Assuming YCSB executable path - adjust as needed
     ycsb_executable = os.path.join(sourceDir, 'build-ycsb/ycsb')  # Update this path
     
-    zipf = [0.6, 0.9, 1.2]
     phases = threads*2-1
     
     # Base YCSB configuration
@@ -35,9 +34,11 @@ if __name__ == '__main__':
         'fieldcount': 1,
         'fieldlength': 1000,
         'insertorder': 'nothashed',
-        'requestdistribution.0': 'uniform',
         'requestdistribution': 'zipfian',
-        **{f'zipfian_const.{i}': zipf[i-1] for i in range(1, min(threads, len(zipf)+1))},
+        'zipfian_const.0': 1.2,
+        'zipfian_const.1': 0.9,
+        'zipfian_const.2': 0.6,
+        'requestdistribution.3': 'uniform',
         'sleepafterload': 0,
         'maxexecutiontime': maxexecutiontime,
         'cachelib.size': 2_000_000_000*threads,
@@ -82,27 +83,40 @@ if __name__ == '__main__':
         }),
         Setup('CacheLib', ycsb_executable, {
             **ycsb_config_motivation_1,
-            'cachelib.pooloptimizer': 'off',  # Fixed typo: was 'pool_optimizer'
+            'cachelib.pooloptimizer': 'off',  
             'cachelib.poolresizer': 'off',
         }),
         Setup('CacheLib-Better-T', ycsb_executable, {
             **ycsb_config_motivation_1,
             'cachelib.pooloptimizer': 'off',
             'cachelib.poolresizer': 'off',
-            'cachelib.pool.proportion.0': 0.15,
-            'cachelib.pool.proportion.1': 0.23,
-            'cachelib.pool.proportion.2': 0.29,
-            'cachelib.pool.proportion.3': 0.33,
+            'cachelib.pool.noinitialsize': 'on',
+            'cachelib.pool.proportion.0': 0.3,
+            'cachelib.pool.proportion.1': 0.4,
+            'cachelib.pool.proportion.2': 0.2,
+            'cachelib.pool.proportion.3': 0.1,
             }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
               controller_args='Motivation 1000'),
         Setup('CacheLib-Better-HR', ycsb_executable, {
             **ycsb_config_motivation_1,
             'cachelib.pooloptimizer': 'off',
             'cachelib.poolresizer': 'off',
-            'cachelib.pool.proportion.0': 0.33,
-            'cachelib.pool.proportion.1': 0.29,
-            'cachelib.pool.proportion.2': 0.23,
-            'cachelib.pool.proportion.3': 0.15,
+            'cachelib.pool.noinitialsize': 'on',
+            'cachelib.pool.proportion.0': 0.1,
+            'cachelib.pool.proportion.1': 0.2,
+            'cachelib.pool.proportion.2': 0.4,
+            'cachelib.pool.proportion.3': 0.3,
+            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
+              controller_args='Motivation 1000'),
+        Setup('CacheLib-all-1.2', ycsb_executable, {
+            **ycsb_config_motivation_1,
+            'cachelib.pooloptimizer': 'off',
+            'cachelib.poolresizer': 'off',
+            'cachelib.pool.noinitialsize': 'on',
+            'cachelib.pool.proportion.0': 0.91,
+            'cachelib.pool.proportion.1': 0.03,
+            'cachelib.pool.proportion.2': 0.03,
+            'cachelib.pool.proportion.3': 0.03,
             }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
               controller_args='Motivation 1000')
     ]
@@ -133,32 +147,79 @@ if __name__ == '__main__':
             **ycsb_config_motivation_2,
             'cachelib.pooloptimizer': 'off',
             'cachelib.poolresizer': 'off',
-            'cachelib.pool.proportion.0': 0.15,
-            'cachelib.pool.proportion.1': 0.23,
-            'cachelib.pool.proportion.2': 0.29,
-            'cachelib.pool.proportion.3': 0.33,
             'cachelib.pool.noinitialsize': 'on',
+            'cachelib.pool.proportion.0': 0.3,
+            'cachelib.pool.proportion.1': 0.4,
+            'cachelib.pool.proportion.2': 0.2,
+            'cachelib.pool.proportion.3': 0.1,
             }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
               controller_args='Motivation 1000:true'),
         Setup('CacheLib-Better-HR', ycsb_executable, {
             **ycsb_config_motivation_2,
             'cachelib.pooloptimizer': 'off',
             'cachelib.poolresizer': 'off',
-            'cachelib.pool.proportion.0': 0.33,
-            'cachelib.pool.proportion.1': 0.29,
-            'cachelib.pool.proportion.2': 0.23,
-            'cachelib.pool.proportion.3': 0.15,
             'cachelib.pool.noinitialsize': 'on',
+            'cachelib.pool.proportion.0': 0.1,
+            'cachelib.pool.proportion.1': 0.2,
+            'cachelib.pool.proportion.2': 0.4,
+            'cachelib.pool.proportion.3': 0.3,
             }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
               controller_args='Motivation 1000:true')
+    ]
+
+    ycsb_config_motivation_3 = {
+        **ycsb_config_motivation_1,
+        'recordcount': 2_000_000,
+        'request_key_domain_end': 1_999_999,
+        'cachelib.size': 200_000_000*threads,
+    }
+    
+    # Load configuration (for database initialization)
+    load_setup_motivation_3 = Load(ycsb_executable, {
+        **ycsb_config_motivation_3,
+        'rocksdb.dbname': os.path.join(sourceDir, 'db-backup', "motivation-3"),
+        'rocksdb.destroy': 'true',
+    })
+    
+    # Create Setup objects for different configurations
+    setups_motivation_3 = [
+        Setup('CacheLib-Optimizer', ycsb_executable, {
+            **ycsb_config_motivation_3,
+            'cachelib.eviction': '2q',
+            'cachelib.pooloptimizer': 'on',
+            'cachelib.poolresizer': 'on',
+        }),
+        Setup('CacheLib-Better-T', ycsb_executable, {
+            **ycsb_config_motivation_3,
+            'cachelib.pooloptimizer': 'off',
+            'cachelib.poolresizer': 'off',
+            'cachelib.pool.noinitialsize': 'on',
+            'cachelib.pool.proportion.0': 0.3,
+            'cachelib.pool.proportion.1': 0.4,
+            'cachelib.pool.proportion.2': 0.2,
+            'cachelib.pool.proportion.3': 0.1,
+            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
+              controller_args='Motivation 1000'),
+        Setup('CacheLib-Better-HR', ycsb_executable, {
+            **ycsb_config_motivation_3,
+            'cachelib.pooloptimizer': 'off',
+            'cachelib.poolresizer': 'off',
+            'cachelib.pool.noinitialsize': 'on',
+            'cachelib.pool.proportion.0': 0.1,
+            'cachelib.pool.proportion.1': 0.2,
+            'cachelib.pool.proportion.2': 0.4,
+            'cachelib.pool.proportion.3': 0.3,
+            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
+              controller_args='Motivation 1000')
     ]
 
     ## Cases
     cases = [
             Case('motivation-1', runs, load_setup_motivation_1, setups_motivation_1, "READ-PASSED READ-FAILED ALL"),
-            Case('motivation-2', runs, load_setup_motivation_2, setups_motivation_2, "READ-PASSED READ-FAILED ALL")
+            Case('motivation-2', runs, load_setup_motivation_2, setups_motivation_2, "READ-PASSED READ-FAILED ALL"),
+            Case('motivation-3', runs, load_setup_motivation_3, setups_motivation_3, "READ-PASSED READ-FAILED ALL"),
     ]
 
     
     # Run the benchmark
-    RunYCSB(cases, outputDir, sif_path=sifPath, binds=[sourceDir], dry_run=True, timeout='03:00:00')
+    RunYCSB(cases, outputDir, sif_path=sifPath, binds=[sourceDir], timeout='03:00:00')

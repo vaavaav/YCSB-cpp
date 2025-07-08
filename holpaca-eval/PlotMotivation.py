@@ -6,10 +6,6 @@ import matplotlib.pyplot as plt
 import sys
 import re
 
-def truncate_to_shortest(lists):
-    min_len = min(len(l) for l in lists)
-    return [l[:min_len] for l in lists]
-
 plt.rcParams['font.size'] = 30
 
 class Metric:
