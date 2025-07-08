@@ -385,7 +385,7 @@ sleep infinity
         return
 
     # Run the sbatch command to submit the controller job
-    subprocess.run()
+    subprocess.run(sbatch_cmd)
 
 
 def colocate(cases, output_dir, sif_path=None, binds=[]):
