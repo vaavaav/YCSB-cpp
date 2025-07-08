@@ -38,9 +38,9 @@ if __name__ == '__main__':
         'requestdistribution.0': 'uniform',
         'requestdistribution': 'zipfian',
         **{f'zipfian_const.{i}': zipf[i-1] for i in range(1, min(threads, len(zipf)+1))},
-        **{f'sleepafterload.{i}': int(i*(maxexecutiontime/phases)) for i in range(threads)},
-        **{f'maxexecutiontime.{i}': int((1 - i*2/phases)*maxexecutiontime) for i in range(threads)},
-        'cachelib.size': 2_000_000_00*threads,
+        'sleepafterload': 0,
+        'maxexecutiontime': maxexecutiontime,
+        'cachelib.size': 2_000_000_000*threads,
         'cachelib.name': 'instance-0',
         'cachelib.eviction': 'lru',
         'cachelib.pool.relsize': 1/threads,
@@ -85,7 +85,7 @@ if __name__ == '__main__':
             'cachelib.pooloptimizer': 'off',  # Fixed typo: was 'pool_optimizer'
             'cachelib.poolresizer': 'off',
         }),
-        Setup('CacheLib-Better', ycsb_executable, {
+        Setup('CacheLib-Better-T', ycsb_executable, {
             **ycsb_config_motivation_1,
             'cachelib.pooloptimizer': 'off',
             'cachelib.poolresizer': 'off',
@@ -94,50 +94,24 @@ if __name__ == '__main__':
             'cachelib.pool.proportion.2': 0.29,
             'cachelib.pool.proportion.3': 0.33,
             }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
+              controller_args='Motivation 1000'),
+        Setup('CacheLib-Better-HR', ycsb_executable, {
+            **ycsb_config_motivation_1,
+            'cachelib.pooloptimizer': 'off',
+            'cachelib.poolresizer': 'off',
+            'cachelib.pool.proportion.0': 0.33,
+            'cachelib.pool.proportion.1': 0.29,
+            'cachelib.pool.proportion.2': 0.23,
+            'cachelib.pool.proportion.3': 0.15,
+            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
               controller_args='Motivation 1000')
     ]
 
 
     ycsb_config_motivation_2 = {
-        'threadcount': threads,
-        'sleepafterload': 0,
-        'maxexecutiontime': maxexecutiontime,
-        'operationcount': 1_000_000_000,
-        'recordcount': 20_000_000,
-        'request_key_domain_end': 19_999_999,
-        'status.interval': 1,
-        'readallfields': 'false',
-        'fieldcount': 1,
-        'fieldlength': 1000,
-        'insertorder': 'nothashed',
-        'requestdistribution.0': 'uniform',
-        'requestdistribution': 'zipfian',
-        **{f'zipfian_const.{i}': zipf[i-1] for i in range(1,threads)},
+        **ycsb_config_motivation_1,
         **{f'sleepafterload.{i}': int(i*(maxexecutiontime/phases)) for i in range(threads)},
         **{f'maxexecutiontime.{i}': int((1 - i*2/phases)*maxexecutiontime) for i in range(threads)},
-        'cachelib.size': 2_000_000_000,
-        **{f'cachelib.name.{i}': f'instance-{i}' for i in range(threads)},
-        'cachelib.eviction': 'lru',
-        'cachelib.pool.relsize': 1,
-        'cachelib.pool.name': 'p0',
-        **{f'request_key_prefix.{i}': f'p{i}' for i in range(threads)},
-        # rocksdb
-        'rocksdb.compression': 'no',
-        'rocksdb.write_buffer_size': 134217728,
-        'rocksdb.max_write_buffer_number': 2,
-        'rocksdb.level0_file_number_compaction_trigger': 4,
-        'rocksdb.max_background_flushes': 1,
-        'rocksdb.max_background_compactions': 3,
-        'rocksdb.use_direct_reads': 'true',
-        'rocksdb.no_block_cache': 'true',
-        'rocksdb.use_direct_io_for_flush_compaction': 'true',
-        'rocksdb.dbname': os.path.join(sourceDir, 'db', 'motivation-2'),
-        # workload
-        'workload.type': 'synthetic',
-        'readproportion': 1,
-        'updateproportion': 0,
-        'scanproportion': 0,
-        'insertproportion': 0,
     }
     
     # Load configuration (for database initialization)
@@ -155,11 +129,28 @@ if __name__ == '__main__':
             'cachelib.pooloptimizer': 'on',
             'cachelib.poolresizer': 'on',
         }),
-        Setup('CacheLib', ycsb_executable, {
-            **ycsb_config_motivation_2,
-            'cachelib.pooloptimizer': 'off',  
+        Setup('CacheLib-Better-T', ycsb_executable, {
+            **ycsb_config_motivation_1,
+            'cachelib.pooloptimizer': 'off',
             'cachelib.poolresizer': 'off',
-        })
+            'cachelib.pool.proportion.0': 0.15,
+            'cachelib.pool.proportion.1': 0.23,
+            'cachelib.pool.proportion.2': 0.29,
+            'cachelib.pool.proportion.3': 0.33,
+            'cachelib.pool.noinitialsize': 'on',
+            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
+              controller_args='Motivation 1000:true'),
+        Setup('CacheLib-Better-HR', ycsb_executable, {
+            **ycsb_config_motivation_1,
+            'cachelib.pooloptimizer': 'off',
+            'cachelib.poolresizer': 'off',
+            'cachelib.pool.proportion.0': 0.33,
+            'cachelib.pool.proportion.1': 0.29,
+            'cachelib.pool.proportion.2': 0.23,
+            'cachelib.pool.proportion.3': 0.15,
+            'cachelib.pool.noinitialsize': 'on',
+            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
+              controller_args='Motivation 1000:true')
     ]
 
     ## Cases
@@ -170,4 +161,4 @@ if __name__ == '__main__':
 
     
     # Run the benchmark
-    RunYCSB(cases, outputDir, dry_run=True)
+    RunYCSB(cases, outputDir, sif_path=sifPath, binds=[sourceDir], dry_run=True, timeout='03:00:00')

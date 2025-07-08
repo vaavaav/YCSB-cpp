@@ -338,7 +338,7 @@ for i in \\$(seq 0 {setup.threads - 1}); do
 done
 mkdir -p {db} && cp -r {db_backup}/* {db}/
 {copy_workloads_cmd}
-singularity run --network host --bind '{executable_dir},/tmp,{','.join(binds)}' {sif_path} bash -c \\"
+singularity run --network host --bind '/tmp,{','.join(binds)}' {sif_path} bash -c \\"
     dstat -cdlmnyt > {local_dstat_output} 2>&1 &
     {setup.build_cmd(status)} \\$IPS > {local_ycsb_output}
     kill \\$(pgrep dstat) 2>/dev/null || true
