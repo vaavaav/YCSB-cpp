@@ -130,7 +130,7 @@ if __name__ == '__main__':
             'cachelib.poolresizer': 'on',
         }),
         Setup('CacheLib-Better-T', ycsb_executable, {
-            **ycsb_config_motivation_1,
+            **ycsb_config_motivation_2,
             'cachelib.pooloptimizer': 'off',
             'cachelib.poolresizer': 'off',
             'cachelib.pool.proportion.0': 0.15,
@@ -141,7 +141,7 @@ if __name__ == '__main__':
             }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
               controller_args='Motivation 1000:true'),
         Setup('CacheLib-Better-HR', ycsb_executable, {
-            **ycsb_config_motivation_1,
+            **ycsb_config_motivation_2,
             'cachelib.pooloptimizer': 'off',
             'cachelib.poolresizer': 'off',
             'cachelib.pool.proportion.0': 0.33,
