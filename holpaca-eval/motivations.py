@@ -101,7 +101,6 @@ if __name__ == '__main__':
             **ycsb_config_motivation_1,
             'cachelib.pooloptimizer': 'off',
             'cachelib.poolresizer': 'off',
-            'cachelib.pool.noinitialsize': 'on',
             'cachelib.pool.proportion.0': 0.1,
             'cachelib.pool.proportion.1': 0.2,
             'cachelib.pool.proportion.2': 0.4,
@@ -112,7 +111,6 @@ if __name__ == '__main__':
             **ycsb_config_motivation_1,
             'cachelib.pooloptimizer': 'off',
             'cachelib.poolresizer': 'off',
-            'cachelib.pool.noinitialsize': 'on',
             'cachelib.pool.proportion.0': 0.91,
             'cachelib.pool.proportion.1': 0.03,
             'cachelib.pool.proportion.2': 0.03,
@@ -169,9 +167,9 @@ if __name__ == '__main__':
 
     ycsb_config_motivation_3 = {
         **ycsb_config_motivation_1,
-        'recordcount': 2_000_000,
-        'request_key_domain_end': 1_999_999,
-        'cachelib.size': 200_000_000*threads,
+        'recordcount': 5_000_000,
+        'request_key_domain_end': 4_999_999,
+        'cachelib.size': 2_000_000_000
     }
     
     # Load configuration (for database initialization)
@@ -193,7 +191,6 @@ if __name__ == '__main__':
             **ycsb_config_motivation_3,
             'cachelib.pooloptimizer': 'off',
             'cachelib.poolresizer': 'off',
-            'cachelib.pool.noinitialsize': 'on',
             'cachelib.pool.proportion.0': 0.3,
             'cachelib.pool.proportion.1': 0.4,
             'cachelib.pool.proportion.2': 0.2,
@@ -204,7 +201,6 @@ if __name__ == '__main__':
             **ycsb_config_motivation_3,
             'cachelib.pooloptimizer': 'off',
             'cachelib.poolresizer': 'off',
-            'cachelib.pool.noinitialsize': 'on',
             'cachelib.pool.proportion.0': 0.1,
             'cachelib.pool.proportion.1': 0.2,
             'cachelib.pool.proportion.2': 0.4,
@@ -216,7 +212,7 @@ if __name__ == '__main__':
     ## Cases
     cases = [
             Case('motivation-1', runs, load_setup_motivation_1, setups_motivation_1, "READ-PASSED READ-FAILED ALL"),
-            Case('motivation-2', runs, load_setup_motivation_2, setups_motivation_2, "READ-PASSED READ-FAILED ALL"),
+            #            Case('motivation-2', runs, load_setup_motivation_2, setups_motivation_2, "READ-PASSED READ-FAILED ALL"),
             Case('motivation-3', runs, load_setup_motivation_3, setups_motivation_3, "READ-PASSED READ-FAILED ALL"),
     ]
 
