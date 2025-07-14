@@ -71,24 +71,19 @@ if __name__ == '__main__':
     
     # Create Setup objects for different configurations
     setups = [
-        Setup('CacheLib-Optimizer', ycsb_executable, {
+        Setup('optimizer', ycsb_executable, {
             **ycsb_config,
             'cachelib.eviction': '2q',
             'cachelib.pooloptimizer': 'on',
             'cachelib.poolresizer': 'on',
         }),
-        Setup('CacheLib', ycsb_executable, {
+        Setup('baseline', ycsb_executable, {
             **ycsb_config,
             'cachelib.pooloptimizer': 'off',  
             'cachelib.poolresizer': 'off',
+            'cachelib.poolrebalancer': 'off',
         }),
-        Setup('CacheLib-Holpaca-HR', ycsb_executable, {
-            **ycsb_config,
-            'cachelib.poolresizer': 'on',
-            'cachelib.pool.noinitialsize': 'on',
-            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
-              controller_args=f'HitRatioMaximization 1000:0.05:{ycsb_config["cachelib.virtualsize"]}:false'),
-        Setup('CacheLib-Holpaca-T', ycsb_executable, {
+        Setup('holpaca', ycsb_executable, {
             **ycsb_config,
             'cachelib.poolresizer': 'on',
             'cachelib.pool.noinitialsize': 'on',
