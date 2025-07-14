@@ -75,18 +75,19 @@ if __name__ == '__main__':
     
     # Create Setup objects for different configurations
     setups_motivation_1 = [
-        Setup('CacheLib-Optimizer', ycsb_executable, {
+        Setup('optimizer', ycsb_executable, {
             **ycsb_config_motivation_1,
             'cachelib.eviction': '2q',
             'cachelib.pooloptimizer': 'on',
             'cachelib.poolresizer': 'on',
         }),
-        Setup('CacheLib', ycsb_executable, {
+        Setup('baseline', ycsb_executable, {
             **ycsb_config_motivation_1,
             'cachelib.pooloptimizer': 'off',  
             'cachelib.poolresizer': 'off',
+            'cachelib.poolrebalancer': 'off',
         }),
-        Setup('CacheLib-Alg1', ycsb_executable, {
+        Setup('custom', ycsb_executable, {
             **ycsb_config_motivation_1,
             'cachelib.pooloptimizer': 'off',
             'cachelib.poolresizer': 'off',
@@ -94,16 +95,6 @@ if __name__ == '__main__':
             'cachelib.pool.proportion.1': 0.03,
             'cachelib.pool.proportion.2': 0.03,
             'cachelib.pool.proportion.3': 0.03,
-            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
-              controller_args='Motivation 1000'),
-        Setup('CacheLib-Alg2', ycsb_executable, {
-            **ycsb_config_motivation_1,
-            'cachelib.pooloptimizer': 'off',
-            'cachelib.poolresizer': 'off',
-            'cachelib.pool.proportion.0': 0.03,
-            'cachelib.pool.proportion.1': 0.03,
-            'cachelib.pool.proportion.2': 0.03,
-            'cachelib.pool.proportion.3': 0.91,
             }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
               controller_args='Motivation 1000')
     ]
@@ -124,13 +115,13 @@ if __name__ == '__main__':
     
     # Create Setup objects for different configurations
     setups_motivation_2 = [
-         Setup('CacheLib-Optimizer', ycsb_executable, {
+         Setup('optimizer', ycsb_executable, {
              **ycsb_config_motivation_2,
              'cachelib.eviction': '2q',
              'cachelib.pooloptimizer': 'on',
              'cachelib.poolresizer': 'on',
          }),
-         Setup('CacheLib-Alg1', ycsb_executable, {
+         Setup('custom', ycsb_executable, {
              **ycsb_config_motivation_2,
              'cachelib.pooloptimizer': 'off',
              'cachelib.poolresizer': 'off',
