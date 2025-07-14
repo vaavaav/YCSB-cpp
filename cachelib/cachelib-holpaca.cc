@@ -40,6 +40,9 @@ const std::string PROP_POOL_OPTIMIZER_DEFAULT = "off";
 
 const std::string PROP_POOL_RESIZER = "cachelib.poolresizer";
 const std::string PROP_POOL_RESIZER_DEFAULT = "off";
+
+const std::string PROP_POOL_REBALANCER = "cachelib.poolrebalancer";
+const std::string PROP_POOL_REBALANCER_DEFAULT = "off";
 } // namespace
 
 namespace ycsbc {
@@ -113,6 +116,16 @@ void CacheLibHolpaca::Init() {
                                   PROP_CONTROLLER_ADDRESS_DEFAULT));
           if (!controllerAddress.empty()) {
             config.setControllerAddress(controllerAddress);
+          }
+          if (props_->GetProperty(
+                  PROP_POOL_REBALANCER + "." + std::to_string(threadId_),
+                  props_->GetProperty(PROP_POOL_REBALANCER,
+                                      PROP_POOL_REBALANCER_DEFAULT)) == "on") {
+            config.enablePoolRebalancing(
+                std::make_shared<facebook::cachelib::HitsPerSlabStrategy>(
+                    facebook::cachelib::HitsPerSlabStrategy::Config(
+                        0.25, static_cast<unsigned int>(1))),
+                std::chrono::milliseconds(100));
           }
           // Needed for pool resizing
           if (props_->GetProperty(
