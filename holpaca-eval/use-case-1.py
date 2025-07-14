@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from RunYCSB import RunYCSB, Load, Setup
+from RunYCSB import RunYCSB, Load, Setup, Case
 
 import subprocess
 import shutil
@@ -8,7 +8,6 @@ import sys
 import os
 import time
 
-name = f"use-case-1-{int(time.time()*1e9)}"
 runs = 1
 status = 'READ-FAILED READ-PASSED INSERT-FAILED INSERT-PASSED UPDATE-FAILED UPDATE-PASSED ALL'
 
@@ -19,10 +18,10 @@ if __name__ == '__main__':
     loadTraces = sys.argv[3].split(':')
     traces = sys.argv[4].split(':')
     tracesDir = os.path.abspath(sys.argv[5])
-    outputDir = os.path.join(os.path.abspath(sys.argv[6]), name)
+    outputDir = os.path.abspath(sys.argv[6])
     sifPath = os.path.abspath(sys.argv[7]) if len(sys.argv) > 7 else None
-    db_backup = os.path.join(sourceDir, 'db-backup', name)
-    db = os.path.join(sourceDir, 'db', name)
+    db_backup = os.path.join(sourceDir, 'db-backup', 'use-case-1')
+    db = os.path.join(sourceDir, 'db', 'use-case-1')
 
     ycsb_executable = os.path.join(sourceDir, 'build-ycsb/ycsb')  # Update this path
     threads = len(traces)
@@ -91,6 +90,12 @@ if __name__ == '__main__':
               controller_args=f'ThroughputMaximization 1000:0.05:{ycsb_config["cachelib.virtualsize"]}:false'),
     ]
     
+
+    cases = [
+            Case('use-case-1', runs, load_setup, setups, "READ-PASSED READ-FAILED ALL")
+            ]
+
+
     # Run the benchmark
-    RunYCSB(name, runs, outputDir, load_setup, setups, "READ-PASSED READ-FAILED ALL", sifPath, binds=[sourceDir])
+    RunYCSB(cases, outputDir, sif_path=sifPath, binds=[sourceDir], timeout='03:00:00', dry_run=True)
 
