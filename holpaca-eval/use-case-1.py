@@ -34,7 +34,8 @@ if __name__ == '__main__':
         'operationcount.1': 6_879_000,
         'operationcount.2': 14_789_000,
         'operationcount.3': 13_175_000,
-        **{f'sleepafterload.{i}': int(i*(maxexecutiontime/phases)) for i in range(threads)},
+        'sleepafterload': 0,
+        # **{f'sleepafterload.{i}': int(i*(maxexecutiontime/phases)) for i in range(threads)},
         # Cachelib
         'cachelib.size': 2_000_000_000*threads,
         'cachelib.virtualsize': 2_000_000_000*threads,
