@@ -137,10 +137,10 @@ if __name__ == '__main__':
 
     ## Cases
     cases = [
-            Case('motivation-1', runs, load_setup_motivation_1, setups_motivation_1, "READ-PASSED READ-FAILED ALL"),
+            #   Case('motivation-1', runs, load_setup_motivation_1, setups_motivation_1, "READ-PASSED READ-FAILED ALL"),
             Case('motivation-2', runs, load_setup_motivation_2, setups_motivation_2, "READ-PASSED READ-FAILED ALL")
     ]
 
     
     # Run the benchmark
-    RunYCSB(cases, outputDir, sif_path=sifPath, binds=[sourceDir], timeout='03:00:00')
+    RunYCSB(cases, outputDir, sif_path=sifPath, binds=[sourceDir], timeout='03:00:00', dry_run=True)
