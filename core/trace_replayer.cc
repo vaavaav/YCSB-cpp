@@ -58,38 +58,6 @@ std::string TraceReplayer::BuildValue(size_t size) {
   return result;
 }
 
-std::vector<std::string_view>
-split_csv_line(std::string_view str, char delimiter, size_t expected_columns) {
-  std::vector<std::string_view> result;
-  size_t start = 0, end = 0;
-
-  while ((end = str.find(delimiter, start)) != std::string_view::npos) {
-    result.emplace_back(str.substr(start, end - start));
-    start = end + 1;
-  }
-
-  result.emplace_back(str.substr(start)); // Last token
-
-  // If more columns than expected, fix the second column
-  if (result.size() > expected_columns) {
-    size_t extra_parts = result.size() - expected_columns;
-
-    // Merge extra parts into the second column
-    std::string_view second_column(result[1].data(), result[1].size());
-    for (size_t i = 2; i <= 1 + extra_parts; ++i) {
-      second_column = std::string_view(second_column.data(),
-                                       result[i].data() + result[i].size() -
-                                           second_column.data());
-    }
-
-    // Remove merged parts from the vector
-    result[1] = second_column;
-    result.erase(result.begin() + 2, result.begin() + 2 + extra_parts);
-  }
-
-  return result;
-}
-
 std::tuple<Operation, std::string, size_t> TraceReplayer::NextOperation() {
   std::string line;
   if (!std::getline(file_buffer_, line)) {
@@ -97,7 +65,15 @@ std::tuple<Operation, std::string, size_t> TraceReplayer::NextOperation() {
     return std::make_tuple(MAXOPTYPE, "", 0);
   }
 
-  auto parts = split_csv_line(line, ',', 7);
+  // split the line by commas
+  std::vector<std::string> parts;
+  size_t pos = 0;
+  while ((pos = line.find(',')) != std::string::npos) {
+    parts.push_back(line.substr(0, pos));
+    line.erase(0, pos + 1);
+  }
+  parts.push_back(line);
+
   std::string key{parts[1]};
   size_t valuesize = std::stoul(std::string(parts[3]));
   std::string operation{parts[5]};

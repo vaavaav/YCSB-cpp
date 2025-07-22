@@ -144,7 +144,7 @@ int main(const int argc, const char *argv[]) {
       exit(1);
     }
     wl->Init("." + std::to_string(i), props);
-    wls.push_back(wl);
+    wls.emplace_back(wl);
   }
 
   const bool show_status = (props.GetProperty("status", "false") == "true");

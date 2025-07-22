@@ -224,10 +224,14 @@ DB::Status CacheLibHolpaca::Read(const std::string &table,
                           size);
               cache.insertOrReplace(new_handle);
             }
+          } else {
+            std::cerr << "Key not found in RocksDB: " << key << std::endl;
+            std::abort();
           }
         } else {
-          volatile auto data = handle->getMemory();
-          auto size = handle->getSize();
+          volatile auto data =
+              std::string(reinterpret_cast<const char *>(handle->getMemory()),
+                          handle->getSize());
         }
         return status;
       },
@@ -250,27 +254,25 @@ DB::Status CacheLibHolpaca::Update(const std::string &table,
                                    std::vector<Field> &values) {
   //  std::lock_guard<std::mutex> lock(mutex_);
   std::string data = values.front().value;
-  auto key_ = key;
   uint32_t size = values.front().value.size();
-  auto res = rocksdbs_[cacheName_].Update(table, key, values);
-  rocksdbIOPSPerThread_[threadId_]++;
-  // TODO: insert into cache
-  if (res == kOK) {
+  if (rocksdbs_[cacheName_].Update(table, key, values) == kOK) {
     return std::visit(
-        [&key, &data, &size](auto &&cache) {
-          auto handle = cache.allocate(poolId_, key, size);
-          if (handle) {
-            std::memcpy(handle->getMemory(), data.data(), size);
-            cache.insertOrReplace(handle);
-            return kOK;
-          } else {
+        [&data, &key, &size](auto &&cache) {
+          auto handle = cache.find(key);
+          if (cache.find(key) != nullptr) {
+            auto new_handle = cache.allocate(poolId_, key, size);
+            if (new_handle) {
+              std::memcpy(new_handle->getMemory(), data.data(), size);
+              cache.insertOrReplace(new_handle);
+              return kOK;
+            }
             return kError;
           }
+          return kOK;
         },
         *cache_);
   }
-
-  return res;
+  return kError;
 }
 
 DB::Status CacheLibHolpaca::Insert(const std::string &table,
@@ -278,23 +280,25 @@ DB::Status CacheLibHolpaca::Insert(const std::string &table,
                                    std::vector<Field> &values) {
   // std::lock_guard<std::mutex> lock(mutex_);
   uint32_t size = values.front().value.size();
-  auto res = rocksdbs_[cacheName_].Insert(table, key, values);
-  rocksdbIOPSPerThread_[threadId_]++;
-  if (res == kOK) {
+  std::string data = values.front().value;
+  if (rocksdbs_[cacheName_].Insert(table, key, values) == kOK) {
     return std::visit(
-        [&key, &values, &size](auto &&cache) {
-          auto handle = cache.allocate(poolId_, key, size);
-          if (handle) {
-            std::memcpy(handle->getMemory(), values.front().value.data(), size);
-            cache.insertOrReplace(handle);
-            return kOK;
-          } else {
+        [&data, &key, &size](auto &&cache) {
+          auto handle = cache.find(key);
+          if (cache.find(key) != nullptr) {
+            auto new_handle = cache.allocate(poolId_, key, size);
+            if (new_handle) {
+              std::memcpy(new_handle->getMemory(), data.data(), size);
+              cache.insertOrReplace(new_handle);
+              return kOK;
+            }
             return kError;
           }
+          return kOK;
         },
         *cache_);
   }
-  return res;
+  return kError;
 }
 
 DB::Status CacheLibHolpaca::Delete(const std::string &table,
