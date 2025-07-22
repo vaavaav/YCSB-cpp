@@ -30,10 +30,10 @@ if __name__ == '__main__':
     ycsb_config = {
         'threadcount': threads,
         'status.interval': 1,
-        'operationcount.0': 30_436_000,
-        'operationcount.1': 6_879_000,
-        'operationcount.2': 14_789_000,
-        'operationcount.3': 13_175_000,
+        'operationcount.0': 24_436_000,
+        'operationcount.1': 5_585_000,
+        'operationcount.2': 34_750_444,
+        'operationcount.3': 94_096_250,
         'sleepafterload': 0,
         # **{f'sleepafterload.{i}': int(i*(maxexecutiontime/phases)) for i in range(threads)},
         # Cachelib
@@ -98,5 +98,5 @@ if __name__ == '__main__':
 
 
     # Run the benchmark
-    RunYCSB(cases, outputDir, sif_path=sifPath, binds=[sourceDir], timeout='03:00:00', dry_run=True)
+    RunYCSB(cases, outputDir, timeout='03:00:00', dry_run=True)
 

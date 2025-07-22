@@ -39,6 +39,7 @@ protected:
 
   std::tuple<Operation, std::string, size_t> NextOperation();
 
+private:
   // file buffer
   std::ifstream file_buffer_;
   double scale_value_size{1.0};

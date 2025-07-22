@@ -344,6 +344,9 @@ DB::Status RocksDB::Insert(const std::string &table, const std::string &key,
   if (!s.ok()) {
     throw utils::Exception(std::string("RocksDB Put: ") + s.ToString());
   }
+  // std::cout << "RocksDB Insert: " << key << " with "
+  //          << values.front().value.size() << " bytes" << std::endl;
+
   return kOK;
 }
 
