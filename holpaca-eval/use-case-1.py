@@ -57,7 +57,7 @@ if __name__ == '__main__':
         'rocksdb.dbname': db,
         # workload
         'workload.type': 'trace',
-        'trace.scale_value': '10',
+        'trace.override_value_size': 1000,
         **{f'trace.file.{i}': os.path.join(tracesDir, trace) for i, trace in enumerate(traces)},
     }
 
