@@ -220,9 +220,16 @@ DB::Status CacheLibHolpaca::Read(const std::string &table,
             uint32_t size = result.front().value.size();
             auto new_handle = cache.allocate(poolId_, key, size);
             if (new_handle) {
-              std::memcpy(new_handle->getMemory(), result.front().value.data(),
-                          size);
+              if (size > 0) {
+                std::memcpy(new_handle->getMemory(),
+                            result.front().value.data(), size);
+              }
               cache.insertOrReplace(new_handle);
+            } else {
+              //              std::cerr << "Failed to allocate memory for key: "
+              //              << key
+              //                        << std::endl;
+              return kError;
             }
           } else {
             std::cerr << "Key not found in RocksDB: " << key << std::endl;

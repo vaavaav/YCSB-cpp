@@ -24,6 +24,9 @@ const string TraceReplayer::SCALE_VALUE_SIZE_DEFAULT = "1.0";
 
 const string TraceReplayer::FILENAME_PROPERTY = "trace.file";
 
+const string TraceReplayer::OVERRIDE_VALUE_SIZE_PROPERTY =
+    "trace.override_value_size";
+
 namespace ycsbc {
 
 void TraceReplayer::Init(std::string const property_suffix,
@@ -42,6 +45,18 @@ void TraceReplayer::Init(std::string const property_suffix,
   request_key_prefix_ = p.GetProperty(
       REQUEST_KEY_PREFIX_PROPERTY + property_suffix,
       p.GetProperty(REQUEST_KEY_PREFIX_PROPERTY, REQUEST_KEY_PREFIX_DEFAULT));
+
+  if (p.ContainsKey(OVERRIDE_VALUE_SIZE_PROPERTY + property_suffix)) {
+    override_value_size_set = true;
+    override_value_size = std::stoul(
+        p.GetProperty(OVERRIDE_VALUE_SIZE_PROPERTY + property_suffix));
+  } else if (p.ContainsKey(OVERRIDE_VALUE_SIZE_PROPERTY)) {
+    override_value_size_set = true;
+    override_value_size =
+        std::stoul(p.GetProperty(OVERRIDE_VALUE_SIZE_PROPERTY));
+  } else {
+    override_value_size_set = false;
+  }
 
   ops_ = 0;
 
@@ -99,6 +114,9 @@ bool TraceReplayer::DoInsert(DB &db) {
   if (k_.empty()) {
     return DB::kOK;
   }
+  if (override_value_size_set) {
+    size = override_value_size;
+  }
   const std::string key = BuildKeyName(k_);
   std::vector<DB::Field> fields;
   auto field = DB::Field();
@@ -110,6 +128,9 @@ bool TraceReplayer::DoInsert(DB &db) {
 bool TraceReplayer::DoTransaction(DB &db) {
   DB::Status status;
   auto [op, k_, size] = NextOperation();
+  if (override_value_size_set) {
+    size = override_value_size;
+  }
   const std::string key = BuildKeyName(k_);
   switch (op) {
   case READ:
