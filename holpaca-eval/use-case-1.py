@@ -30,10 +30,10 @@ if __name__ == '__main__':
     ycsb_config = {
         'threadcount': threads,
         'status.interval': 1,
-        'operationcount.0': 24_436_000,
-        'operationcount.1': 5_585_000,
-        'operationcount.2': 34_750_444,
-        'operationcount.3': 94_096_250,
+        'operationcount.0': 6_000_000,
+        'operationcount.1': 5_000_000,
+        'operationcount.2': 36_000_000,
+        'operationcount.3': 33_000_000,
         'sleepafterload': 0,
         # **{f'sleepafterload.{i}': int(i*(maxexecutiontime/phases)) for i in range(threads)},
         # Cachelib
@@ -93,7 +93,7 @@ if __name__ == '__main__':
     
 
     cases = [
-            Case('use-case-1', runs, load_setup, setups, "READ-PASSED READ-FAILED ALL")
+            Case('use-case-1', runs, load_setup, setups, "READ-PASSED READ-FAILED READ INSERT-PASSED INSERT-FAILED UPDATE-PASSED UPDATE-FAILED ALL",
             ]
 
 

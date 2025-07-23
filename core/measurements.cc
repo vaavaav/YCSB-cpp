@@ -51,7 +51,6 @@ std::string
 BasicMeasurements::GetStatusMsg(std::vector<Operation> const &operations) {
   std::ostringstream msg_stream;
   msg_stream.precision(2);
-  uint64_t total_cnt = 0;
   msg_stream << std::fixed << " operations;";
   for (auto const &o : operations) {
     Operation op = static_cast<Operation>(o);
@@ -68,9 +67,10 @@ BasicMeasurements::GetStatusMsg(std::vector<Operation> const &operations) {
                              : 0) /
                       1000.0
                << "]";
-    total_cnt += cnt;
   }
-  return std::to_string(total_cnt) + msg_stream.str();
+  return std::to_string(
+             count_[Operation::ALL].load(std::memory_order_relaxed)) +
+         msg_stream.str();
 }
 
 void BasicMeasurements::Reset() {
@@ -98,7 +98,6 @@ std::string HdrHistogramMeasurements::GetStatusMsg(
     std::vector<Operation> const &operations) {
   std::ostringstream msg_stream;
   msg_stream.precision(2);
-  uint64_t total_cnt = 0;
   msg_stream << std::fixed << " operations;";
   for (auto const &o : operations) {
     Operation op = static_cast<Operation>(o);
@@ -115,9 +114,9 @@ std::string HdrHistogramMeasurements::GetStatusMsg(
                << " 99.99="
                << hdr_value_at_percentile(histogram_[op], 99.99) / 1000.0
                << "]";
-    total_cnt += cnt;
   }
-  return std::to_string(total_cnt) + msg_stream.str();
+  return std::to_string(histogram_[Operation::ALL]->total_count) +
+         msg_stream.str();
 }
 
 std::string HdrHistogramMeasurements::GetCDF() {
