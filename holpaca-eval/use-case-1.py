@@ -29,6 +29,7 @@ if __name__ == '__main__':
 
     ycsb_config = {
         'threadcount': threads,
+        'maxexecutiontime': 40*60, # 40 minutes
         'status.interval': 1,
         'operationcount.0': 6_000_000,
         'operationcount.1': 5_000_000,
@@ -93,7 +94,7 @@ if __name__ == '__main__':
     ]
 
     cases = [
-            Case('use-case-1', runs, load_setup, setups, "READ-PASSED READ-FAILED READ INSERT-PASSED INSERT-FAILED UPDATE-PASSED UPDATE-FAILED ALL",
+            Case('use-case-1', runs, load_setup, setups, "READ-PASSED READ-FAILED READ INSERT-PASSED INSERT-FAILED UPDATE-PASSED UPDATE-FAILED ALL")
             ]
 
     # Run the benchmark
