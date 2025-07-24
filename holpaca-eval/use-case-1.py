@@ -71,32 +71,31 @@ if __name__ == '__main__':
     
     # Create Setup objects for different configurations
     setups = [
-        Setup('optimizer', ycsb_executable, {
+        Setup('optimized', ycsb_executable, {
             **ycsb_config,
             'cachelib.eviction': '2q',
             'cachelib.pooloptimizer': 'on',
             'cachelib.poolresizer': 'on',
+            'cachelib.poolrebalancer': 'on',
         }),
         Setup('baseline', ycsb_executable, {
             **ycsb_config,
             'cachelib.pooloptimizer': 'off',  
             'cachelib.poolresizer': 'off',
-            'cachelib.poolrebalancer': 'off',
         }),
         Setup('holpaca', ycsb_executable, {
             **ycsb_config,
             'cachelib.poolresizer': 'on',
             'cachelib.pool.noinitialsize': 'on',
+            'cachelib.poolrebalancer': 'on',
             }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
               controller_args=f'ThroughputMaximization 1000:0.05:{ycsb_config["cachelib.virtualsize"]}:false'),
     ]
-    
 
     cases = [
             Case('use-case-1', runs, load_setup, setups, "READ-PASSED READ-FAILED READ INSERT-PASSED INSERT-FAILED UPDATE-PASSED UPDATE-FAILED ALL",
             ]
 
-
     # Run the benchmark
-    RunYCSB(cases, outputDir, timeout='03:00:00', dry_run=True)
+    RunYCSB(cases, outputDir, timeout='00:45:00', dry_run=True)
 
