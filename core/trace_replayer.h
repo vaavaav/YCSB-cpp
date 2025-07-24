@@ -13,9 +13,6 @@ extern const char *kOperationString[MAXOPTYPE];
 
 class TraceReplayer : public CoreWorkload {
 public:
-  static const std::string SCALE_VALUE_SIZE_PROPERTY;
-  static const std::string SCALE_VALUE_SIZE_DEFAULT;
-
   static const std::string OVERRIDE_VALUE_SIZE_PROPERTY;
 
   static const std::string FILENAME_PROPERTY;
@@ -44,7 +41,6 @@ protected:
 private:
   // file buffer
   std::ifstream file_buffer_;
-  double scale_value_size{1.0};
   std::string request_key_prefix_;
 
   bool override_value_size_set{false};

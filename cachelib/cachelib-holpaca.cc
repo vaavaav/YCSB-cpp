@@ -125,7 +125,7 @@ void CacheLibHolpaca::Init() {
                 std::make_shared<facebook::cachelib::HitsPerSlabStrategy>(
                     facebook::cachelib::HitsPerSlabStrategy::Config(
                         0.25, static_cast<unsigned int>(1))),
-                std::chrono::milliseconds(100));
+                std::chrono::milliseconds(100), 1);
           }
           // Needed for pool resizing
           if (props_->GetProperty(
@@ -146,7 +146,7 @@ void CacheLibHolpaca::Init() {
             config.enablePoolOptimizer(
                 std::make_shared<
                     facebook::cachelib::MarginalHitsOptimizeStrategy>(),
-                std::chrono::seconds(1), std::chrono::seconds(0), 0);
+                std::chrono::seconds(1), std::chrono::seconds(0), 1);
           }
           config.validate(); // will throw if bad config
         },

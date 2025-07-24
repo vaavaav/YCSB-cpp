@@ -19,9 +19,6 @@
 using std::string;
 using ycsbc::TraceReplayer;
 
-const string TraceReplayer::SCALE_VALUE_SIZE_PROPERTY = "trace.scale_value";
-const string TraceReplayer::SCALE_VALUE_SIZE_DEFAULT = "1.0";
-
 const string TraceReplayer::FILENAME_PROPERTY = "trace.file";
 
 const string TraceReplayer::OVERRIDE_VALUE_SIZE_PROPERTY =
@@ -37,10 +34,6 @@ void TraceReplayer::Init(std::string const property_suffix,
 
   std::string file_name = p.GetProperty(FILENAME_PROPERTY + property_suffix);
   file_buffer_.open(file_name, std::ifstream::in);
-
-  scale_value_size = std::stod(p.GetProperty(
-      SCALE_VALUE_SIZE_PROPERTY + property_suffix,
-      p.GetProperty(SCALE_VALUE_SIZE_PROPERTY, SCALE_VALUE_SIZE_DEFAULT)));
 
   request_key_prefix_ = p.GetProperty(
       REQUEST_KEY_PREFIX_PROPERTY + property_suffix,
