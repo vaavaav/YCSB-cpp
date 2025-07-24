@@ -93,9 +93,9 @@ if __name__ == '__main__':
     ]
 
     cases = [
-            Case('use-case-1', runs, load_setup, setups, "READ-PASSED READ-FAILED READ INSERT-PASSED INSERT-FAILED UPDATE-PASSED UPDATE-FAILED ALL",
+            Case('use-case-1', runs, load_setup, setups, "READ-PASSED READ-FAILED READ INSERT-PASSED INSERT-FAILED UPDATE-PASSED UPDATE-FAILED ALL")
             ]
 
     # Run the benchmark
-    RunYCSB(cases, outputDir, timeout='00:45:00', dry_run=True)
+    RunYCSB(cases, outputDir, timeout='01:00:00', dry_run=True)
 
