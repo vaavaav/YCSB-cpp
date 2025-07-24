@@ -29,6 +29,7 @@ if __name__ == '__main__':
 
     ycsb_config = {
         'threadcount': threads,
+        'maxexecutiontime': 40*60, # 40 minutes
         'status.interval': 1,
         'operationcount.0': 6_000_000,
         'operationcount.1': 5_000_000,
@@ -97,5 +98,5 @@ if __name__ == '__main__':
             ]
 
     # Run the benchmark
-    RunYCSB(cases, outputDir, timeout='01:00:00', dry_run=True)
+    RunYCSB(cases, outputDir, timeout='00:45:00', dry_run=True)
 
