@@ -29,20 +29,23 @@ if __name__ == '__main__':
 
     ycsb_config = {
         'threadcount': threads,
-        'maxexecutiontime': 40*60, # 40 minutes
+        'maxexecutiontime': 60*60, 
         'status.interval': 1,
-        'operationcount.0': 6_000_000,
+        'operationcount.0': 5_000_000,
         'operationcount.1': 5_000_000,
         'operationcount.2': 36_000_000,
         'operationcount.3': 33_000_000,
         'sleepafterload': 0,
         # **{f'sleepafterload.{i}': int(i*(maxexecutiontime/phases)) for i in range(threads)},
         # Cachelib
-        'cachelib.size': 2_000_000_000*threads,
-        'cachelib.virtualsize': 2_000_000_000*threads,
+        'cachelib.size': 2_500_000_000,
+        'cachelib.virtualsize': 2_500_000_000,
         'cachelib.name': 'instance-0',
         'cachelib.eviction': 'lru',
-        'cachelib.pool.relsize': 1 / threads,
+        'cachelib.pool.relsize.0': 0.609,
+        'cachelib.pool.relsize.1': 0.235,
+        'cachelib.pool.relsize.2': 0.089,
+        'cachelib.pool.relsize.3': 0.067,
         **{f'request_key_prefix.{i}': f'p{i}' for i in range(threads)},
         **{f'cachelib.pool.name.{i}': f'p{i}' for i in range(threads)},
         # rocksdb
@@ -77,7 +80,7 @@ if __name__ == '__main__':
             'cachelib.eviction': '2q',
             'cachelib.pooloptimizer': 'on',
             'cachelib.poolresizer': 'on',
-            'cachelib.poolrebalancer': 'on',
+            #'cachelib.poolrebalancer': 'on',
         }),
         Setup('baseline', ycsb_executable, {
             **ycsb_config,
@@ -88,7 +91,7 @@ if __name__ == '__main__':
             **ycsb_config,
             'cachelib.poolresizer': 'on',
             'cachelib.pool.noinitialsize': 'on',
-            'cachelib.poolrebalancer': 'on',
+            #'cachelib.poolrebalancer': 'on',
             }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
               controller_args=f'ThroughputMaximization 1000:0.05:{ycsb_config["cachelib.virtualsize"]}:false'),
     ]
