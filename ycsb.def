@@ -1,5 +1,5 @@
 Bootstrap: docker
-From: ubuntu:20.04
+From: ubuntu:24.04
 
 %environment
  export DEBIAN_FRONTEND=noninteractive
@@ -9,24 +9,19 @@ From: ubuntu:20.04
 
 %files
   ../.config/nvim/init.lua /etc/xdg/nvim/init.lua
-  ../.tmux.conf /etc/tmux.conf
-  ../.bashrc /etc/bash.bashrc
-  ../.bash_profile /etc/profile
+  build.py /build.py
 
 %post
   export DEBIAN_FRONTEND=noninteractive
   echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections
   echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections
   apt-get update
-  apt-get install -y dstat tzdata git sudo tmux tmux-plugin-manager ninja-build gettext libtool libtool-bin autoconf automake cmake g++ pkg-config unzip curl doxygen binutils-dev bison flex build-essential libboost-all-dev libbz2-dev libdouble-conversion-dev libdwarf-dev libelf-dev libevent-dev libgflags-dev libgoogle-glog-dev libiberty-dev libjemalloc-dev libleveldb-dev liblz4-dev liblzma-dev libnuma-dev libsnappy-dev libsodium-dev libunwind-dev make pkg-config software-properties-common zlib1g-dev libssl-dev vim
-  # Install neovim
-  git clone -b v0.10.2 --depth 1 https://github.com/neovim/neovim.git /neovim
-  cd /neovim
-  make CMAKE_BUILD_TYPE=RelWithDebInfo
-  make install
-  cd ~
-  rm -rf /neovim
-  # End install neovim
-  apt-get install -y python3 python3-pip
-  #  rm -rf /var/lib/apt/lists/*
-  pip3 install --no-cache-dir pandas matplotlib seaborn
+  apt install -y build-essential wget curl python3 g++ make \
+    libgmp-dev libmpfr-dev libmpc-dev libisl-dev flex bison
+  /build.py -i
+  rm /build.py
+  apt install -y g++-11 gcc-11
+  update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100
+  update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
+  update-alternatives --set gcc /usr/bin/gcc-11
+  update-alternatives --set g++ /usr/bin/g++-11
