@@ -82,23 +82,23 @@ if __name__ == '__main__':
             'cachelib.poolresizer': 'on',
             'cachelib.poolrebalancer': 'off',
         }),
-        Setup('baseline', ycsb_executable, {
-            **ycsb_config_motivation_1,
-            'cachelib.pooloptimizer': 'off',  
-            'cachelib.poolresizer': 'off',
-            'cachelib.poolrebalancer': 'off',
-        }),
-        Setup('custom', ycsb_executable, {
-            **ycsb_config_motivation_1,
-            'cachelib.pooloptimizer': 'off',
-            'cachelib.poolresizer': 'off',
-            'cachelib.poolrebalancer': 'off',
-            'cachelib.pool.proportion.0': 0.91,
-            'cachelib.pool.proportion.1': 0.03,
-            'cachelib.pool.proportion.2': 0.03,
-            'cachelib.pool.proportion.3': 0.03,
-            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
-              controller_args='Motivation 1000')
+       # Setup('baseline', ycsb_executable, {
+       #     **ycsb_config_motivation_1,
+       #     'cachelib.pooloptimizer': 'off',  
+       #     'cachelib.poolresizer': 'off',
+       #     'cachelib.poolrebalancer': 'off',
+       # }),
+       # Setup('custom', ycsb_executable, {
+       #     **ycsb_config_motivation_1,
+       #     'cachelib.pooloptimizer': 'off',
+       #     'cachelib.poolresizer': 'off',
+       #     'cachelib.poolrebalancer': 'off',
+       #     'cachelib.pool.proportion.0': 0.91,
+       #     'cachelib.pool.proportion.1': 0.03,
+       #     'cachelib.pool.proportion.2': 0.03,
+       #     'cachelib.pool.proportion.3': 0.03,
+       #     }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
+       #       controller_args='Motivation 1000')
     ]
 
 
@@ -141,10 +141,10 @@ if __name__ == '__main__':
 
     ## Cases
     cases = [
-            #   Case('motivation-1', runs, load_setup_motivation_1, setups_motivation_1, "READ-PASSED READ-FAILED ALL"),
-            Case('motivation-2', runs, load_setup_motivation_2, setups_motivation_2, "READ-PASSED READ-FAILED ALL")
+            Case('motivation-1', runs, load_setup_motivation_1, setups_motivation_1, "READ-PASSED READ-FAILED ALL"),
+            #Case('motivation-2', runs, load_setup_motivation_2, setups_motivation_2, "READ-PASSED READ-FAILED ALL")
     ]
 
     
     # Run the benchmark
-    RunYCSB(cases, outputDir, sif_path=sifPath, binds=[sourceDir], timeout='03:00:00', dry_run=True)
+    RunYCSB(cases, outputDir, sif_path=sifPath, binds=[sourceDir], timeout='01:00:00')

@@ -6,7 +6,7 @@ import json
 import re
 import time
 
-getMem = lambda cache_size: int(cache_size * 1.4 / (1024 * 1024))
+getMem = lambda cache_size: int(cache_size * 3 / (1024 * 1024))
 
 sanitize = lambda name: re.sub(r'\W+', '_', name)
 
@@ -78,7 +78,7 @@ def build_sbatch_cmd(name, cmd, stdout, stderr, mem=None, jobid=None, export=Non
 
     return sbatch_cmd
 
-def RunYCSB(cases, output_dir, sif_path=None, binds=[], colocated=False, dry_run=False, timeout=None):
+def RunYCSB(cases, output_dir, sif_path=None, binds=[], colocated=False, dry_run=False, timeout=None, load=True):
     global DRY_RUN, TIMEOUT 
     DRY_RUN = dry_run
     TIMEOUT = timeout
@@ -104,7 +104,7 @@ def RunYCSB(cases, output_dir, sif_path=None, binds=[], colocated=False, dry_run
                 json.dump({s.name: s.config for s in case.setups}, f, indent=2)
 
         load_job_id = None
-        if case.load:
+        if load:
             if sif_path:
                 load_job_id = loadSIF(case.name, case.load, sif_path, binds)
             else:

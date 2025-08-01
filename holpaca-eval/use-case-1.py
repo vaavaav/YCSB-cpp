@@ -109,5 +109,5 @@ if __name__ == '__main__':
             ]
 
     # Run the benchmark
-    RunYCSB(cases, outputDir, timeout='01:00:00', sif_path=sifPath, binds=[sourceDir])
+    RunYCSB(cases, outputDir, timeout='01:05:00', sif_path=sifPath, binds=[sourceDir])
 
