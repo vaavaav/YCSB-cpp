@@ -66,20 +66,20 @@ def main():
 
     # Dependencies: name, repo, branch/tag, commit (optional), git_flags, source_dir, cmake_flags
     deps = [
-                    ("zstd", "https://github.com/facebook/zstd", "v1.5.6", None, [], "build/cmake", ["-DZSTD_BUILD_TESTS=OFF"]),
-                    ("googletest", "https://github.com/google/googletest", "v1.15.2", None, [], ".", []),
-                    ("glog", "https://github.com/google/glog", "v0.5.0", None, [], ".", ["-DWITH_GFLAGS=OFF"]),
-                    ("gflags", "https://github.com/gflags/gflags", "v2.2.2", None, [], ".", ["-DGFLAGS_BUILD_TESTING=NO"]),
-                    ("fmt", "https://github.com/fmtlib/fmt", "10.2.1", None, [], ".", ["-DFMT_TEST=NO"]),
-                    ("sparsemap", "https://github.com/Tessil/sparse-map", "v0.6.2", None, ['--recurse-submodules', '--shallow-submodules'], ".", []),
-                    ("folly", "https://github.com/facebook/folly", "main", "17be1d", ['--recurse-submodules', '--shallow-submodules'], ".", ["-DBUILD_TESTS=OFF"]),
-                    ("fizz", "https://github.com/facebookincubator/fizz", "main", "5576ab83", ['--recurse-submodules', '--shallow-submodules'], "fizz", ["-DBUILD_TESTS=OFF"]),
-                    ("wangle", "https://github.com/facebook/wangle", "main", "0c80d9e", ['--recurse-submodules', '--shallow-submodules'], "wangle", ["-DBUILD_TESTS=OFF"]),
-                    ("mvfst", "https://github.com/facebook/mvfst", "main", "aa7ac3", ['--recurse-submodules', '--shallow-submodules'], ".", []),
-                    ("fbthrift", "https://github.com/facebook/fbthrift", "main", "c21dccc", ['--recurse-submodules', '--shallow-submodules'], ".", ["-DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"]),
-                    ("grpc", "https://github.com/grpc/grpc", "v1.50.1", None, ['--recurse-submodules', '--shallow-submodules'], ".", ["-DgRPC_INSTALL=ON", "-DgRPC_BUILD_TESTS=OFF", "-DgRPC_ZLIB_PROVIDER=package", "-DgRPC_SSL_PROVIDER=package", "-DABSL_PROPAGATE_CXX_STD=ON", "-Dprotobuf_WITH_ZLIB=ON", "-DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"]),
-                    ("Shards", "https://github.com/vaavaav/SHARDS-cpp", "varying-size", None, [], ".", []),
-                    ("gsl", "https://github.com/ampl/gsl", "20211111", None, [], ".", ["-DGSL_DISABLE_TESTS=1", "-DDOCUMENTATION=OFF", "-DNO_AMPL_BINDINGS=1"]),
+#                    ("zstd", "https://github.com/facebook/zstd", "v1.5.6", None, [], "build/cmake", ["-DZSTD_BUILD_TESTS=OFF"]),
+#                    ("googletest", "https://github.com/google/googletest", "v1.15.2", None, [], ".", []),
+#                    ("glog", "https://github.com/google/glog", "v0.5.0", None, [], ".", ["-DWITH_GFLAGS=OFF"]),
+#                    ("gflags", "https://github.com/gflags/gflags", "v2.2.2", None, [], ".", ["-DGFLAGS_BUILD_TESTING=NO"]),
+#                    ("fmt", "https://github.com/fmtlib/fmt", "10.2.1", None, [], ".", ["-DFMT_TEST=NO"]),
+#                    ("sparsemap", "https://github.com/Tessil/sparse-map", "v0.6.2", None, ['--recurse-submodules', '--shallow-submodules'], ".", []),
+#                    ("folly", "https://github.com/facebook/folly", "main", "17be1d", ['--recurse-submodules', '--shallow-submodules'], ".", ["-DBUILD_TESTS=OFF"]),
+#                    ("fizz", "https://github.com/facebookincubator/fizz", "main", "5576ab83", ['--recurse-submodules', '--shallow-submodules'], "fizz", ["-DBUILD_TESTS=OFF"]),
+#                    ("wangle", "https://github.com/facebook/wangle", "main", "0c80d9e", ['--recurse-submodules', '--shallow-submodules'], "wangle", ["-DBUILD_TESTS=OFF"]),
+#                    ("mvfst", "https://github.com/facebook/mvfst", "main", "aa7ac3", ['--recurse-submodules', '--shallow-submodules'], ".", []),
+#                    ("fbthrift", "https://github.com/facebook/fbthrift", "main", "c21dccc", ['--recurse-submodules', '--shallow-submodules'], ".", ["-DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"]),
+#                    ("grpc", "https://github.com/grpc/grpc", "v1.50.1", None, ['--recurse-submodules', '--shallow-submodules'], ".", ["-DgRPC_INSTALL=ON", "-DgRPC_BUILD_TESTS=OFF", "-DgRPC_ZLIB_PROVIDER=package", "-DgRPC_SSL_PROVIDER=package", "-DABSL_PROPAGATE_CXX_STD=ON", "-Dprotobuf_WITH_ZLIB=ON", "-DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"]),
+#                    ("Shards", "https://github.com/vaavaav/SHARDS-cpp", "varying-size", None, [], ".", []),
+#                    ("gsl", "https://github.com/ampl/gsl", "20211111", None, [], ".", ["-DGSL_DISABLE_TESTS=1", "-DDOCUMENTATION=OFF", "-DNO_AMPL_BINDINGS=1"]),
                     ("CacheLib-Holpaca", "https://github.com/vaavaav/CacheLib-Holpaca", "holpaca-2404", None, [], "cachelib", ["-DBUILD_TESTS=OFF", "-DCMAKE_FIND_DEBUG_MODE=ON"]),
          ("rocksdb", "https://github.com/vaavaav/rocksdb", "main", None, [], ".", ["-DWITH_TESTS=OFF", "-DWITH_GFLAGS=OFF"]),
     ]
@@ -97,10 +97,11 @@ def main():
         for name, repo, branch_tag, commit, extra_git_flags, src_dir, extra_flags in deps:
             target = external_dir / name
             if target.exists():
-                run(["rm", "-rf", str(target)])
-            
-            # Clone
-            run(["git", "clone", "-b", branch_tag, "--depth", "1"] + extra_git_flags + [str(repo), str(target)])
+                #run(["rm", "-rf", str(target)])
+                print("")
+            else:
+                # Clone
+                run(["git", "clone", "-b", branch_tag, "--depth", "1"] + extra_git_flags + [str(repo), str(target)])
             
             # Checkout specific commit if provided
             if commit:
