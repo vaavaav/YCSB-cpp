@@ -30,6 +30,7 @@ private:
   thread_local static facebook::cachelib::PoolId poolId_;
   static int ref_cnt_;
   static std::unordered_map<int, int> rocksdbIOPSPerThread_;
+  static std::unordered_map<int, std::pair<int, int>> missesAndHitsPerThread_;
 
 public:
   void Init();
@@ -78,7 +79,11 @@ public:
     auto [cache, poolId] = cachesPerThread_[i];
     auto value = std::visit(
         [i, poolId](auto &&c) {
-          c.registerDiskIOPS(poolId, rocksdbIOPSPerThread_[i]);
+          c.registerMetrics(
+              poolId, rocksdbIOPSPerThread_[i],
+              missesAndHitsPerThread_[i].first /
+                  static_cast<double>((missesAndHitsPerThread_[i].first +
+                                       missesAndHitsPerThread_[i].second)));
 
           const auto &pool = c.getPool(poolId);
           auto cms = c.getCacheMemoryStats();

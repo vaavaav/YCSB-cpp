@@ -93,7 +93,15 @@ if __name__ == '__main__':
             'cachelib.pool.noinitialsize': 'on',
             #'cachelib.poolrebalancer': 'on',
             }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
-              controller_args=f'ThroughputMaximization 1000:0.05:{ycsb_config["cachelib.virtualsize"]}:false'),
+              controller_args=f'ThroughputMaximization 1000:0.05:{ycsb_config["cachelib.virtualsize"]}:false:false'),
+
+        Setup('holpaca A', ycsb_executable, {
+            **ycsb_config,
+            'cachelib.poolresizer': 'on',
+            'cachelib.pool.noinitialsize': 'on',
+            #'cachelib.poolrebalancer': 'on',
+            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
+              controller_args=f'ThroughputMaximization 1000:0.05:{ycsb_config["cachelib.virtualsize"]}:false:true'),
     ]
 
     cases = [
@@ -101,5 +109,5 @@ if __name__ == '__main__':
             ]
 
     # Run the benchmark
-    RunYCSB(cases, outputDir, timeout='00:45:00', sif_path=sifPath, binds=[sourceDir])
+    RunYCSB(cases, outputDir, timeout='01:00:00', sif_path=sifPath, binds=[sourceDir])
 

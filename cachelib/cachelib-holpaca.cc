@@ -51,6 +51,8 @@ std::mutex CacheLibHolpaca::mutex_;
 thread_local facebook::cachelib::PoolId CacheLibHolpaca::poolId_;
 int CacheLibHolpaca::ref_cnt_ = 0;
 std::unordered_map<int, int> CacheLibHolpaca::rocksdbIOPSPerThread_;
+std::unordered_map<int, std::pair<int, int>>
+    CacheLibHolpaca::missesAndHitsPerThread_;
 std::unordered_map<std::string, RocksDB> CacheLibHolpaca::rocksdbs_;
 std::unordered_map<std::string, std::shared_ptr<CacheLibHolpaca::Cache>>
     CacheLibHolpaca::caches_;
@@ -164,6 +166,7 @@ void CacheLibHolpaca::Init() {
       cache_ = std::make_shared<Cache>(std::get<Cache2Q::Config>(config));
     }
     rocksdbIOPSPerThread_[threadId_] = 0;
+    missesAndHitsPerThread_[threadId_] = {0, 0};
     rocksdb_.SetProps(props_);
     rocksdb_.Init();
     rocksdbs_[cacheName_] = rocksdb_;
@@ -216,6 +219,7 @@ DB::Status CacheLibHolpaca::Read(const std::string &table,
         auto status = handle != nullptr ? kOK : kNotFound;
         if (status == kNotFound) {
           rocksdbIOPSPerThread_[threadId_]++;
+          missesAndHitsPerThread_[threadId_].first++;
           if (rocksdbs_[cacheName_].Read(table, key, fields, result) == kOK) {
             uint32_t size = result.front().value.size();
             auto new_handle = cache.allocate(poolId_, key, size);
@@ -236,6 +240,7 @@ DB::Status CacheLibHolpaca::Read(const std::string &table,
             std::abort();
           }
         } else {
+          missesAndHitsPerThread_[threadId_].second++;
           volatile auto data =
               std::string(reinterpret_cast<const char *>(handle->getMemory()),
                           handle->getSize());
