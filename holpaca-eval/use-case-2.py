@@ -56,6 +56,7 @@ if __name__ == '__main__':
         'rocksdb.use_direct_io_for_flush_compaction': 'true',
         'rocksdb.dbname': db,
         # workload
+        'workload.type': 'trace',
         'trace.override_value_size': 1000,
         **{f'trace.file.{i}': os.path.join(tracesDir, trace) for i, trace in enumerate(traces)},
     }
@@ -74,12 +75,14 @@ if __name__ == '__main__':
             'cachelib.eviction': '2q',
             'cachelib.pooloptimizer': 'on',
             'cachelib.poolresizer': 'on',
+            'cachelib.size': ycsb_config['cachelib.virtualsize'],
             #'cachelib.poolrebalancer': 'on',
         }),
         Setup('baseline', ycsb_executable, {
             **ycsb_config,
             'cachelib.pooloptimizer': 'off',  
             'cachelib.poolresizer': 'off',
+            'cachelib.size': ycsb_config['cachelib.virtualsize'],
         }),
         Setup('holpaca', ycsb_executable, {
             **ycsb_config,
@@ -89,7 +92,7 @@ if __name__ == '__main__':
             }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
               controller_args=f'ThroughputMaximization 1000:0.05:{ycsb_config["cachelib.virtualsize"]}:false:false'),
 
-        Setup('holpaca A', ycsb_executable, {
+        Setup('holpaca-A', ycsb_executable, {
             **ycsb_config,
             'cachelib.poolresizer': 'on',
             'cachelib.pool.noinitialsize': 'on',
@@ -131,4 +134,4 @@ if __name__ == '__main__':
             ]
 
     # Run the benchmark
-    RunYCSB(cases, outputDir, timeout='01:10:00', dry_run=True)
+    RunYCSB(cases, outputDir, timeout='01:10:00', sif_path=sifPath, binds=[sourceDir])
