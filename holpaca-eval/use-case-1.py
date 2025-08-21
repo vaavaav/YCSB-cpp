@@ -29,23 +29,20 @@ if __name__ == '__main__':
 
     ycsb_config = {
         'threadcount': threads,
-        'maxexecutiontime': 60*60, 
+        'maxexecutiontime': 1800,  # 30 minutes
         'status.interval': 1,
-        'operationcount.0': 5_000_000,
-        'operationcount.1': 5_000_000,
-        'operationcount.2': 36_000_000,
-        'operationcount.3': 33_000_000,
+        'operationcount': 100_000_000,
         'sleepafterload': 0,
         # **{f'sleepafterload.{i}': int(i*(maxexecutiontime/phases)) for i in range(threads)},
         # Cachelib
-        'cachelib.size': 2_500_000_000,
-        'cachelib.virtualsize': 2_500_000_000,
+        'cachelib.size': 4_500_000_000,  # 4.5 GB
+        'cachelib.virtualsize': 4_500_000_000,  # 4.5 GB
         'cachelib.name': 'instance-0',
         'cachelib.eviction': 'lru',
-        'cachelib.pool.relsize.0': 0.609,
-        'cachelib.pool.relsize.1': 0.235,
-        'cachelib.pool.relsize.2': 0.089,
-        'cachelib.pool.relsize.3': 0.067,
+        'cachelib.pool.relsize.0': 0.625,
+        'cachelib.pool.relsize.1': 0.249,
+        'cachelib.pool.relsize.2': 0.078,
+        'cachelib.pool.relsize.3': 0.048,
         **{f'request_key_prefix.{i}': f'p{i}' for i in range(threads)},
         **{f'cachelib.pool.name.{i}': f'p{i}' for i in range(threads)},
         # rocksdb
@@ -75,6 +72,11 @@ if __name__ == '__main__':
     
     # Create Setup objects for different configurations
     setups = [
+        Setup('baseline', ycsb_executable, {
+            **ycsb_config,
+            'cachelib.pooloptimizer': 'off',  
+            'cachelib.poolresizer': 'off',
+        }),
         Setup('optimized', ycsb_executable, {
             **ycsb_config,
             'cachelib.eviction': '2q',
@@ -82,34 +84,13 @@ if __name__ == '__main__':
             'cachelib.poolresizer': 'on',
             #'cachelib.poolrebalancer': 'on',
         }),
-        Setup('baseline', ycsb_executable, {
-            **ycsb_config,
-            'cachelib.pooloptimizer': 'off',  
-            'cachelib.poolresizer': 'off',
-        }),
         Setup('holpaca', ycsb_executable, {
             **ycsb_config,
             'cachelib.poolresizer': 'on',
             'cachelib.pool.noinitialsize': 'on',
             #'cachelib.poolrebalancer': 'on',
             }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
-              controller_args=f'ThroughputMaximization 1000:0.05:{ycsb_config["cachelib.virtualsize"]}:false:false'),
-
-        Setup('holpaca-A', ycsb_executable, {
-            **ycsb_config,
-            'cachelib.poolresizer': 'on',
-            'cachelib.pool.noinitialsize': 'on',
-            #'cachelib.poolrebalancer': 'on',
-            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
-              controller_args=f'ThroughputMaximization 1000:0.05:{ycsb_config["cachelib.virtualsize"]}:false:true'),
-        Setup('holpaca-2q', ycsb_executable, {
-            **ycsb_config,
-            'cachelib.eviction': '2q',
-            'cachelib.poolresizer': 'on',
-            'cachelib.pool.noinitialsize': 'on',
-            #'cachelib.poolrebalancer': 'on',
-            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
-              controller_args=f'ThroughputMaximization 1000:0.05:{ycsb_config["cachelib.virtualsize"]}:false:false'),
+              controller_args=f'ThroughputMaximization 1000:0.05:{ycsb_config["cachelib.virtualsize"]}:false:true')
     ]
 
     cases = [
