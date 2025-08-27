@@ -14,6 +14,8 @@ const std::string PROP_CACHE_EVICTION_DEFAULT = "lru"; // or 2q
 const std::string PROP_SIZE = "cachelib.size";
 const std::string PROP_SIZE_DEFAULT = "1000000000";
 
+const std::string PROP_VIRTUAL_SIZE = "cachelib.virtualsize";
+
 const std::string PROP_CONTROLLER_ADDRESS = "cachelib.controller.address";
 const std::string PROP_CONTROLLER_ADDRESS_DEFAULT = "";
 
@@ -105,6 +107,14 @@ void CacheLibHolpaca::Init() {
               .setAccessConfig({25 /* bucket power */,
                                 15 /* lock power */}); // assuming caching
                                                        // 20 million items
+
+          if (props_->ContainsKey(PROP_VIRTUAL_SIZE + "." +
+                                  std::to_string(threadId_)) ||
+              props_->ContainsKey(PROP_VIRTUAL_SIZE)) {
+            config.setVirtualSize(std::stol(props_->GetProperty(
+                PROP_VIRTUAL_SIZE + "." + std::to_string(threadId_),
+                props_->GetProperty(PROP_VIRTUAL_SIZE))));
+          }
           auto address = props_->GetProperty(
               PROP_STAGE_ADDRESS + "." + std::to_string(threadId_),
               props_->GetProperty(PROP_STAGE_ADDRESS,

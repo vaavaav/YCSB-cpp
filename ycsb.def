@@ -8,7 +8,6 @@ From: ubuntu:24.04
  export PYTHONUNBUFFERED=1
 
 %files
-  ../.config/nvim/init.lua /etc/xdg/nvim/init.lua
   build.py /build.py
 
 %post
@@ -17,7 +16,7 @@ From: ubuntu:24.04
   echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections
   apt-get update
   apt install -y build-essential wget curl python3 g++ make \
-    libgmp-dev libmpfr-dev libmpc-dev libisl-dev flex bison
+    libgmp-dev libmpfr-dev libmpc-dev libisl-dev flex bison vim neovim
   /build.py -i
   rm /build.py
   apt install -y g++-11 gcc-11
