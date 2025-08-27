@@ -36,7 +36,6 @@ if __name__ == '__main__':
         # **{f'sleepafterload.{i}': int(i*(maxexecutiontime/phases)) for i in range(threads)},
         # Cachelib
         'cachelib.size': 4_500_000_000,  # 4.5 GB
-        'cachelib.virtualsize': 4_500_000_000,  # 4.5 GB
         'cachelib.name': 'instance-0',
         'cachelib.eviction': 'lru',
         'cachelib.pool.relsize.0': 0.625,
@@ -90,7 +89,7 @@ if __name__ == '__main__':
             'cachelib.pool.noinitialsize': 'on',
             #'cachelib.poolrebalancer': 'on',
             }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
-              controller_args=f'ThroughputMaximization 1000:0.05:{ycsb_config["cachelib.virtualsize"]}:false:true')
+              controller_args=f'ThroughputMaximization 1000:0.05:false:true')
     ]
 
     cases = [
