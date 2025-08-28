@@ -29,16 +29,17 @@ if __name__ == '__main__':
     ycsb_config = {
         'threadcount': threads,
         'maxexecutiontime': 1800,  # 30 minutes
+        'operationcount': 100_000_000,
         'status.interval': 1,
         'sleepafterload': 0,
         #**{f'sleepafterload.{i}': int(i*(maxexecutiontime/phases)) for i in range(threads)},
         # Cachelib
         'cachelib.size': 4_500_000_000,  # 18 GB
-        'cachelib.virtualsize.0': 4_500_000_000*0.625,  
-        'cachelib.virtualsize.1': 4_500_000_000*0.249,
-        'cachelib.virtualsize.2': 4_500_000_000*0.078,
-        'cachelib.virtualsize.3': 4_500_000_000*0.048,
         **{f'cachelib.name.{i}': f'instance-{i}' for i in range(len(traces))},
+        'cachelib.virtualsize.0': int(4_500_000_000*0.625),  
+        'cachelib.virtualsize.1': int(4_500_000_000*0.249),
+        'cachelib.virtualsize.2': int(4_500_000_000*0.078),
+        'cachelib.virtualsize.3': int(4_500_000_000*0.048),
         'cachelib.eviction': 'lru',
         'cachelib.pool.relsize': 1, 
         **{f'request_key_prefix.{i}': f'p{i}' for i in range(len(traces))},
@@ -101,4 +102,4 @@ if __name__ == '__main__':
             ]
 
     # Run the benchmark
-    RunYCSB(cases, outputDir, timeout='01:10:00', sif_path=sifPath, binds=[sourceDir])
+    RunYCSB(cases, outputDir, timeout='01:10:00', sif_path=sifPath, binds=[sourceDir], dry_run=True)
