@@ -128,20 +128,23 @@ bool TraceReplayer::DoTransaction(DB &db) {
   switch (op) {
   case READ:
     status = TransactionRead(db, key);
+    ++ops_;
     break;
   case UPDATE:
     status = TransactionUpdate(db, key, size);
+    ++ops_;
     break;
   case INSERT:
     status = TransactionInsert(db, key, size);
+    ++ops_;
     break;
   default:
     // throw utils::Exception("Operation request is not recognized!");
-    status = DB::kOK;
+    status = DB::kError;
     break;
   }
 
-  if (++ops_ >= operation_count_) {
+  if (ops_ >= operation_count_) {
     request_stop();
   }
 

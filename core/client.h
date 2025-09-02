@@ -17,6 +17,8 @@
 #include "db.h"
 #include "terminator_thread.h"
 #include "utils.h"
+#include <condition_variable>
+#include <mutex>
 
 using namespace std::chrono_literals;
 
@@ -35,27 +37,36 @@ inline long ClientThread(std::chrono::seconds sleepafterload,
 
     db->Init();
 
+    std::condition_variable cv;
+    std::mutex m;
     std::future<void> terminator;
     if (maxexecutiontime > 0s) {
       terminator = std::async(std::launch::async, ycsbc::TerminatorThread,
-                              maxexecutiontime, wl);
+                              maxexecutiontime, wl, std::ref(cv), std::ref(m));
     }
 
     long ops = 0;
     if (load) {
       while (!wl->is_stop_requested()) {
-        wl->DoInsert(*db);
-        ops++;
+        if (wl->DoInsert(*db)) {
+          ops++;
+        }
       }
     } else {
       while (!wl->is_stop_requested()) {
-        wl->DoTransaction(*db);
-        ops++;
+        if (wl->DoTransaction(*db)) {
+          ops++;
+        }
       }
     }
 
     if (cleanup_db) {
       db->Cleanup();
+    }
+
+    {
+      std::lock_guard<std::mutex> lock(m);
+      cv.notify_one();
     }
 
     if (maxexecutiontime > 0s) {
