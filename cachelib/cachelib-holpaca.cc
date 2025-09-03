@@ -16,6 +16,9 @@ const std::string PROP_SIZE_DEFAULT = "1000000000";
 
 const std::string PROP_VIRTUAL_SIZE = "cachelib.virtualsize";
 
+const std::string PROP_PROPORTION = "cachelib.proportion";
+const std::string PROP_PROPORTION_DEFAULT = "1.0";
+
 const std::string PROP_CONTROLLER_ADDRESS = "cachelib.controller.address";
 const std::string PROP_CONTROLLER_ADDRESS_DEFAULT = "";
 
@@ -107,6 +110,10 @@ void CacheLibHolpaca::Init() {
               .setAccessConfig({25 /* bucket power */,
                                 15 /* lock power */}); // assuming caching
                                                        // 20 million items
+
+          config.setProportion(std::stod(props_->GetProperty(
+              PROP_PROPORTION + "." + std::to_string(threadId_),
+              props_->GetProperty(PROP_PROPORTION, PROP_PROPORTION_DEFAULT))));
 
           if (props_->ContainsKey(PROP_VIRTUAL_SIZE + "." +
                                   std::to_string(threadId_)) ||
