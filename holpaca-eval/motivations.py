@@ -75,30 +75,30 @@ if __name__ == '__main__':
     
     # Create Setup objects for different configurations
     setups_motivation_1 = [
-        Setup('optimizer', ycsb_executable, {
+        Setup('baseline', ycsb_executable, {
+            **ycsb_config_motivation_1,
+            'cachelib.pooloptimizer': 'off',  
+            'cachelib.poolresizer': 'off',
+            'cachelib.poolrebalancer': 'off',
+        }),
+        Setup('custom', ycsb_executable, {
+            **ycsb_config_motivation_1,
+            'cachelib.pooloptimizer': 'off',
+            'cachelib.poolresizer': 'off',
+            'cachelib.poolrebalancer': 'off',
+            'cachelib.pool.proportion.0': 0.91,
+            'cachelib.pool.proportion.1': 0.03,
+            'cachelib.pool.proportion.2': 0.03,
+            'cachelib.pool.proportion.3': 0.03,
+            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
+              controller_args='Motivation 1000'),
+        Setup('optimized', ycsb_executable, {
             **ycsb_config_motivation_1,
             'cachelib.eviction': '2q',
             'cachelib.pooloptimizer': 'on',
             'cachelib.poolresizer': 'on',
             'cachelib.poolrebalancer': 'off',
         }),
-       # Setup('baseline', ycsb_executable, {
-       #     **ycsb_config_motivation_1,
-       #     'cachelib.pooloptimizer': 'off',  
-       #     'cachelib.poolresizer': 'off',
-       #     'cachelib.poolrebalancer': 'off',
-       # }),
-       # Setup('custom', ycsb_executable, {
-       #     **ycsb_config_motivation_1,
-       #     'cachelib.pooloptimizer': 'off',
-       #     'cachelib.poolresizer': 'off',
-       #     'cachelib.poolrebalancer': 'off',
-       #     'cachelib.pool.proportion.0': 0.91,
-       #     'cachelib.pool.proportion.1': 0.03,
-       #     'cachelib.pool.proportion.2': 0.03,
-       #     'cachelib.pool.proportion.3': 0.03,
-       #     }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
-       #       controller_args='Motivation 1000')
     ]
 
 
@@ -117,13 +117,6 @@ if __name__ == '__main__':
     
     # Create Setup objects for different configurations
     setups_motivation_2 = [
-         Setup('optimizer', ycsb_executable, {
-             **ycsb_config_motivation_2,
-             'cachelib.eviction': '2q',
-             'cachelib.pooloptimizer': 'on',
-             'cachelib.poolresizer': 'on',
-             'cachelib.poolrebalancer': 'off',
-         }),
          Setup('custom', ycsb_executable, {
              **ycsb_config_motivation_2,
              'cachelib.pooloptimizer': 'off',
@@ -135,14 +128,65 @@ if __name__ == '__main__':
              'cachelib.pool.proportion.2': 0.03,
              'cachelib.pool.proportion.3': 0.03,
              }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
-               controller_args='Motivation 1000:true')
+               controller_args='Motivation 1000:true'),
+         Setup('optimized', ycsb_executable, {
+             **ycsb_config_motivation_2,
+             'cachelib.eviction': '2q',
+             'cachelib.pooloptimizer': 'on',
+             'cachelib.poolresizer': 'on',
+             'cachelib.poolrebalancer': 'off',
+         }),
     ]
+
+    ycsb_config_motivation_3 = {
+        **ycsb_config_motivation_1,
+        'cachelib.pool.relsize': 1.0,
+        'cachelib.size': 2_000_000_000,
+        **{f'cachelib.name.{i}': f'instance-{i}' for i in range(threads)},
+        **{f'sleepafterload.{i}': int(i*(maxexecutiontime/phases)) for i in range(threads)},
+        **{f'maxexecutiontime.{i}': int((1 - i*2/phases)*maxexecutiontime) for i in range(threads)},
+    }
+
+    load_setup_motivation_3 = Load(ycsb_executable, {
+        **ycsb_config_motivation_3,
+        'rocksdb.dbname': os.path.join(sourceDir, 'db-backup', "motivation-3"),
+        'rocksdb.destroy': 'true',
+    })
+
+    setups_motivation_3 = [
+            Setup('optimizer', ycsb_executable, {
+                **ycsb_config_motivation_3,
+                'cachelib.eviction': '2q',
+                'cachelib.pooloptimizer': 'on',
+                'cachelib.poolresizer': 'on',
+                'cachelib.poolrebalancer': 'off',
+                }),
+            Setup('custom', ycsb_executable, {
+                **ycsb_config_motivation_3,
+                'cachelib.size': 10_000_000_000,
+                'cachelib.virtualsize': 2_000_000_000,
+                'cachelib.pooloptimizer': 'off',
+                'cachelib.poolresizer': 'off',
+                'cachelib.poolrebalancer': 'off',
+                'cachelib.pool.noinitialsize': 'on',
+                'cachelib.proportion.0': 0.91,
+                'cachelib.pool.proportion.0': 1.0,
+                'cachelib.proportion.1': 0.03,
+                'cachelib.pool.proportion.1': 1.0,
+                'cachelib.proportion.2': 0.03,
+                'cachelib.pool.proportion.2': 1.0,
+                'cachelib.proportion.3': 0.03,
+                'cachelib.pool.proportion.3': 1.0,
+                }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
+                  controller_args='Motivation 1000:true')
+            ]
 
 
     ## Cases
     cases = [
-            Case('motivation-1', runs, load_setup_motivation_1, setups_motivation_1, "READ-PASSED READ-FAILED ALL"),
-            #Case('motivation-2', runs, load_setup_motivation_2, setups_motivation_2, "READ-PASSED READ-FAILED ALL")
+            #   Case('motivation-1', runs, load_setup_motivation_1, setups_motivation_1, "READ-PASSED READ-FAILED ALL"),
+            #   Case('motivation-2', runs, load_setup_motivation_2, setups_motivation_2, "READ-PASSED READ-FAILED ALL"),
+            Case('motivation-3', runs, load_setup_motivation_3, setups_motivation_3, "READ-PASSED READ-FAILED ALL")
     ]
 
     
