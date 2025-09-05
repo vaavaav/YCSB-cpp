@@ -349,12 +349,15 @@ void CacheLibHolpaca::SetThreadId(int threadId) { threadId_ = threadId; }
 void CacheLibHolpaca::Cleanup() {
   std::lock_guard<std::mutex> lock(mutex_);
   rocksdb_.Cleanup();
-  std::visit([](auto &&cache) { cache.removePool(poolId_); }, *cache_);
+  cachesPerThread_[threadId_] = {nullptr, 0};
+  std::visit(
+      [](auto &&cache) {
+        cache.removePool(poolId_);
+        cache_.reset();
+      },
+      *cache_);
   if (--ref_cnt_) {
     return;
-  }
-  for (auto &cache : caches_) {
-    cache.second.reset();
   }
   caches_.clear();
   rocksdbs_.clear();
