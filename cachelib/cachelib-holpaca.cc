@@ -186,6 +186,7 @@ void CacheLibHolpaca::Init() {
     }
     rocksdbIOPSPerThread_[threadId_] = 0;
     missesAndHitsPerThread_[threadId_] = {0, 0};
+    previousMissesAndHitsPerThread_[threadId_] = {0, 0};
     rocksdb_.SetProps(props_);
     rocksdb_.Init();
     rocksdbs_[cacheName_] = rocksdb_;
