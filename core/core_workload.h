@@ -203,6 +203,7 @@ public:
 
   virtual bool DoInsert(DB &db);
   virtual bool DoTransaction(DB &db);
+  virtual uint64_t GetExecutedOps() const { return ops_; }
 
   bool read_all_fields() const { return read_all_fields_; }
   bool write_all_fields() const { return write_all_fields_; }

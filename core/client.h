@@ -45,18 +45,13 @@ inline long ClientThread(std::chrono::seconds sleepafterload,
                               maxexecutiontime, wl, std::ref(cv), std::ref(m));
     }
 
-    long ops = 0;
     if (load) {
       while (!wl->is_stop_requested()) {
-        if (wl->DoInsert(*db)) {
-          ops++;
-        }
+        wl->DoInsert(*db);
       }
     } else {
       while (!wl->is_stop_requested()) {
-        if (wl->DoTransaction(*db)) {
-          ops++;
-        }
+        wl->DoTransaction(*db);
       }
     }
 
@@ -73,7 +68,7 @@ inline long ClientThread(std::chrono::seconds sleepafterload,
       terminator.wait();
     }
 
-    return ops;
+    return wl->GetExecutedOps();
   } catch (const utils::Exception &e) {
     std::cerr << "Caught exception: " << e.what() << std::endl;
     exit(1);

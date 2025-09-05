@@ -24,6 +24,7 @@ public:
 
   bool DoTransaction(DB &db) override final;
   bool DoInsert(DB &db) override final;
+  uint64_t GetExecutedOps() const override final { return ops_; }
 
 protected:
   DB::Status TransactionRead(DB &db, std::string const &key) override final;

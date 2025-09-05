@@ -154,13 +154,13 @@ if __name__ == '__main__':
     })
 
     setups_motivation_3 = [
-            Setup('optimized', ycsb_executable, {
-                **ycsb_config_motivation_3,
-                'cachelib.eviction': '2q',
-                'cachelib.pooloptimizer': 'on',
-                'cachelib.poolresizer': 'on',
-                'cachelib.poolrebalancer': 'off',
-                }),
+#           Setup('optimized', ycsb_executable, {
+#               **ycsb_config_motivation_3,
+#               'cachelib.eviction': '2q',
+#               'cachelib.pooloptimizer': 'on',
+#               'cachelib.poolresizer': 'on',
+#               'cachelib.poolrebalancer': 'off',
+#               }),
             Setup('custom', ycsb_executable, {
                 **ycsb_config_motivation_3,
                 'cachelib.size': 10_000_000_000,
