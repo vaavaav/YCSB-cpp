@@ -73,7 +73,8 @@ public:
 
   std::tuple<std::string, std::string, uint64_t, uint64_t, uint64_t, uint64_t>
   OccupancyCapacityAndGlobal(int i) {
-    if (cachesPerThread_.find(i) == cachesPerThread_.end()) {
+    if (cachesPerThread_.find(i) == cachesPerThread_.end() ||
+        std::get<0>(cachesPerThread_[i]) == nullptr) {
       return std::make_tuple("", "", 0, 0, 0, 0);
     }
     auto [cache, poolId] = cachesPerThread_[i];
