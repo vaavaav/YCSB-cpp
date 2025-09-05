@@ -58,6 +58,8 @@ int CacheLibHolpaca::ref_cnt_ = 0;
 std::unordered_map<int, int> CacheLibHolpaca::rocksdbIOPSPerThread_;
 std::unordered_map<int, std::pair<int, int>>
     CacheLibHolpaca::missesAndHitsPerThread_;
+std::unordered_map<int, std::pair<int, int>>
+    CacheLibHolpaca::previousMissesAndHitsPerThread_;
 std::unordered_map<std::string, RocksDB> CacheLibHolpaca::rocksdbs_;
 std::unordered_map<std::string, std::shared_ptr<CacheLibHolpaca::Cache>>
     CacheLibHolpaca::caches_;

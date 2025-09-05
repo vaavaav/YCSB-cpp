@@ -31,6 +31,8 @@ private:
   static int ref_cnt_;
   static std::unordered_map<int, int> rocksdbIOPSPerThread_;
   static std::unordered_map<int, std::pair<int, int>> missesAndHitsPerThread_;
+  static std::unordered_map<int, std::pair<int, int>>
+      previousMissesAndHitsPerThread_;
 
 public:
   void Init();
@@ -80,11 +82,19 @@ public:
     auto [cache, poolId] = cachesPerThread_[i];
     auto value = std::visit(
         [i, poolId](auto &&c) {
-          c.registerMetrics(
-              poolId, rocksdbIOPSPerThread_[i],
-              missesAndHitsPerThread_[i].first /
-                  static_cast<double>((missesAndHitsPerThread_[i].first +
-                                       missesAndHitsPerThread_[i].second)));
+          auto accMissesAndHits = missesAndHitsPerThread_[i];
+
+          int misses = missesAndHitsPerThread_[i].first -
+                       previousMissesAndHitsPerThread_[i].first;
+
+          int hits = missesAndHitsPerThread_[i].second -
+                     previousMissesAndHitsPerThread_[i].second;
+
+          c.registerMetrics(poolId, rocksdbIOPSPerThread_[i],
+                            (misses + hits == 0) ? 0
+                                                 : static_cast<double>(misses) /
+                                                       (misses + hits));
+          previousMissesAndHitsPerThread_[i] = accMissesAndHits;
 
           const auto &pool = c.getPool(poolId);
           auto cms = c.getCacheMemoryStats();
