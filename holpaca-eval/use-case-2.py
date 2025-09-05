@@ -34,12 +34,11 @@ if __name__ == '__main__':
         'sleepafterload': 0,
         #**{f'sleepafterload.{i}': int(i*(maxexecutiontime/phases)) for i in range(threads)},
         # Cachelib
-        'cachelib.size': 4_500_000_000,  # 18 GB
+        'cachelib.size.0': int(4_500_000_000*0.625),  
+        'cachelib.size.1': int(4_500_000_000*0.249),
+        'cachelib.size.2': int(4_500_000_000*0.078),
+        'cachelib.size.3': int(4_500_000_000*0.048),
         **{f'cachelib.name.{i}': f'instance-{i}' for i in range(len(traces))},
-        'cachelib.virtualsize.0': int(4_500_000_000*0.625),  
-        'cachelib.virtualsize.1': int(4_500_000_000*0.249),
-        'cachelib.virtualsize.2': int(4_500_000_000*0.078),
-        'cachelib.virtualsize.3': int(4_500_000_000*0.048),
         'cachelib.eviction': 'lru',
         'cachelib.pool.relsize': 1, 
         **{f'request_key_prefix.{i}': f'p{i}' for i in range(len(traces))},
@@ -70,43 +69,43 @@ if __name__ == '__main__':
     
     # Create Setup objects for different configurations
     setups = [
-#       Setup('baseline', ycsb_executable, {
-#           **ycsb_config,
-#           'cachelib.pooloptimizer': 'off',  
-#           'cachelib.poolresizer': 'off',
-#           'cachelib.size.0': ycsb_config['cachelib.virtualsize.0'],
-#           'cachelib.size.1': ycsb_config['cachelib.virtualsize.1'],
-#           'cachelib.size.2': ycsb_config['cachelib.virtualsize.2'],
-#           'cachelib.size.3': ycsb_config['cachelib.virtualsize.3'],
-#       }),
-        Setup('optimized', ycsb_executable, {
-            **ycsb_config,
-            'cachelib.eviction': '2q',
-            'cachelib.pooloptimizer': 'on',
-            'cachelib.poolresizer': 'on',
-            'cachelib.size.0': ycsb_config['cachelib.virtualsize.0'],
-            'cachelib.size.1': ycsb_config['cachelib.virtualsize.1'],
-            'cachelib.size.2': ycsb_config['cachelib.virtualsize.2'],
-            'cachelib.size.3': ycsb_config['cachelib.virtualsize.3'],
-            # based on baseline results
-            'maxexecutiontime': 2000,
-            'operationcount.0': 3067541,
-            'operationcount.1': 3568656,
-            'operationcount.2': 17273442,
-            'operationcount.3': 17178627,
-        }),
-        Setup('holpaca', ycsb_executable, {
-            **ycsb_config,
-            'cachelib.poolresizer': 'on',
-            'cachelib.pool.noinitialsize': 'on',
-            # based on baseline results
-            'maxexecutiontime': 2000,
-            'operationcount.0': 3067541,
-            'operationcount.1': 3568656,
-            'operationcount.2': 17273442,
-            'operationcount.3': 17178627,
-            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
-              controller_args=f'ThroughputMaximization 1000:0.05:false:true'),
+       Setup('baseline', ycsb_executable, {
+           **ycsb_config,
+           'cachelib.pooloptimizer': 'off',  
+           'cachelib.poolresizer': 'off',
+       }),
+#        Setup('optimized', ycsb_executable, {
+#            **ycsb_config,
+#            'cachelib.eviction': '2q',
+#            'cachelib.pooloptimizer': 'on',
+#            'cachelib.poolresizer': 'on',
+#            # based on baseline results
+#            'maxexecutiontime': 2000,
+#            'operationcount.0': 3232357,
+#            'operationcount.1': 3675923,
+#            'operationcount.2': 17309627,
+#            'operationcount.3': 16440435,
+#        }),
+#        Setup('holpaca', ycsb_executable, {
+#            **ycsb_config,
+#            'cachelib.poolresizer': 'on',
+#            'cachelib.pool.noinitialsize': 'on',
+#            'cachelib.size.0': 20_000_000_000,  # 20 GB
+#            'cachelib.size.1': 20_000_000_000,
+#            'cachelib.size.2': 20_000_000_000,
+#            'cachelib.size.3': 20_000_000_000,
+#            'cachelib.virtualsize.0': int(4_500_000_000*0.625),  
+#            'cachelib.virtualsize.1': int(4_500_000_000*0.249),
+#            'cachelib.virtualsize.2': int(4_500_000_000*0.078),
+#            'cachelib.virtualsize.3': int(4_500_000_000*0.048),
+#            # based on baseline results
+#            'maxexecutiontime': 2000,
+#            'operationcount.0': 3232357,
+#            'operationcount.1': 3675923,
+#            'operationcount.2': 17309627,
+#            'operationcount.3': 16440435,
+#            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'),
+#              controller_args=f'ThroughputMaximization 1000:0.05:false:true'),
     ]
     
     cases = [
