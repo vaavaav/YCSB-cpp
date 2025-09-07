@@ -54,7 +54,6 @@ namespace ycsbc {
 
 std::mutex CacheLibHolpaca::mutex_;
 thread_local facebook::cachelib::PoolId CacheLibHolpaca::poolId_;
-int CacheLibHolpaca::ref_cnt_ = 0;
 std::unordered_map<int, int> CacheLibHolpaca::rocksdbIOPSPerThread_;
 std::unordered_map<int, std::pair<int, int>>
     CacheLibHolpaca::missesAndHitsPerThread_;
@@ -66,6 +65,7 @@ std::unordered_map<std::string, std::shared_ptr<CacheLibHolpaca::Cache>>
 std::unordered_map<int, std::tuple<std::shared_ptr<CacheLibHolpaca::Cache>,
                                    facebook::cachelib::PoolId>>
     CacheLibHolpaca::cachesPerThread_;
+std::unordered_map<std::string, int> CacheLibHolpaca::refCountPerCache_;
 thread_local std::string CacheLibHolpaca::cacheName_;
 thread_local std::shared_ptr<CacheLibHolpaca::Cache> CacheLibHolpaca::cache_;
 thread_local int CacheLibHolpaca::threadId_;
@@ -75,7 +75,6 @@ thread_local RocksDB CacheLibHolpaca::rocksdb_;
 void CacheLibHolpaca::Init() {
 
   std::lock_guard<std::mutex> lock(mutex_);
-  ref_cnt_++;
   cacheName_ = props_->GetProperty(
       PROP_CACHE_NAME + "." + std::to_string(threadId_),
       props_->GetProperty(PROP_CACHE_NAME, PROP_CACHE_NAME_DEFAULT));
@@ -85,6 +84,7 @@ void CacheLibHolpaca::Init() {
     cache_ = it->second;
     rocksdb_ = rocksdbs_[cacheName_];
     rocksdb_.Init();
+    refCountPerCache_[cacheName_]++;
   } else {
     Config config;
     if (props_->GetProperty(
@@ -191,6 +191,7 @@ void CacheLibHolpaca::Init() {
     rocksdb_.Init();
     rocksdbs_[cacheName_] = rocksdb_;
     caches_[cacheName_] = cache_;
+    refCountPerCache_[cacheName_] = 1;
   }
   std::string poolName = props_->GetProperty(
       PROP_POOL_NAME + "." + std::to_string(threadId_),
@@ -353,19 +354,22 @@ void CacheLibHolpaca::Cleanup() {
   std::lock_guard<std::mutex> lock(mutex_);
   rocksdb_.Cleanup();
   cachesPerThread_[threadId_] = {nullptr, 0};
-  std::visit(
-      [](auto &&cache) {
-        cache.removePool(poolId_);
-        cache_.reset();
-      },
-      *cache_);
-  if (--ref_cnt_) {
-    return;
+  std::visit([](auto &&cache) { cache.removePool(poolId_); }, *cache_);
+  if (refCountPerCache_[cacheName_] == 1) {
+    refCountPerCache_.erase(cacheName_);
+    caches_.erase(cacheName_);
+    rocksdbs_.erase(cacheName_);
+    cache_.reset();
+  } else {
+    refCountPerCache_[cacheName_]--;
   }
-  caches_.clear();
-  rocksdbs_.clear();
-  cachesPerThread_.clear();
-  rocksdbIOPSPerThread_.clear();
+
+  if (refCountPerCache_.empty()) {
+    caches_.clear();
+    rocksdbs_.clear();
+    cachesPerThread_.clear();
+    rocksdbIOPSPerThread_.clear();
+  }
 }
 
 } // namespace ycsbc
