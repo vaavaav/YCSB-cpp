@@ -23,12 +23,13 @@ private:
   static std::unordered_map<
       int, std::tuple<std::shared_ptr<Cache>, facebook::cachelib::PoolId>>
       cachesPerThread_;
+
+  static std::unordered_map<std::string, int> refCountPerCache_;
   thread_local static std::string cacheName_;
   thread_local static std::shared_ptr<Cache> cache_;
   thread_local static RocksDB rocksdb_;
   thread_local static int threadId_;
   thread_local static facebook::cachelib::PoolId poolId_;
-  static int ref_cnt_;
   static std::unordered_map<int, int> rocksdbIOPSPerThread_;
   static std::unordered_map<int, std::pair<int, int>> missesAndHitsPerThread_;
   static std::unordered_map<int, std::pair<int, int>>
