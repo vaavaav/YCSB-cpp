@@ -76,7 +76,7 @@ if __name__ == '__main__':
            **ycsb_config,
            'cachelib.pooloptimizer': 'off',  
            'cachelib.poolresizer': 'off',
-           **{f'maxexecutiontime.{i}': int((1 - i*2/phases)*maxexecutationtime) for i in range(threads)},
+           **{f'maxexecutiontime.{i}': int((1 - i*2/phases)*maxexecutiontime) for i in range(threads)},
        }),
 #       Setup('optimized', ycsb_executable, {
 #           **ycsb_config,
