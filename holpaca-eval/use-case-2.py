@@ -89,7 +89,7 @@ if __name__ == '__main__':
        Setup('holpaca', ycsb_executable, {
            **ycsb_config,
            'cachelib.poolresizer': 'on',
-           'cachelib.pool.noinitialsize': 'on',
+           #'cachelib.pool.noinitialsize': 'on',
            'cachelib.size.0': 20_000_000_000,  # 20 GB
            'cachelib.size.1': 20_000_000_000,
            'cachelib.size.2': 20_000_000_000,
