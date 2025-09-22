@@ -94,34 +94,34 @@ if __name__ == '__main__':
 
 
     setups = [
-       Setup('holpaca-V1', yscb_executable, {
+       Setup('holpaca-V1', ycsb_executable, {
            **holpaca_config,
            'cachelib.pool.qos.0': 10_000.0
            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'), controller_args=f'ThroughputMaximization 1000:0.05:false'),    
-       Setup('holpaca-V2', yscb_executable, {
+       Setup('holpaca-V2', ycsb_executable, {
            **holpaca_config,
            'cachelib.pool.qos.0': 20_000.0
            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'), controller_args=f'ThroughputMaximization 1000:0.05:false'),    
-       Setup('holpaca-V3', yscb_executable, {
+       Setup('holpaca-V3', ycsb_executable, {
            **holpaca_config,
            'cachelib.pool.qos.0': 30_000.0
            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'), controller_args=f'ThroughputMaximization 1000:0.05:false'),    
-       Setup('holpaca-V4', yscb_executable, {
+       Setup('holpaca-V4', ycsb_executable, {
            **holpaca_config,
            'cachelib.pool.qos.0': 40_000.0
            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'), controller_args=f'ThroughputMaximization 1000:0.05:false'),    
-       Setup('holpaca-V5', yscb_executable, {
+       Setup('holpaca-V5', ycsb_executable, {
            **holpaca_config,
            'cachelib.pool.qos.0': 14_000.0,
            'cachelib.pool.qos.1': 10_000.0,
            'cachelib.pool.qos.2':  2_000.0,
            'cachelib.pool.qos.3':  1_000.0,
            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'), controller_args=f'ThroughputMaximization 1000:0.05:false'),    
-       Setup('holpaca-V6', yscb_executable, {
+       Setup('holpaca-V6', ycsb_executable, {
            **holpaca_config,
            'cachelib.pool.qos.3': 3_000.0,
            }, controller_exec=os.path.join(sourceDir, 'opt/ycsb/bin/cachelib_holpaca_controller'), controller_args=f'ThroughputMaximization 1000:0.05:false'),    
-       Setup('holpaca-V7', yscb_executable, {
+       Setup('holpaca-V7', ycsb_executable, {
            **holpaca_config,
            'cachelib.pool.qos.2': 2_500.0,
            'cachelib.pool.qos.3': 2_500.0,
