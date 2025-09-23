@@ -92,9 +92,11 @@ public:
                      previousMissesAndHitsPerThread_[i].second;
 
           c.registerMetrics(poolId, rocksdbIOPSPerThread_[i],
-                            (misses + hits == 0) ? 0
-                                                 : static_cast<double>(misses) /
-                                                       (misses + hits));
+                            (misses + hits == 0)
+                                ? 0
+                                : static_cast<double>(misses) / (misses + hits),
+                            hits + misses);
+
           previousMissesAndHitsPerThread_[i] = accMissesAndHits;
 
           const auto &pool = c.getPool(poolId);

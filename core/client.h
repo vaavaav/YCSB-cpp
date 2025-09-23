@@ -24,10 +24,10 @@ using namespace std::chrono_literals;
 
 namespace ycsbc {
 
-inline long ClientThread(std::chrono::seconds sleepafterload,
-                         std::chrono::seconds maxexecutiontime, int threadId,
-                         ycsbc::DB *db, ycsbc::CoreWorkload *wl,
-                         const long num_ops, bool load, bool cleanup_db) {
+void ClientThread(std::chrono::seconds sleepafterload,
+                  std::chrono::seconds maxexecutiontime, int threadId,
+                  ycsbc::DB *db, ycsbc::CoreWorkload *wl, const long num_ops,
+                  bool load, bool cleanup_db) {
   try {
     db->SetThreadId(threadId);
 
@@ -68,7 +68,6 @@ inline long ClientThread(std::chrono::seconds sleepafterload,
       terminator.wait();
     }
 
-    return wl->GetExecutedOps();
   } catch (const utils::Exception &e) {
     std::cerr << "Caught exception: " << e.what() << std::endl;
     exit(1);

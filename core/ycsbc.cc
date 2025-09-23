@@ -52,6 +52,12 @@ static const std::unordered_set<std::string> kOperationTypes = {
 static const std::string WORKLOAD_TYPE_PROPERTY = "workload.type";
 static const std::string WORKLOAD_TYPE_DEFAULT = "synthetic";
 
+static const std::string SLEEP_AFTER_LOAD_PROPERTY = "sleepafterload";
+static const std::string SLEEP_AFTER_LOAD_DEFAULT = "0";
+
+static const std::string MAX_EXECUTION_TIME_PROPERTY = "maxexecutiontime";
+static const std::string MAX_EXECUTION_TIME_DEFAULT = "0";
+
 void UsageMessage(const char *command);
 bool StrStartWith(const char *str, const char *pre);
 void ParseCommandLine(int argc, const char *argv[],
@@ -163,23 +169,23 @@ int main(const int argc, const char *argv[]) {
           std::launch::async, StatusThread, &measurements, gMeasurements,
           &operationsForStatus, &dbs, &done, status_interval);
     }
-    std::vector<std::future<long>> client_threads;
+    std::vector<std::thread> client_threads;
     for (int i = 0; i < num_threads; ++i) {
       const long thread_ops = stol(props.GetProperty(
           ycsbc::CoreWorkload::RECORD_COUNT_PROPERTY + "." + std::to_string(i),
           props.GetProperty(ycsbc::CoreWorkload::RECORD_COUNT_PROPERTY, "0")));
 
-      client_threads.emplace_back(
-          std::async(std::launch::async, ycsbc::ClientThread, 0s, 0s, i, dbs[i],
-                     wls[i], thread_ops, true, true));
+      client_threads.emplace_back(std::thread(ycsbc::ClientThread, 0s, 0s, i,
+                                              dbs[i], wls[i], thread_ops, true,
+                                              true));
     }
     assert((int)client_threads.size() == num_threads);
 
     long sum = 0;
-    for (auto &n : client_threads) {
-      assert(n.valid());
-      n.wait();
-      sum += n.get();
+    for (int i = 0; i < num_threads; i++) {
+      assert(client_threads[i].joinable());
+      client_threads[i].join();
+      sum += wls[i]->GetExecutedOps();
     }
     done.store(true);
     double runtime = timer.End();
@@ -191,6 +197,11 @@ int main(const int argc, const char *argv[]) {
     std::cout << "Load runtime(sec): " << runtime << std::endl;
     std::cout << "Load operations(ops): " << sum << std::endl;
     std::cout << "Load throughput(ops/sec): " << sum / runtime << std::endl;
+  }
+
+  // reset all measurements
+  for (auto m : measurements) {
+    m->Reset();
   }
   gMeasurements->Reset();
 
@@ -206,30 +217,37 @@ int main(const int argc, const char *argv[]) {
           std::thread(StatusThread, &measurements, gMeasurements,
                       &operationsForStatus, &dbs, &done, status_interval);
     }
-    std::vector<std::future<long>> client_threads;
+    std::vector<std::thread> client_threads;
     for (int i = 0; i < num_threads; ++i) {
       long thread_ops = stol(props.GetProperty(
           ycsbc::CoreWorkload::OPERATION_COUNT_PROPERTY + "." +
               std::to_string(i),
           props.GetProperty(ycsbc::CoreWorkload::OPERATION_COUNT_PROPERTY,
                             "0")));
-      std::chrono::seconds maxexecutiontime = std::chrono::seconds(
-          stoi(props.GetProperty("maxexecutiontime." + std::to_string(i),
-                                 props.GetProperty("maxexecutiontime", "0"))));
-      std::chrono::seconds sleepafterload = std::chrono::seconds(
-          stoi(props.GetProperty("sleepafterload." + std::to_string(i),
-                                 props.GetProperty("sleepafterload", "0"))));
-      client_threads.emplace_back(std::async(
-          std::launch::async, ycsbc::ClientThread, sleepafterload,
-          maxexecutiontime, i, dbs[i], wls[i], thread_ops, false, true));
+      std::chrono::seconds maxexecutiontime =
+          std::chrono::seconds(stoi(props.GetProperty(
+              MAX_EXECUTION_TIME_PROPERTY + "." + std::to_string(i),
+              props.GetProperty(MAX_EXECUTION_TIME_PROPERTY,
+                                MAX_EXECUTION_TIME_DEFAULT))));
+
+      std::chrono::seconds sleepafterload = std::chrono::seconds(stoi(
+          props.GetProperty(SLEEP_AFTER_LOAD_PROPERTY + "." + std::to_string(i),
+                            props.GetProperty(SLEEP_AFTER_LOAD_PROPERTY,
+                                              SLEEP_AFTER_LOAD_DEFAULT))));
+
+      client_threads.emplace_back(
+          std::thread(ycsbc::ClientThread, sleepafterload, maxexecutiontime, i,
+                      dbs[i], wls[i], thread_ops, false, true));
     }
     assert((int)client_threads.size() == num_threads);
 
     long sum = 0;
-    for (auto &n : client_threads) {
-      assert(n.valid());
-      sum += n.get();
+    for (int i = 0; i < num_threads; i++) {
+      assert(client_threads[i].joinable());
+      client_threads[i].join();
+      sum += wls[i]->GetExecutedOps();
     }
+
     done.store(true);
     double runtime = timer.End();
 
@@ -238,8 +256,8 @@ int main(const int argc, const char *argv[]) {
     }
 
     std::cout << "Run runtime(sec): " << runtime << std::endl;
-    std::cout << "Run operations(ops): " << sum << std::endl;
-    std::cout << "Run throughput(ops/sec): " << sum / runtime << std::endl;
+    std::cout << "Run operations(ops): " << sum << std::endl
+              << "Run throughput(ops/sec): " << sum / runtime << std::endl;
     std::cout << gMeasurements->GetCDF() << std::endl;
 
     for (int i = 0; i < num_threads; i++) {
