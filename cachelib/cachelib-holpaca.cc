@@ -46,6 +46,13 @@ const std::string PROP_POOL_OPTIMIZER_DEFAULT = "off";
 const std::string PROP_POOL_RESIZER = "cachelib.poolresizer";
 const std::string PROP_POOL_RESIZER_DEFAULT = "off";
 
+const std::string PROP_POOL_RESIZER_MILLISECONDS =
+    "cachelib.poolresizer.milliseconds";
+const std::string PROP_POOL_RESIZER_MILLISECONDS_DEFAULT = "1000";
+
+const std::string PROP_POOL_RESIZER_SLABS = "cachelib.poolresizer.slabs";
+const std::string PROP_POOL_RESIZER_SLABS_DEFAULT = "1";
+
 const std::string PROP_POOL_REBALANCER = "cachelib.poolrebalancer";
 const std::string PROP_POOL_REBALANCER_DEFAULT = "off";
 } // namespace
@@ -153,11 +160,23 @@ void CacheLibHolpaca::Init() {
                   PROP_POOL_RESIZER + "." + std::to_string(threadId_),
                   props_->GetProperty(PROP_POOL_RESIZER,
                                       PROP_POOL_RESIZER_DEFAULT)) == "on") {
+
+            auto ms = std::chrono::milliseconds(std::stol(props_->GetProperty(
+                PROP_POOL_RESIZER_MILLISECONDS + "." +
+                    std::to_string(threadId_),
+                props_->GetProperty(PROP_POOL_RESIZER_MILLISECONDS,
+                                    PROP_POOL_RESIZER_MILLISECONDS_DEFAULT))));
+
+            auto slabs = std::stol(props_->GetProperty(
+                PROP_POOL_RESIZER_SLABS + "." + std::to_string(threadId_),
+                props_->GetProperty(PROP_POOL_RESIZER_SLABS,
+                                    PROP_POOL_RESIZER_SLABS_DEFAULT)));
+
             config.enablePoolResizing(
                 std::make_shared<facebook::cachelib::HitsPerSlabStrategy>(
                     facebook::cachelib::HitsPerSlabStrategy::Config(
                         0.25, static_cast<unsigned int>(1))),
-                std::chrono::milliseconds(100), 1);
+                ms, slabs);
           }
           if (props_->GetProperty(
                   PROP_POOL_OPTIMIZER + "." + std::to_string(threadId_),
