@@ -43,14 +43,15 @@ class Setup:
         return f"{self.executable} -run -db cachelib-holpaca {f'-s {status}' if status else ''} {' '.join(f'-p {k}={v}' for k, v in self.config.items())}"
 
 class Case:
-    def __init__(self, name, runs, load, setups, status):
+    def __init__(self, name, runs, load, setups, status, node=None):
         self.name = name
         self.runs = runs
         self.load = load
         self.setups = setups
         self.status = status
+        self.node = node
 
-def build_sbatch_cmd(name, cmd, stdout, stderr, mem=None, jobid=None, export=None, ntasks=1):
+def build_sbatch_cmd(name, cmd, stdout, stderr, mem=None, jobid=None, export=None, ntasks=1, node=None):
     sbatch_cmd = [
         "sbatch",
         f"--job-name={name}",
@@ -75,7 +76,8 @@ def build_sbatch_cmd(name, cmd, stdout, stderr, mem=None, jobid=None, export=Non
     global TIMEOUT
     if TIMEOUT:
         sbatch_cmd.insert(1, f"--time={TIMEOUT}")
-
+    if node:
+        sbatch_cmd.insert(1, f"--nodelist={node}")
     return sbatch_cmd
 
 def RunYCSB(cases, output_dir, sif_path=None, binds=[], colocated=False, dry_run=False, timeout=None, load=True):
@@ -106,7 +108,7 @@ def RunYCSB(cases, output_dir, sif_path=None, binds=[], colocated=False, dry_run
         load_job_id = None
         if load:
             if sif_path:
-                load_job_id = loadSIF(case.name, case.load, sif_path, binds)
+                load_job_id = loadSIF(case.name, case.load, sif_path, binds, node=case.node)
             else:
                 loadLOCAL(case.name, case.load)
 
@@ -122,9 +124,9 @@ def RunYCSB(cases, output_dir, sif_path=None, binds=[], colocated=False, dry_run
 
                 if sif_path:
                     if setup.controller_exec:
-                        runSIFController(run_name, setup, db_backup, out, case.status, load_job_id, sif_path, binds)
+                        runSIFController(run_name, setup, db_backup, out, case.status, load_job_id, sif_path, binds, node=case.node)
                     else:
-                        runSIF(run_name, setup, db_backup, out, case.status, load_job_id, sif_path, binds)
+                        runSIF(run_name, setup, db_backup, out, case.status, load_job_id, sif_path, binds, node=case.node)
                 else:
                     runLOCAL(run_name, setup, db_backup, out, case.status)
 
@@ -239,7 +241,7 @@ def loadSIF(name, setup: Load, sif_path=None, binds=[]):
 
 
 # RunSIF function to execute a YCSB workload using Singularity
-def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path=None, binds=[]):
+def runSIF(name, setup: Setup, db_backup, outdir, status, load_job_id, sif_path=None, binds=[], node=None):
     if not os.path.exists(sif_path):
         raise FileNotFoundError(f"SIF file not found: {sif_path}")
     
@@ -288,7 +290,8 @@ cp {local_dstat_output} {dstat_output}
         stdout=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-{name}.out",
         stderr=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-{name}.err",
         mem=setup.used_mem,
-        jobid=load_job_id
+        jobid=load_job_id,
+        node=node
     )
 
     if DRY_RUN:
@@ -300,7 +303,7 @@ cp {local_dstat_output} {dstat_output}
 
 
 # RunSIFController function to execute a YCSB workload with a controller using Singularity
-def runSIFController(name, setup, db_backup, outdir, status, load_job_id, sif_path=None, binds=[]):
+def runSIFController(name, setup, db_backup, outdir, status, load_job_id, sif_path=None, binds=[], node=None):
     if not os.path.exists(sif_path):
         raise FileNotFoundError(f"SIF file not found: {sif_path}")
     if not setup.controller_exec:
@@ -356,7 +359,8 @@ cp {local_dstat_output} {dstat_output}
         stdout=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-client-{name}.out",
         stderr=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-client-{name}.err",
         mem=setup.used_mem,
-        export="CONTROLLER_IP=$CONTROLLER_IP,CONTROLLER_JOB_ID=$CONTROLLER_JOB_ID"
+        export="CONTROLLER_IP=$CONTROLLER_IP,CONTROLLER_JOB_ID=$CONTROLLER_JOB_ID",
+        node=node
         ))
     
     controller_dir = os.path.dirname(setup.controller_exec)
@@ -366,7 +370,7 @@ cp {local_dstat_output} {dstat_output}
 CONTROLLER_IP=$(hostname -I | awk '{{print $1}}' | xargs)
 singularity run --network host --bind '{controller_dir},{executable_dir},{outdir},{','.join(binds)}' {sif_path} bash -c "
     dstat -cdlmnyt > {outdir}/controller_dstat.csv 2>&1 &
-    {setup.controller_exec} $CONTROLLER_IP:11110 {setup.controller_args}
+    {setup.controller_exec} $CONTROLLER_IP:11110 {setup.controller_args} > {outdir}/controller.log 2>&1
 " &
 CONTROLLER_JOB_ID=$SLURM_JOB_ID
 {controller_sbatch}
