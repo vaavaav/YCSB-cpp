@@ -185,4 +185,4 @@ if __name__ == "__main__":
                     node += 2
 
     # Run the benchmark
-    RunYCSB(cases, outputDir, sif_path=sifPath, binds=[sourceDir], timeout="0:30:00")
+    RunYCSB(cases, outputDir, sif_path=sifPath, binds=[sourceDir], timeout="0:30:00", dry_run=True)

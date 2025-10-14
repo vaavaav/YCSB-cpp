@@ -43,14 +43,14 @@ class Setup:
         return f"{self.executable} -run -db cachelib-holpaca {f'-s {status}' if status else ''} {' '.join(f'-p {k}={v}' for k, v in self.config.items())}"
 
 class Case:
-    def __init__(self, name, runs, load, setups, status, node=None):
+    def __init__(self, name, runs, load, setups, status, node=None, controller_node=None):
         self.name = name
         self.runs = runs
         self.load = load
         self.setups = setups
         self.status = status
         self.node = node
-        self.controller_node = None
+        self.controller_node = controller_node
 
 def build_sbatch_cmd(name, cmd, stdout, stderr, mem=None, jobid=None, export=None, ntasks=1, node=None):
     sbatch_cmd = [
