@@ -178,10 +178,11 @@ if __name__ == "__main__":
                             load,
                             setups,
                             "READ-PASSED READ-FAILED UPDATE-PASSED UPDATE-FAILED INSERT-PASSED INSERT-FAILED",
-                            node=f'cnx{node}'
+                            node=f'cnx{node}',
+                            controller_node=f'cnx{node+1}'
                         )
                     )
-                    node += 1
+                    node += 2
 
     # Run the benchmark
     RunYCSB(cases, outputDir, sif_path=sifPath, binds=[sourceDir], timeout="0:30:00")

@@ -50,6 +50,7 @@ class Case:
         self.setups = setups
         self.status = status
         self.node = node
+        self.controller_node = None
 
 def build_sbatch_cmd(name, cmd, stdout, stderr, mem=None, jobid=None, export=None, ntasks=1, node=None):
     sbatch_cmd = [
@@ -108,7 +109,7 @@ def RunYCSB(cases, output_dir, sif_path=None, binds=[], colocated=False, dry_run
         load_job_id = None
         if load:
             if sif_path:
-                load_job_id = loadSIF(case.name, case.load, sif_path, binds, node=case.node)
+                load_job_id = loadSIF(case.name, case.load, sif_path, binds)
             else:
                 loadLOCAL(case.name, case.load)
 
@@ -124,7 +125,7 @@ def RunYCSB(cases, output_dir, sif_path=None, binds=[], colocated=False, dry_run
 
                 if sif_path:
                     if setup.controller_exec:
-                        runSIFController(run_name, setup, db_backup, out, case.status, load_job_id, sif_path, binds, node=case.node)
+                        runSIFController(run_name, setup, db_backup, out, case.status, load_job_id, sif_path, binds, node=case.node, controller_node=case.controller_node)
                     else:
                         runSIF(run_name, setup, db_backup, out, case.status, load_job_id, sif_path, binds, node=case.node)
                 else:
@@ -303,7 +304,7 @@ cp {local_dstat_output} {dstat_output}
 
 
 # RunSIFController function to execute a YCSB workload with a controller using Singularity
-def runSIFController(name, setup, db_backup, outdir, status, load_job_id, sif_path=None, binds=[], node=None):
+def runSIFController(name, setup, db_backup, outdir, status, load_job_id, sif_path=None, binds=[], node=None, controller_node=None):
     if not os.path.exists(sif_path):
         raise FileNotFoundError(f"SIF file not found: {sif_path}")
     if not setup.controller_exec:
@@ -382,7 +383,8 @@ sleep infinity
         cmd=controller_inner_script,
         stdout=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-controller-{name}.out",
         stderr=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-controller-{name}.err",
-        jobid=load_job_id
+        jobid=load_job_id,
+        node=controller_node
     )    
 
     if DRY_RUN:
