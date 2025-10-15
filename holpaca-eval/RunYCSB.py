@@ -111,7 +111,7 @@ def RunYCSB(
     dry_run=False,
     timeout=None,
     load=True,
-    cleanScript=None
+    cleanScript=None,
 ):
     global DRY_RUN, TIMEOUT
     DRY_RUN = dry_run
@@ -148,7 +148,9 @@ def RunYCSB(
                     "At least one setup must have a controller_exec when using multiple mode."
                 )
             if not cleanScript or not os.path.exists(cleanScript):
-                raise ValueError("cleanScript must be provided and exist when using multiple mode.")
+                raise ValueError(
+                    "cleanScript must be provided and exist when using multiple mode."
+                )
             case_out = os.path.join(case_dir, str(run_idx + 1))
             if not DRY_RUN:
                 os.makedirs(case_out, exist_ok=True)
@@ -163,10 +165,10 @@ def RunYCSB(
                     db_backup,
                     case.status,
                     load_job_id,
+                    case_out,
+                    cleanScript,
                     sif_path,
                     binds,
-                    case_out,
-                    cleanScript
                 )
 
         for setup in case.setups:
@@ -485,7 +487,15 @@ sleep infinity
 
 
 def runSIFControllerMultiple(
-    name, setups, db_backup, status, load_job_id, sif_path=None, binds=[], case_out, cleanScript
+    name,
+    setups,
+    db_backup,
+    status,
+    load_job_id,
+    case_out,
+    cleanScript,
+    sif_path=None,
+    binds=[],
 ):
     if not os.path.exists(sif_path):
         raise FileNotFoundError(f"SIF file not found: {sif_path}")
