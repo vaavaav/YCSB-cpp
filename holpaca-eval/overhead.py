@@ -103,13 +103,13 @@ if __name__ == "__main__":
     }
 
     zipfian = {
-        "operationcount": 40_000_000,
+        "operationcount": 80_000_000,
         "requestdistribution": "zipfian",
         "zipfian_const": 0.9,
     }
 
     uniform = {
-        "operationcount": 20_000_000,
+        "operationcount": 40_000_000,
         "requestdistribution": "uniform",
     }
 
@@ -142,15 +142,15 @@ if __name__ == "__main__":
     cases = []
     for workload_name, workload in [
         ("readonly", readonly),
-        ("mixed", mixed),
-        ("writeheavy", writeheavy),
+        #       ("mixed", mixed),
+        #       ("writeheavy", writeheavy),
     ]:
         for dist_name, dist in [("zipfian", zipfian), ("uniform", uniform)]:
             for typ_name, typ in [
                 ("instance", constructInstanceConfig),
                 ("tenant", constructTenantConfig),
             ]:
-                for threads in [1, 2, 4, 8, 16, 32, 64]:
+                for threads in [1, 64]:  # [1, 2, 4, 8, 16, 32, 64]:
                     setups = [optimized, holpaca]
                     name = f"{workload_name}-{dist_name}-{typ_name}-{threads}"
                     for setup in setups:
@@ -188,6 +188,4 @@ if __name__ == "__main__":
         binds=[sourceDir],
         timeout="0:40:00",
         dry_run=True,
-        multiple=True,
-        cleanScript=f"{sourceDir}/utils.sh clean-heap",
     )

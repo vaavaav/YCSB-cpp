@@ -111,7 +111,6 @@ def RunYCSB(
     dry_run=False,
     timeout=None,
     load=True,
-    cleanScript=None,
 ):
     global DRY_RUN, TIMEOUT
     DRY_RUN = dry_run
@@ -147,10 +146,6 @@ def RunYCSB(
                 raise ValueError(
                     "At least one setup must have a controller_exec when using multiple mode."
                 )
-            if not cleanScript or not os.path.exists(cleanScript):
-                raise ValueError(
-                    "cleanScript must be provided and exist when using multiple mode."
-                )
             case_out = os.path.join(case_dir, str(run_idx + 1))
             if not DRY_RUN:
                 os.makedirs(case_out, exist_ok=True)
@@ -166,7 +161,6 @@ def RunYCSB(
                     case.status,
                     load_job_id,
                     case_out,
-                    cleanScript,
                     sif_path,
                     binds,
                 )
@@ -493,7 +487,6 @@ def runSIFControllerMultiple(
     status,
     load_job_id,
     case_out,
-    cleanScript,
     sif_path=None,
     binds=[],
 ):
@@ -558,7 +551,7 @@ def runSIFControllerMultiple(
         )
 
     # Build the full client script
-    client_inner_script = '"' + f"\n{cleanScript}\n".join(client_multiple_script) + '"'
+    client_inner_script = '"' + f"\n".join(client_multiple_script) + '"'
 
     # Get the sbatch command for scheduling the client job
     controller_sbatch = " ".join(
