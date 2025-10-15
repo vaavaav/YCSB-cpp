@@ -11,11 +11,12 @@ from RunYCSB import Case, Load, RunYCSB, Setup
 runs = 1
 
 
-def constructConfig(name):
+def constructConfig(name, threads):
     return {
+        "threadcount": threads,
         "sleepafterload": 0,
-        "operationcount": 20_000_000,
         "recordcount": 20_000_000,
+        **{f"request_key_prefix.{i}": f"p{i}" for i in range(threads)},
         "request_key_domain_end": 19_999_999,
         "status.interval": 1,
         "readallfields": "false",
@@ -42,7 +43,6 @@ def constructInstanceConfig(threads):
         **{f"cachelib.name.{i}": "instance-{i}" for i in range(threads)},
         "cachelib.pool.relsize": 1,
         "cachelib.pool.name": "p0",
-        **{f"request_key_prefix.{i}": f"p{i}" for i in range(threads)},
     }
 
 
@@ -52,7 +52,6 @@ def constructTenantConfig(threads):
         "cachelib.name": "instance-0",
         "cachelib.pool.relsize": 1 / threads,
         **{f"cachelib.pool.name.{i}": f"p{i}" for i in range(threads)},
-        **{f"request_key_prefix.{i}": f"p{i}" for i in range(threads)},
     }
 
 
@@ -155,7 +154,7 @@ if __name__ == "__main__":
                     name = f"{workload_name}-{dist_name}-{typ_name}-{threads}"
                     for setup in setups:
                         setup.config = {
-                            **constructConfig(name),
+                            **constructConfig(name, threads),
                             **typ(threads),
                             **workload,
                             **dist,
@@ -164,7 +163,7 @@ if __name__ == "__main__":
                     load = constructLoadConfig(
                         name,
                         {
-                            **constructConfig(name),
+                            **constructConfig(name, threads),
                             **workload,
                             **dist,
                         },
