@@ -78,47 +78,51 @@ if __name__ == "__main__":
 
     # Create Setup objects for different configurations
     setups = [
+        # Setup(
+        #     "baseline",
+        #     ycsb_executable,
+        #     {
+        #         **ycsb_config,
+        #         "cachelib.pooloptimizer": "off",
+        #         "cachelib.poolresizer": "off",
+        #     },
+        # ),
         Setup(
-            "baseline",
+            "optimized",
             ycsb_executable,
             {
                 **ycsb_config,
-                "cachelib.pooloptimizer": "off",
-                "cachelib.poolresizer": "off",
+                "cachelib.eviction": "2q",
+                "cachelib.pooloptimizer": "on",
+                "cachelib.poolresizer": "on",
+                "cachelib.poolresizer.milliseconds": 100,
+                "cachelib.poolresizer.slabs": 1000,
+                # based on baseline results
+                "operationcount.0": 38172843,
+                "operationcount.1": 42595633,
+                "operationcount.2": 8190523,
+                "operationcount.3": 6738939,
             },
         ),
-        #      Setup('optimized', ycsb_executable, {
-        #          **ycsb_config,
-        #          'cachelib.eviction': '2q',
-        #          'cachelib.pooloptimizer': 'on',
-        #          'cachelib.poolresizer': 'on',
-        #          "cachelib.poolresizer.milliseconds": 100,
-        #          "cachelib.poolresizer.slabs": 1000,
-        #          # based on baseline results
-        #          'operationcount.0': 18119255,
-        #          'operationcount.1': 18873457,
-        #          'operationcount.2': 3448424,
-        #          'operationcount.3': 3084634,
-        #      }),
-        # Setup(
-        #    "holpaca",
-        #    ycsb_executable,
-        #    {
-        #        **ycsb_config,
-        #        "cachelib.poolresizer": "on",
-        #        "cachelib.poolresizer.milliseconds": 100,
-        #        "cachelib.poolresizer.slabs": 1000,
-        #        # based on baseline results
-        #        "operationcount.0": 18119255,
-        #        "operationcount.1": 18873457,
-        #        "operationcount.2": 3448424,
-        #        "operationcount.3": 3084634,
-        #    },
-        #    controller_exec=os.path.join(
-        #        sourceDir, "opt/ycsb/bin/cachelib_holpaca_controller"
-        #    ),
-        #    controller_args=f"ThroughputMaximization 1000:0.01",
-        # ),
+        Setup(
+            "holpaca",
+            ycsb_executable,
+            {
+                **ycsb_config,
+                "cachelib.poolresizer": "on",
+                "cachelib.poolresizer.milliseconds": 100,
+                "cachelib.poolresizer.slabs": 1000,
+                # based on baseline results
+                "operationcount.0": 38172843,
+                "operationcount.1": 42595633,
+                "operationcount.2": 8190523,
+                "operationcount.3": 6738939,
+            },
+            controller_exec=os.path.join(
+                sourceDir, "opt/ycsb/bin/cachelib_holpaca_controller"
+            ),
+            controller_args=f"ThroughputMaximization 1000:0.01",
+        ),
     ]
 
     cases = [
