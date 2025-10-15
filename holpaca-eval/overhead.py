@@ -102,13 +102,13 @@ if __name__ == "__main__":
     }
 
     zipfian = {
-        "operationcount": 80_000_000,
+        "operationcount": 4_411_499,
         "requestdistribution": "zipfian",
         "zipfian_const": 0.9,
     }
 
     uniform = {
-        "operationcount": 40_000_000,
+        "operationcount": 2_278_588,
         "requestdistribution": "uniform",
     }
 
@@ -138,6 +138,21 @@ if __name__ == "__main__":
         controller_args="MarginalHits 1000",
     )
 
+    holpaca_cce = Setup(
+        "holpaca-cce",
+        ycsb_executable,
+        {
+            "cachelib.eviction": "2q",
+            "cachelib.pooloptimizer": "off",
+            "cachelib.poolresizer": "on",
+            "cachelib.poolrebalancer": "off",
+        },
+        controller_exec=os.path.join(
+            sourceDir, "opt/ycsb/bin/cachelib_holpaca_controller"
+        ),
+        controller_args="MarginalHits 1:10000000",
+    )
+
     cases = []
     for workload_name, workload in [
         ("readonly", readonly),
@@ -150,7 +165,7 @@ if __name__ == "__main__":
                 ("tenant", constructTenantConfig),
             ]:
                 for threads in [1, 64]:  # [1, 2, 4, 8, 16, 32, 64]:
-                    setups = [optimized, holpaca]
+                    setups = [optimized, holpaca, holpaca_cce]
                     name = f"{workload_name}-{dist_name}-{typ_name}-{threads}"
                     for setup in setups:
                         setup.config = {
