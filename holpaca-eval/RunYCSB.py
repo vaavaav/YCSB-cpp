@@ -111,6 +111,7 @@ def RunYCSB(
     dry_run=False,
     timeout=None,
     load=True,
+    cleanScript=None
 ):
     global DRY_RUN, TIMEOUT
     DRY_RUN = dry_run
@@ -146,6 +147,11 @@ def RunYCSB(
                 raise ValueError(
                     "At least one setup must have a controller_exec when using multiple mode."
                 )
+            if not cleanScript or not os.path.exists(cleanScript):
+                raise ValueError("cleanScript must be provided and exist when using multiple mode.")
+            case_out = os.path.join(case_dir, str(run_idx + 1))
+            if not DRY_RUN:
+                os.makedirs(case_out, exist_ok=True)
             for run_idx in range(case.runs):
                 for setup in case.setups:
                     setup.out = os.path.join(case_dir, setup.name, str(run_idx + 1))
@@ -159,6 +165,8 @@ def RunYCSB(
                     load_job_id,
                     sif_path,
                     binds,
+                    case_out,
+                    cleanScript
                 )
 
         for setup in case.setups:
@@ -477,7 +485,7 @@ sleep infinity
 
 
 def runSIFControllerMultiple(
-    name, setups, db_backup, status, load_job_id, sif_path=None, binds=[]
+    name, setups, db_backup, status, load_job_id, sif_path=None, binds=[], case_out, cleanScript
 ):
     if not os.path.exists(sif_path):
         raise FileNotFoundError(f"SIF file not found: {sif_path}")
@@ -540,7 +548,7 @@ def runSIFControllerMultiple(
         )
 
     # Build the full client script
-    client_inner_script = '"' + "\n".join(client_multiple_script) + '"'
+    client_inner_script = '"' + f"\n{cleanScript}\n".join(client_multiple_script) + '"'
 
     # Get the sbatch command for scheduling the client job
     controller_sbatch = " ".join(
@@ -559,9 +567,9 @@ def runSIFControllerMultiple(
     # Prepare the command to run the SIF container of the controller
     controller_inner_script = f"""
 CONTROLLER_IP=$(hostname -I | awk '{{print $1}}' | xargs)
-singularity run --network host --bind '{controller_dir},{executable_dir},{outdir},{','.join(binds)}' {sif_path} bash -c "
-    dstat -cdlmnyt > {outdir}/controller_dstat.csv 2>&1 &
-    {setup.controller_exec} $CONTROLLER_IP:11110 {setup.controller_args} > {outdir}/controller.log 2>&1
+singularity run --network host --bind '{controller_dir},{executable_dir},{case_out},{','.join(binds)}' {sif_path} bash -c "
+    dstat -cdlmnyt > {case_out}/controller_dstat.csv 2>&1 &
+    {setup.controller_exec} $CONTROLLER_IP:11110 {setup.controller_args} > {case_out}/controller.log 2>&1
 " &
 CONTROLLER_JOB_ID=$SLURM_JOB_ID
 {controller_sbatch}

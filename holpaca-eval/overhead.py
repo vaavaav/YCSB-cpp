@@ -189,4 +189,5 @@ if __name__ == "__main__":
         timeout="0:40:00",
         dry_run=True,
         multiple=True,
+        cleanScript=f"{sourceDir}/utils.sh clean-heap",
     )
