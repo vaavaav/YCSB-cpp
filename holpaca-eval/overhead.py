@@ -150,21 +150,21 @@ if __name__ == "__main__":
         controller_exec=os.path.join(
             sourceDir, "opt/ycsb/bin/cachelib_holpaca_controller"
         ),
-        controller_args="MarginalHits 1:10000000",
+        controller_args="MarginalHits 1:100000",
     )
 
     cases = []
     for workload_name, workload in [
         ("readonly", readonly),
-        #       ("mixed", mixed),
-        #       ("writeheavy", writeheavy),
+        ("mixed", mixed),
+        ("writeheavy", writeheavy),
     ]:
         for dist_name, dist in [("zipfian", zipfian), ("uniform", uniform)]:
             for typ_name, typ in [
                 ("instance", constructInstanceConfig),
                 ("tenant", constructTenantConfig),
             ]:
-                for threads in [1, 64]:  # [1, 2, 4, 8, 16, 32, 64]:
+                for threads in [1, 2, 4, 8, 16, 32, 64]:
                     setups = [optimized, holpaca, holpaca_cce]
                     name = f"{workload_name}-{dist_name}-{typ_name}-{threads}"
                     for setup in setups:
