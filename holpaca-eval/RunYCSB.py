@@ -481,8 +481,6 @@ def runSIFControllerMultiple(
 ):
     if not os.path.exists(sif_path):
         raise FileNotFoundError(f"SIF file not found: {sif_path}")
-    if not setup.controller_exec:
-        raise ValueError("Controller executable not provided in setup.")
 
     client_multiple_script = []
 
