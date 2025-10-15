@@ -140,7 +140,6 @@ if __name__ == "__main__":
     )
 
     cases = []
-    node = 357
     for workload_name, workload in [
         ("readonly", readonly),
         ("mixed", mixed),
@@ -153,7 +152,7 @@ if __name__ == "__main__":
             ]:
                 for threads in [1, 2, 4, 8, 16, 32, 64]:
                     setups = [optimized, holpaca]
-                    name = f"{workload_name}-{dist_name}-{typ_name}-{threads}-{node}"
+                    name = f"{workload_name}-{dist_name}-{typ_name}-{threads}"
                     for setup in setups:
                         setup.config = {
                             **constructConfig(name),
@@ -178,11 +177,16 @@ if __name__ == "__main__":
                             load,
                             setups,
                             "READ-PASSED READ-FAILED UPDATE-PASSED UPDATE-FAILED INSERT-PASSED INSERT-FAILED",
-                            node=f'cnx{node}',
-                            controller_node=f'cnx{node+1}'
                         )
                     )
-                    node += 2
 
     # Run the benchmark
-    RunYCSB(cases, outputDir, sif_path=sifPath, binds=[sourceDir], timeout="0:30:00", dry_run=True)
+    RunYCSB(
+        cases,
+        outputDir,
+        sif_path=sifPath,
+        binds=[sourceDir],
+        timeout="0:40:00",
+        dry_run=True,
+        multiple=True,
+    )

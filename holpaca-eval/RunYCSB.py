@@ -142,12 +142,12 @@ def RunYCSB(
         os.makedirs(db_backup, exist_ok=True)
 
         if multiple and sif_path:
+            if not any(setup.controller_exec for setup in case.setups):
+                raise ValueError(
+                    "At least one setup must have a controller_exec when using multiple mode."
+                )
             for run_idx in range(case.runs):
                 for setup in case.setups:
-                    if not setup.controller_exec:
-                        raise ValueError(
-                            "All setups must have a controller_exec when using multiple mode."
-                        )
                     setup.out = os.path.join(case_dir, setup.name, str(run_idx + 1))
                     if not DRY_RUN:
                         os.makedirs(setup.out, exist_ok=True)
