@@ -154,7 +154,7 @@ if __name__ == "__main__":
     )
 
     cases = []
-    for workload_name, workload in [
+    for workload_name, workload in ([
         ("readonly", readonly),
         ("mixed", mixed),
         ("writeheavy", writeheavy),
@@ -165,26 +165,27 @@ if __name__ == "__main__":
                 ("tenant", constructTenantConfig),
             ]:
                 for threads in [1, 2, 4, 8, 16, 32, 64]:
-                    setups = [optimized, holpaca, holpaca_cce]
+                    setups = copy.deepcopy([optimized, holpaca, holpaca_cce])
                     name = f"{workload_name}-{dist_name}-{typ_name}-{threads}"
-                    for setup in setups:
-                        setup.config = {
-                            **constructConfig(name, threads),
-                            **typ(threads),
-                            **workload,
-                            **dist,
-                            **setup.config,
-                        }
+                    config = constructConfig(name, threads)
                     load = constructLoadConfig(
                         name,
                         {
-                            **constructConfig(name, threads),
+                            **config,
                             **typ(threads),
                             **workload,
                             **dist,
                         },
                         sourceDir,
                     )
+                    for setup in setups:
+                        setup.config = {
+                            **config,
+                            **typ(threads),
+                            **workload,
+                            **dist,
+                            **setup.config,
+                        }
                     cases.append(
                         Case(
                             name,
