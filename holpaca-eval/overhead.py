@@ -217,7 +217,7 @@ if __name__ == "__main__":
         ("mixed", mixedConfig),
         ("writeheavy", writeheavyConfig),
     ]:
-        for dist_name, dist in [("zipfian", zipfian), ("uniform", uniform)]:
+        for dist_name, dist in [("zipfian", zipfianConfig), ("uniform", uniformConfig)]:
             for typ_name, typ in [
                 ("instance", instanceConfig),
                 ("tenant", tenantConfig),
