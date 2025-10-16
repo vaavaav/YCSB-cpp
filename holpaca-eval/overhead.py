@@ -13,7 +13,7 @@ runs = 1
 
 def getRecordCount(threads):
     if threads == 1:
-        return 32_000_000
+        return
     elif threads == 2:
         return 16_000_000
     elif threads == 4:
@@ -61,7 +61,7 @@ def getOperationCount(threads, distribution):
             return 500_000
 
 
-def constructConfig(name, threads):
+def baseConfig(name, threads):
     return {
         "threadcount": threads,
         "sleepafterload": 0,
@@ -87,7 +87,7 @@ def constructConfig(name, threads):
     }
 
 
-def constructInstanceConfig(threads):
+def instanceConfig(threads):
     return {
         "cachelib.size": getRecordCount(threads) * 100,
         **{f"cachelib.name.{i}": f"instance-{i}" for i in range(threads)},
@@ -96,7 +96,7 @@ def constructInstanceConfig(threads):
     }
 
 
-def constructTenantConfig(threads):
+def tenantConfig(threads):
     return {
         "cachelib.size": getRecordCount(threads) * 100 * threads,
         "cachelib.name": "instance-0",
@@ -105,7 +105,7 @@ def constructTenantConfig(threads):
     }
 
 
-def constructLoadConfig(name, base_config, sourceDir):
+def loadConfig(name, base_config, sourceDir):
     return Load(
         ycsb_executable,
         {
@@ -116,6 +116,51 @@ def constructLoadConfig(name, base_config, sourceDir):
     )
 
 
+def zipfianConfig(threads):
+    return {
+        "operationcount": getOperationCount(threads, "zipfian"),
+        "requestdistribution": "zipfian",
+        "zipfian_const": 0.9,
+    }
+
+
+def uniformConfig(threads):
+    return {
+        "operationcount": getOperationCount(threads, "uniform"),
+        "requestdistribution": "uniform",
+    }
+
+
+def readonlyConfig():
+    return {
+        "workload.type": "synthetic",
+        "readproportion": 1,
+        "updateproportion": 0,
+        "scanproportion": 0,
+        "insertproportion": 0,
+    }
+
+
+def mixedConfig():
+    return {
+        "workload.type": "synthetic",
+        "readproportion": 0.5,
+        "updateproportion": 0,
+        "scanproportion": 0,
+        "insertproportion": 0.5,
+    }
+
+
+def writeheavyConfig():
+    return {
+        "workload.type": "synthetic",
+        "readproportion": 0.1,
+        "updateproportion": 0,
+        "scanproportion": 0,
+        "insertproportion": 0.9,
+    }
+
+
 # TODO: multiplas instancias
 
 
@@ -124,43 +169,6 @@ if __name__ == "__main__":
     outputDir = os.path.join(os.path.abspath(sys.argv[2]))
     sifPath = os.path.abspath(sys.argv[3]) if len(sys.argv) > 3 else None
     ycsb_executable = os.path.join(sourceDir, "build-ycsb/ycsb")  # Update this path
-
-    # Assuming YCSB executable path - adjust as needed
-
-    readonly = {
-        "workload.type": "synthetic",
-        "readproportion": 1,
-        "updateproportion": 0,
-        "scanproportion": 0,
-        "insertproportion": 0,
-    }
-
-    mixed = {
-        "workload.type": "synthetic",
-        "readproportion": 0.5,
-        "updateproportion": 0,
-        "scanproportion": 0,
-        "insertproportion": 0.5,
-    }
-
-    writeheavy = {
-        "workload.type": "synthetic",
-        "readproportion": 0.1,
-        "updateproportion": 0,
-        "scanproportion": 0,
-        "insertproportion": 0.9,
-    }
-
-    zipfian = {
-        "operationcount": 5_522_856,
-        "requestdistribution": "zipfian",
-        "zipfian_const": 0.9,
-    }
-
-    uniform = {
-        "operationcount": 2_777_295,
-        "requestdistribution": "uniform",
-    }
 
     optimized = Setup(
         "optimized",
@@ -205,35 +213,30 @@ if __name__ == "__main__":
 
     cases = []
     for workload_name, workload in [
-        ("readonly", readonly),
-        ("mixed", mixed),
-        ("writeheavy", writeheavy),
+        ("readonly", readonlyConfig),
+        ("mixed", mixedConfig),
+        ("writeheavy", writeheavyConfig),
     ]:
         for dist_name, dist in [("zipfian", zipfian), ("uniform", uniform)]:
             for typ_name, typ in [
-                ("instance", constructInstanceConfig),
-                ("tenant", constructTenantConfig),
+                ("instance", instanceConfig),
+                ("tenant", tenantConfig),
             ]:
                 for threads in [1, 2, 4, 8, 16, 32, 64]:
                     setups = copy.deepcopy([optimized, holpaca, holpaca_cce])
                     name = f"{workload_name}-{dist_name}-{typ_name}-{threads}"
-                    config = constructConfig(name, threads)
-                    load = constructLoadConfig(
+                    config = baseConfig(name, threads)
+                    load = loadConfig(
                         name,
-                        {
-                            **config,
-                            **typ(threads),
-                            **workload,
-                            **dist,
-                        },
+                        {**config, **typ(threads), **workload(), **dist(threads)},
                         sourceDir,
                     )
                     for setup in setups:
                         setup.config = {
                             **config,
                             **typ(threads),
-                            **workload,
-                            **dist,
+                            **workload(),
+                            **dist(threads),
                             **setup.config,
                         }
                     cases.append(
