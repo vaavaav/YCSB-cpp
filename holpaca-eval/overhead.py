@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import copy
 import os
 import shutil
 import subprocess
@@ -13,7 +14,7 @@ runs = 1
 
 def getRecordCount(threads):
     if threads == 1:
-        return
+        return 32_000_000
     elif threads == 2:
         return 16_000_000
     elif threads == 4:
