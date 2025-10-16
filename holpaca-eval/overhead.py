@@ -102,13 +102,13 @@ if __name__ == "__main__":
     }
 
     zipfian = {
-        "operationcount": 4_411_499,
+        "operationcount": 5_522_856,
         "requestdistribution": "zipfian",
         "zipfian_const": 0.9,
     }
 
     uniform = {
-        "operationcount": 2_278_588,
+        "operationcount": 2_777_295,
         "requestdistribution": "uniform",
     }
 
