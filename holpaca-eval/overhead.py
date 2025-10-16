@@ -179,6 +179,7 @@ if __name__ == "__main__":
                         name,
                         {
                             **constructConfig(name, threads),
+                            **typ(threads),
                             **workload,
                             **dist,
                         },
