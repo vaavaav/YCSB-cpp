@@ -114,6 +114,7 @@ def loadConfig(name, base_config, sourceDir):
             "rocksdb.dbname": os.path.join(sourceDir, "db-backup", name),
             "rocksdb.destroy": "true",
         },
+        status="INSERT",
     )
 
 
@@ -231,7 +232,6 @@ if __name__ == "__main__":
                         name,
                         {**config, **typ(threads), **workload(), **dist(threads)},
                         sourceDir,
-                        status="INSERT",
                     )
                     for setup in setups:
                         setup.config = {
