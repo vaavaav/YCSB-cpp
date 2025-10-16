@@ -40,7 +40,7 @@ def constructConfig(name, threads):
 def constructInstanceConfig(threads):
     return {
         "cachelib.size": 2_000_000_000,
-        **{f"cachelib.name.{i}": "instance-{i}" for i in range(threads)},
+        **{f"cachelib.name.{i}": f"instance-{i}" for i in range(threads)},
         "cachelib.pool.relsize": 1,
         "cachelib.pool.name": "p0",
     }
