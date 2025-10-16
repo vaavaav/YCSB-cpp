@@ -10,21 +10,23 @@ from RunYCSB import Case, Load, RunYCSB, Setup
 
 runs = 1
 
+
 def getRecordCount(threads):
     if threads == 1:
-        return 50_000_000
+        return 32_000_000
     elif threads == 2:
-        return 45_000_000
+        return 16_000_000
     elif threads == 4:
-        return 35_000_000
+        return 8_000_000
     elif threads == 8:
-        return 20_000_000
+        return 4_000_000
     elif threads == 16:
-        return 10_000_000
+        return 2_000_000
     elif threads == 32:
-        return 10_000_000
+        return 1_000_000
     elif threads == 64:
-        return 5_000_000
+        return 500_000
+
 
 def getOperationCount(threads, distribution):
     if distribution == "zipfian":
@@ -57,6 +59,7 @@ def getOperationCount(threads, distribution):
             return 500_000
         elif threads == 64:
             return 500_000
+
 
 def constructConfig(name, threads):
     return {
@@ -201,7 +204,7 @@ if __name__ == "__main__":
     )
 
     cases = []
-    for workload_name, workload in ([
+    for workload_name, workload in [
         ("readonly", readonly),
         ("mixed", mixed),
         ("writeheavy", writeheavy),
