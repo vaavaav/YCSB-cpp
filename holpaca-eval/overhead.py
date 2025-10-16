@@ -231,6 +231,7 @@ if __name__ == "__main__":
                         name,
                         {**config, **typ(threads), **workload(), **dist(threads)},
                         sourceDir,
+                        status="INSERT",
                     )
                     for setup in setups:
                         setup.config = {

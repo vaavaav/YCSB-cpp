@@ -15,7 +15,7 @@ TIMEOUT = None
 
 
 class Load:
-    def __init__(self, executable, config):
+    def __init__(self, executable, config, status=None):
         self.executable = executable
         self.config = config
         self.threads = int(config.get("threadcount", 1))
@@ -23,9 +23,10 @@ class Load:
             config.get(f"trace.file.{i}", config.get("trace.file"))
             for i in range(self.threads)
         ]
+        self.status = f"-s {status}" if status else ""
 
     def build_cmd(self):
-        return f"{self.executable} -load -db cachelib-holpaca {' '.join(f'-p {k}={v}' for k, v in self.config.items())}"
+        return f"{self.executable} -load -db cachelib-holpaca {self.status} {' '.join(f'-p {k}={v}' for k, v in self.config.items())}"
 
 
 class Setup:
