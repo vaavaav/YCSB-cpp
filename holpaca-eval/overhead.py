@@ -10,14 +10,61 @@ from RunYCSB import Case, Load, RunYCSB, Setup
 
 runs = 1
 
+def getRecordCount(threads):
+    if threads == 1:
+        return 50_000_000
+    elif threads == 2:
+        return 45_000_000
+    elif threads == 4:
+        return 35_000_000
+    elif threads == 8:
+        return 20_000_000
+    elif threads == 16:
+        return 10_000_000
+    elif threads == 32:
+        return 10_000_000
+    elif threads == 64:
+        return 5_000_000
+
+def getOperationCount(threads, distribution):
+    if distribution == "zipfian":
+        if threads == 1:
+            return 6_000_000
+        elif threads == 2:
+            return 5_000_000
+        elif threads == 4:
+            return 4_000_000
+        elif threads == 8:
+            return 3_000_000
+        elif threads == 16:
+            return 2_000_000
+        elif threads == 32:
+            return 1_000_000
+        elif threads == 64:
+            return 1_000_000
+    else:  # uniform
+        if threads == 1:
+            return 3_000_000
+        elif threads == 2:
+            return 2_500_000
+        elif threads == 4:
+            return 2_000_000
+        elif threads == 8:
+            return 1_500_000
+        elif threads == 16:
+            return 1_000_000
+        elif threads == 32:
+            return 500_000
+        elif threads == 64:
+            return 500_000
 
 def constructConfig(name, threads):
     return {
         "threadcount": threads,
         "sleepafterload": 0,
-        "recordcount": 20_000_000,
+        "recordcount": getRecordCount(threads),
         **{f"request_key_prefix.{i}": f"p{i}" for i in range(threads)},
-        "request_key_domain_end": 19_999_999,
+        "request_key_domain_end": getRecordCount(threads) - 1,
         "status.interval": 1,
         "readallfields": "false",
         "fieldcount": 1,
@@ -39,7 +86,7 @@ def constructConfig(name, threads):
 
 def constructInstanceConfig(threads):
     return {
-        "cachelib.size": 2_000_000_000,
+        "cachelib.size": getRecordCount(threads) * 100,
         **{f"cachelib.name.{i}": f"instance-{i}" for i in range(threads)},
         "cachelib.pool.relsize": 1,
         "cachelib.pool.name": "p0",
@@ -48,7 +95,7 @@ def constructInstanceConfig(threads):
 
 def constructTenantConfig(threads):
     return {
-        "cachelib.size": 2_000_000_000 * threads,
+        "cachelib.size": getRecordCount(threads) * 100 * threads,
         "cachelib.name": "instance-0",
         "cachelib.pool.relsize": 1 / threads,
         **{f"cachelib.pool.name.{i}": f"p{i}" for i in range(threads)},
