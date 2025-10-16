@@ -32,34 +32,34 @@ def getRecordCount(threads):
 def getOperationCount(threads, distribution):
     if distribution == "zipfian":
         if threads == 1:
-            return 6_000_000
+            return 12_000_000
         elif threads == 2:
             return 5_000_000
-        elif threads == 4:
-            return 4_000_000
-        elif threads == 8:
-            return 3_000_000
-        elif threads == 16:
-            return 2_000_000
-        elif threads == 32:
-            return 1_000_000
-        elif threads == 64:
-            return 1_000_000
-    else:  # uniform
-        if threads == 1:
-            return 3_000_000
-        elif threads == 2:
-            return 2_500_000
         elif threads == 4:
             return 2_000_000
         elif threads == 8:
             return 1_500_000
         elif threads == 16:
-            return 1_000_000
+            return 700_000
         elif threads == 32:
             return 500_000
         elif threads == 64:
-            return 500_000
+            return 300_000
+    else:  # uniform
+        if threads == 1:
+            return 7_000_000
+        elif threads == 2:
+            return 5_600_000
+        elif threads == 4:
+            return 2_800_000
+        elif threads == 8:
+            return 1_400_000
+        elif threads == 16:
+            return 700_000
+        elif threads == 32:
+            return 350_000
+        elif threads == 64:
+            return 175_000
 
 
 def baseConfig(name, threads):

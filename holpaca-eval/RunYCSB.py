@@ -197,7 +197,9 @@ def runLOCAL(name, setup: Setup, db_backup, outdir, status):
     if DRY_RUN:
         print(f"[DRY-RUN] [LOCAL] rm -r {setup.config['rocksdb.dbname']}")
         print(f"[DRY-RUN] [LOCAL] cp -r {db_backup} {setup.config['rocksdb.dbname']}")
-        print(f"[DRY-RUN] [LOCAL] dstat -cdlmnyt > {os.path.join(outdir, 'dstat.csv')}")
+        print(
+            f"[DRY-RUN] [LOCAL] dool -cdlmnyt --output {os.path.join(outdir, 'dool.csv')}"
+        )
         if setup.controller_exec:
             print(
                 f"[DRY-RUN] [LOCAL] {setup.controller_exec} {setup.controller_ip} {setup.controller_args} &> {os.path.join(outdir, 'controller.log')}"
@@ -207,7 +209,7 @@ def runLOCAL(name, setup: Setup, db_backup, outdir, status):
         )
         if setup.controller_exec:
             print(f"[DRY-RUN] [LOCAL] kill $(pgrep {setup.controller_exec})")
-        print(f"[DRY-RUN] [LOCAL] kill $(pgrep dstat)")
+        print(f"[DRY-RUN] [LOCAL] kill $(pgrep dool)")
     return
 
     db = setup.config["rocksdb.dbname"]
@@ -216,9 +218,9 @@ def runLOCAL(name, setup: Setup, db_backup, outdir, status):
     # Restore the database from backup
     shutil.copytree(db_backup, db)
     controller = None
-    with open(os.path.join(outdir, "dstat.csv"), "w") as dstat_output:
-        # Start dstat to collect system statistics
-        dstat = subprocess.Popen(["dstat", "-cdlmnyt"], stdout=dstat_output)
+    with open(os.path.join(outdir, "dool.csv"), "w") as dool_output:
+        # Start dool to collect system statistics
+        dool = subprocess.Popen(["dool", "-cdlmnyt"], stdout=dool_output)
         if setup.controller_exec:
             # Start the controller if specified
             controller = subprocess.Popen(
@@ -235,7 +237,7 @@ def runLOCAL(name, setup: Setup, db_backup, outdir, status):
             subprocess.run(setup.build_cmd(status), shell=True, stdout=ycsb_output)
         if controller:
             controller.terminate()
-        dstat.terminate()
+        dool.terminate()
 
 
 # LoadSIF function to initialize the database for a YCSB workload using Singularity
@@ -322,12 +324,12 @@ def runSIF(
     setup.config["rocksdb.dbname"] = db
     # Get the directory of the executable
     executable_dir = os.path.dirname(setup.executable)
-    # Store dstat output in a local file
-    local_dstat_output = "/tmp/dstat.csv"
+    # Store dool output in a local file
+    local_dool_output = "/tmp/dool.csv"
     # Store YCSB output in a local file
     local_ycsb_output = "/tmp/ycsb.txt"
-    # Prepare the output paths for dstat
-    dstat_output = os.path.join(outdir, "dstat.csv")
+    # Prepare the output paths for dool
+    dool_output = os.path.join(outdir, "dool.csv")
     # Prepare the output paths for YCSB
     ycsb_output = os.path.join(outdir, "ycsb.txt")
     # Prepare the command to run the SIF container
@@ -336,12 +338,12 @@ rm -rf {db}
 cp -r {db_backup} {db}
 {copy_workloads_cmd}
 singularity run --bind '/tmp,{','.join(binds)}' {sif_path} bash -c "
-    dstat -cdlmnyt > {local_dstat_output} 2>&1 &
+    dool -cdlmnyt --output {local_dool_output} &
     {setup.build_cmd(status)} > {local_ycsb_output}
-    kill $(pgrep dstat)
+    kill $(pgrep dool)
 "
 cp {local_ycsb_output} {ycsb_output}
-cp {local_dstat_output} {dstat_output}
+cp {local_dool_output} {dool_output}
 """
     print(f"[SIF] Submitting run job for {name}, setup: {setup.name}")
 
@@ -375,12 +377,12 @@ def runSIFController(
     db = "/tmp/db"
     # Redirect the database path to the local storage
     setup.config["rocksdb.dbname"] = db
-    # Store dstat output in a local file
-    local_dstat_output = "/tmp/dstat.csv"
+    # Store dool output in a local file
+    local_dool_output = "/tmp/dool.csv"
     # Store YCSB output in a local file
     local_ycsb_output = "/tmp/ycsb.txt"
-    # Prepare the output paths for dstat
-    dstat_output = os.path.join(outdir, "dstat.csv")
+    # Prepare the output paths for dool
+    dool_output = os.path.join(outdir, "dool.csv")
     # Prepare the output paths for YCSB
     ycsb_output = os.path.join(outdir, "ycsb.txt")
     # List commands to copy workload files to the local storage
@@ -405,13 +407,13 @@ done
 mkdir -p {db} && cp -r {db_backup}/* {db}/
 {copy_workloads_cmd}
 singularity run --network host --bind '/tmp,{','.join(binds)}' {sif_path} bash -c \\"
-    dstat -cdlmnyt > {local_dstat_output} 2>&1 &
+    dool -cdlmnyt --output {local_dool_output} &
     {setup.build_cmd(status)} \\$IPS > {local_ycsb_output}
-    kill \\$(pgrep dstat) 2>/dev/null || true
+    kill \\$(pgrep dool) 2>/dev/null || true
 \\"
 scancel \\"\\$CONTROLLER_JOB_ID\\" 2>/dev/null || true
 cp {local_ycsb_output} {ycsb_output}
-cp {local_dstat_output} {dstat_output}
+cp {local_dool_output} {dool_output}
 " """
 
     # Get the sbatch command for scheduling the client job
@@ -432,7 +434,7 @@ cp {local_dstat_output} {dstat_output}
     controller_inner_script = f"""
 CONTROLLER_IP=$(hostname -I | awk '{{print $1}}' | xargs)
 singularity run --network host --bind '{controller_dir},{executable_dir},{outdir},{','.join(binds)}' {sif_path} bash -c "
-    dstat -cdlmnyt > {outdir}/controller_dstat.csv 2>&1 &
+    dool -cdlmnyt --output {outdir}/controller_dool.csv &
     {setup.controller_exec} $CONTROLLER_IP:11110 {setup.controller_args} > {outdir}/controller.log 2>&1
 " &
 CONTROLLER_JOB_ID=$SLURM_JOB_ID
