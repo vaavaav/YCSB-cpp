@@ -62,12 +62,12 @@ class Setup:
     def build_cmd(self):
         return f"{self.executable} -load -run -db cachelib-holpaca-overhead {f'-s {self.status}' if self.status else ''} {' '.join(f'-p {k}={v}' for k, v in self.config.items())}"
 
-    def run(self, sifPath, outputDir, binds=[], rehearse=False):
+    def run(self, sifPath, binds=[], rehearse=False):
         if not os.path.exists(sifPath):
             raise FileNotFoundError(f"SIF file not found: {sifPath}")
 
-        if not os.path.exists(outputDir) and not rehearse:
-            os.makedirs(outputDir, exist_ok=True)
+        if not os.path.exists(self.out) and not rehearse:
+            os.makedirs(self.out, exist_ok=True)
 
         # Get the directory of the executable
         executable_dir = os.path.dirname(self.executable)

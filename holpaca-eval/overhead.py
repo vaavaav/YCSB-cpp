@@ -154,4 +154,4 @@ if __name__ == "__main__":
                     }
                     setup.out = os.path.join(outputDir, name)
                     setup.status = "INSERT-PASSED INSERT-FAILED READ-PASSED READ-FAILED UPDATE-PASSED UPDATE-FAILED ALL"
-                    setup.run(sifPath, outputDir, binds=[sourceDir], rehearse=True)
+                    setup.run(sifPath, binds=[sourceDir], rehearse=True)
