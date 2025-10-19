@@ -88,7 +88,14 @@ public:
     auto [cache, poolId] = cachesPerThread_[i];
     if (std::holds_alternative<std::shared_ptr<CacheHolpacaLRU>>(cache)) {
       auto c = std::get<std::shared_ptr<CacheHolpacaLRU>>(cache);
-      auto const &accMissesAndHits = missesAndHitsPerThread_[i].load();
+      auto it = missesAndHitsPerThread_.find(i);
+      if (it == missesAndHitsPerThread_.end()) {
+        it = missesAndHitsPerThread_
+                 .emplace(i, CacheLibHolpacaOverhead::missesAndHits{0, 0})
+                 .first;
+      }
+
+      auto const accMissesAndHits = it->second.load();
 
       int misses =
           accMissesAndHits.misses - previousMissesAndHitsPerThread_[i].first;

@@ -11,7 +11,7 @@ from RunYCSBOverhead import Setup
 
 runs = 1
 KEYS = 2_000_000
-ITEMSIZE = 1_000
+ITEMSIZE = 1_00
 OVERHEAD_MARGIN = 1.2
 
 
@@ -137,7 +137,7 @@ if __name__ == "__main__":
             ("tenants", configTenants),
             #            ("instances", configInstances),
         ]:
-            for threads in [16]:  # , 4, 8, 16, 32, 64]:
+            for threads in [64]:  # , 4, 8, 16, 32, 64]:
                 for setupName, setup in [
                     ("baseline", baseline),
                     # ("holpaca", holpaca),
@@ -153,5 +153,7 @@ if __name__ == "__main__":
                         **setup.config,
                     }
                     setup.out = os.path.join(outputDir, name)
-                    setup.status = "INSERT-PASSED INSERT-FAILED READ-PASSED READ-FAILED UPDATE-PASSED UPDATE-FAILED ALL"
+                    setup.status = (
+                        "READ-PASSED READ-FAILED UPDATE-PASSED UPDATE-FAILED ALL"
+                    )
                     setup.run(sifPath, binds=[sourceDir], rehearse=True)

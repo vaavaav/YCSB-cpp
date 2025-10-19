@@ -205,11 +205,12 @@ void CacheLibHolpacaOverhead::Init() {
     } else {
       throw std::runtime_error("Unknown cachelib.type property");
     }
-    missesAndHitsPerThread_[threadId_] = {0, 0};
-    previousMissesAndHitsPerThread_[threadId_] = {0, 0};
     caches_[cacheName_] = cache_;
     refCountPerCache_[cacheName_] = 1;
   }
+  missesAndHitsPerThread_[threadId_] = {0, 0};
+  previousMissesAndHitsPerThread_[threadId_] = {0, 0};
+
   if (cachesPerThread_.find(threadId_) != cachesPerThread_.end()) {
     poolId_ = std::get<1>(cachesPerThread_[threadId_]);
     refCountPerCache_[cacheName_]--;
@@ -243,13 +244,20 @@ DB::Status CacheLibHolpacaOverhead::Read(const std::string &table,
       [&table, &key, &fields, &result](auto &&cache) {
         auto handle = cache->find(key);
         auto status = handle != nullptr ? kOK : kNotFound;
-        auto mah = missesAndHitsPerThread_[threadId_].load();
+        auto it = missesAndHitsPerThread_.find(threadId_);
+        if (it == missesAndHitsPerThread_.end()) {
+          it = missesAndHitsPerThread_
+                   .emplace(threadId_,
+                            CacheLibHolpacaOverhead::missesAndHits{0, 0})
+                   .first;
+        }
+        auto mah = it->second.load();
         if (status == kNotFound) {
           mah.misses++;
         } else {
           mah.hits++;
         }
-        missesAndHitsPerThread_[threadId_].store(mah);
+        it->second.store(mah);
         if (handle != nullptr) {
           volatile auto data =
               std::string(reinterpret_cast<const char *>(handle->getMemory()),
