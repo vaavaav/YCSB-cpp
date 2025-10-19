@@ -11,8 +11,8 @@ inline void TerminatorThread(std::chrono::seconds max_execution_time,
                              std::condition_variable &cv, std::mutex &m) {
   std::unique_lock<std::mutex> lock(m);
   if (!cv.wait_for(lock, max_execution_time,
-                   [wl]() { return wl->is_stop_requested(); })) {
-    wl->request_stop();
+                   [wl]() { return wl->operations_done(); })) {
+    wl->stop_operations();
   }
 }
 

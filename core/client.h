@@ -46,11 +46,11 @@ void ClientThread(std::chrono::seconds sleepafterload,
     }
 
     if (load) {
-      while (!wl->is_stop_requested()) {
+      while (!wl->inserts_done()) {
         wl->DoInsert(*db);
       }
     } else {
-      while (!wl->is_stop_requested()) {
+      while (!wl->operations_done()) {
         wl->DoTransaction(*db);
       }
     }

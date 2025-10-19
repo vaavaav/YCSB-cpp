@@ -225,11 +225,17 @@ public:
     delete transaction_insert_key_sequence_;
   }
 
-  void request_stop() {
-    stop_requested_.store(true, std::memory_order_release);
+  void stop_inserts() { inserts_done_.store(true, std::memory_order_release); }
+
+  void stop_operations() {
+    operations_done_.store(true, std::memory_order_release);
   }
 
-  bool is_stop_requested() { return stop_requested_.load(); }
+  bool inserts_done() { return inserts_done_.load(std::memory_order_acquire); }
+
+  bool operations_done() {
+    return operations_done_.load(std::memory_order_acquire);
+  }
 
   std::string BuildKeyName(uint64_t key_num);
 
@@ -281,7 +287,8 @@ protected:
   size_t inserts_{0};
   long zero_padding_;
 
-  std::atomic_bool stop_requested_ = {false};
+  std::atomic_bool inserts_done_ = {false};
+  std::atomic_bool operations_done_ = {false};
 };
 
 } // namespace ycsbc

@@ -361,7 +361,7 @@ bool CoreWorkload::DoInsert(DB &db) {
   std::vector<DB::Field> fields;
   BuildSingleValue(fields);
   if (++inserts_ >= record_count_) {
-    request_stop();
+    stop_inserts();
   }
   return db.Insert(table_name_, key, fields) == DB::kOK;
 }
@@ -388,7 +388,7 @@ bool CoreWorkload::DoTransaction(DB &db) {
     throw utils::Exception("Operation request is not recognized!");
   }
   if (++ops_ >= operation_count_) {
-    request_stop();
+    stop_operations();
   }
 
   return (status == DB::kOK);

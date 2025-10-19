@@ -177,7 +177,7 @@ int main(const int argc, const char *argv[]) {
 
       client_threads.emplace_back(std::thread(ycsbc::ClientThread, 0s, 0s, i,
                                               dbs[i], wls[i], thread_ops, true,
-                                              true));
+                                              false));
     }
     assert((int)client_threads.size() == num_threads);
 

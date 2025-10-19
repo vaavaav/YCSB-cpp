@@ -69,7 +69,6 @@ std::string TraceReplayer::BuildValue(size_t size) {
 std::tuple<Operation, std::string, size_t> TraceReplayer::NextOperation() {
   std::string line;
   if (!std::getline(file_buffer_, line)) {
-    request_stop();
     return std::make_tuple(MAXOPTYPE, "", 0);
   }
 
@@ -105,6 +104,7 @@ std::string TraceReplayer::BuildKeyName(const std::string &k) {
 bool TraceReplayer::DoInsert(DB &db) {
   auto [_, k_, size] = NextOperation();
   if (k_.empty()) {
+    stop_inserts();
     return DB::kOK;
   }
   if (override_value_size_set) {
@@ -145,7 +145,7 @@ bool TraceReplayer::DoTransaction(DB &db) {
   }
 
   if (ops_ >= operation_count_) {
-    request_stop();
+    stop_operations();
   }
 
   return (status == DB::kOK);

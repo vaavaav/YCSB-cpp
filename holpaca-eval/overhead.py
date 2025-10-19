@@ -7,20 +7,20 @@ import subprocess
 import sys
 import time
 
-from RunYCSBOverhead import loadPhase
+from RunYCSBOverhead import Setup
 
 runs = 1
 KEYS = 2_000_000
 ITEMSIZE = 1_000
+OVERHEAD_MARGIN = 1.2
 
 
 def baseConfig(name, threads):
     return {
         "threadcount": threads,
         "sleepafterload": 0,
-        "recordcount": KEYS * threads,
-        **{f"request_key_domain_start.{i}": KEYS * i for i in range(threads)},
-        **{f"request_key_domain_end.{i}": KEYS * (i + 1) - 1 for i in range(threads)},
+        "recordcount": KEYS,
+        **{f"request_key_prefix.{i}": f"p{i}" for i in range(threads)},
         "status.interval": 1,
         "readallfields": "false",
         "fieldcount": 1,
@@ -32,7 +32,7 @@ def baseConfig(name, threads):
 
 def configTenants(name, threads=1):
     return {
-        "cachelib.size": KEYS * ITEMSIZE * threads,
+        "cachelib.size": KEYS * ITEMSIZE * threads * OVERHEAD_MARGIN,
         "cachelib.name": "instance-0",
         "cachelib.pool.relsize": 1 / threads,
         **{f"cachelib.pool.name.{i}": f"p{i}" for i in range(threads)},
@@ -41,7 +41,7 @@ def configTenants(name, threads=1):
 
 def configInstances(name, threads=1):
     return {
-        "cachelib.size": KEYS * ITEMSIZE,
+        "cachelib.size": KEYS * ITEMSIZE * OVERHEAD_MARGIN,
         **{f"cachelib.name.{i}": f"instance-{i}" for i in range(threads)},
         "cachelib.pool.relsize": 1,
         "cachelib.pool.name": "p0",
@@ -62,9 +62,9 @@ def mixedConfig():
     return {
         "workload.type": "synthetic",
         "readproportion": 0.5,
-        "updateproportion": 0,
+        "updateproportion": 0.5,
         "scanproportion": 0,
-        "insertproportion": 0.5,
+        "insertproportion": 0,
     }
 
 
@@ -72,9 +72,9 @@ def writeheavyConfig():
     return {
         "workload.type": "synthetic",
         "readproportion": 0.1,
-        "updateproportion": 0,
+        "updateproportion": 0.9,
         "scanproportion": 0,
-        "insertproportion": 0.9,
+        "insertproportion": 0,
     }
 
 
@@ -83,16 +83,6 @@ if __name__ == "__main__":
     outputDir = os.path.join(os.path.abspath(sys.argv[2]))
     sifPath = os.path.abspath(sys.argv[3]) if len(sys.argv) > 3 else None
     ycsb_executable = os.path.join(sourceDir, "build-ycsb/ycsb")  # Update this path
-
-    loadPhase(
-        "overhead",
-        ycsb_executable,
-        loadConfig("overhead"),
-        sifPath,
-        status="INSERT",
-        sifBinds=[sourceDir],
-        rehearse=True,
-    )
 
     baseline = Setup(
         "baseline",
@@ -137,7 +127,7 @@ if __name__ == "__main__":
         controller_args="ThroughputMaximization 1:0.01:1000000",
     )
 
-    cases = []
+    setups = []
     for workload_name, workload in [
         ("readonly", readonlyConfig),
         ("mixed", mixedConfig),
@@ -145,33 +135,23 @@ if __name__ == "__main__":
     ]:
         for setupTypeName, setupType in [
             ("tenants", configTenants),
-            ("instances", configInstances),
+            #            ("instances", configInstances),
         ]:
-            for threads in [1, 2, 4, 8, 16, 32, 64]:
-                setups = copy.deepcopy([baseline])
-                name = f"{workload_name}-{setupTypeName}-{threads}"
-                for setup in setups:
+            for threads in [16]:  # , 4, 8, 16, 32, 64]:
+                for setupName, setup in [
+                    ("baseline", baseline),
+                    # ("holpaca", holpaca),
+                    # ("holpaca-cce", holpaca_cce),
+                ]:
+                    name = f"{workload_name}-{setupTypeName}-{threads}-{setupName}"
+                    setup = copy.deepcopy(setup)
+                    setup.name = name
                     setup.config = {
                         **baseConfig(name, threads),
                         **setupType(name, threads),
                         **workload(),
                         **setup.config,
                     }
-                cases.append(
-                    Case(
-                        name,
-                        runs,
-                        setups,
-                        "READ-PASSED READ-FAILED UPDATE-PASSED UPDATE-FAILED INSERT-PASSED INSERT-FAILED",
-                    )
-                )
-
-    # Run the benchmark
-    RunYCSB(
-        cases,
-        outputDir,
-        sif_path=sifPath,
-        binds=[sourceDir],
-        timeout="0:40:00",
-        dry_run=True,
-    )
+                    setup.out = os.path.join(outputDir, name)
+                    setup.status = "INSERT-PASSED INSERT-FAILED READ-PASSED READ-FAILED UPDATE-PASSED UPDATE-FAILED ALL"
+                    setup.run(sifPath, outputDir, binds=[sourceDir], rehearse=True)
