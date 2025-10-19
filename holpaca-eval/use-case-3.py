@@ -73,7 +73,7 @@ if __name__ == "__main__":
     holpaca_config = {
         **ycsb_config,
         "cachelib.poolresizer": "on",
-        "cachelib.poolresizer.milliseconds": 100,
+        "cachelib.poolresizer.milliseconds": 1000,
         "cachelib.poolresizer.slabs": 1000,
         "cachelib.size.0": 20_000_000_000,  # 20 GB
         "cachelib.size.1": 20_000_000_000,

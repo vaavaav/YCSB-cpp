@@ -7,129 +7,44 @@ import subprocess
 import sys
 import time
 
-from RunYCSB import Case, Load, RunYCSB, Setup
+from RunYCSBOverhead import loadPhase
 
 runs = 1
-
-
-def getRecordCount(threads):
-    if threads == 1:
-        return 32_000_000
-    elif threads == 2:
-        return 16_000_000
-    elif threads == 4:
-        return 8_000_000
-    elif threads == 8:
-        return 4_000_000
-    elif threads == 16:
-        return 2_000_000
-    elif threads == 32:
-        return 1_000_000
-    elif threads == 64:
-        return 500_000
-
-
-def getOperationCount(threads, distribution):
-    if distribution == "zipfian":
-        if threads == 1:
-            return 12_000_000
-        elif threads == 2:
-            return 5_000_000
-        elif threads == 4:
-            return 2_000_000
-        elif threads == 8:
-            return 1_500_000
-        elif threads == 16:
-            return 700_000
-        elif threads == 32:
-            return 500_000
-        elif threads == 64:
-            return 300_000
-    else:  # uniform
-        if threads == 1:
-            return 7_000_000
-        elif threads == 2:
-            return 5_600_000
-        elif threads == 4:
-            return 2_800_000
-        elif threads == 8:
-            return 1_400_000
-        elif threads == 16:
-            return 700_000
-        elif threads == 32:
-            return 350_000
-        elif threads == 64:
-            return 175_000
+KEYS = 2_000_000
+ITEMSIZE = 1_000
 
 
 def baseConfig(name, threads):
     return {
         "threadcount": threads,
         "sleepafterload": 0,
-        "recordcount": getRecordCount(threads),
-        **{f"request_key_prefix.{i}": f"p{i}" for i in range(threads)},
-        "request_key_domain_end": getRecordCount(threads) - 1,
+        "recordcount": KEYS * threads,
+        **{f"request_key_domain_start.{i}": KEYS * i for i in range(threads)},
+        **{f"request_key_domain_end.{i}": KEYS * (i + 1) - 1 for i in range(threads)},
         "status.interval": 1,
         "readallfields": "false",
         "fieldcount": 1,
-        "fieldlength": 1000,
+        "fieldlength": ITEMSIZE,
         "insertorder": "nothashed",
-        # rocksdb
-        "rocksdb.compression": "no",
-        "rocksdb.write_buffer_size": 134217728,
-        "rocksdb.max_write_buffer_number": 2,
-        "rocksdb.level0_file_number_compaction_trigger": 4,
-        "rocksdb.max_background_flushes": 1,
-        "rocksdb.max_background_compactions": 3,
-        "rocksdb.use_direct_reads": "true",
-        "rocksdb.no_block_cache": "true",
-        "rocksdb.use_direct_io_for_flush_compaction": "true",
-        "rocksdb.dbname": os.path.join(sourceDir, "db", name),
+        "requestdistribution": "uniform",
     }
 
 
-def instanceConfig(threads):
+def configTenants(name, threads=1):
     return {
-        "cachelib.size": getRecordCount(threads) * 100,
-        **{f"cachelib.name.{i}": f"instance-{i}" for i in range(threads)},
-        "cachelib.pool.relsize": 1,
-        "cachelib.pool.name": "p0",
-    }
-
-
-def tenantConfig(threads):
-    return {
-        "cachelib.size": getRecordCount(threads) * 100 * threads,
+        "cachelib.size": KEYS * ITEMSIZE * threads,
         "cachelib.name": "instance-0",
         "cachelib.pool.relsize": 1 / threads,
         **{f"cachelib.pool.name.{i}": f"p{i}" for i in range(threads)},
     }
 
 
-def loadConfig(name, base_config, sourceDir):
-    return Load(
-        ycsb_executable,
-        {
-            **base_config,
-            "rocksdb.dbname": os.path.join(sourceDir, "db-backup", name),
-            "rocksdb.destroy": "true",
-        },
-        status="INSERT",
-    )
-
-
-def zipfianConfig(threads):
+def configInstances(name, threads=1):
     return {
-        "operationcount": getOperationCount(threads, "zipfian"),
-        "requestdistribution": "zipfian",
-        "zipfian_const": 0.9,
-    }
-
-
-def uniformConfig(threads):
-    return {
-        "operationcount": getOperationCount(threads, "uniform"),
-        "requestdistribution": "uniform",
+        "cachelib.size": KEYS * ITEMSIZE,
+        **{f"cachelib.name.{i}": f"instance-{i}" for i in range(threads)},
+        "cachelib.pool.relsize": 1,
+        "cachelib.pool.name": "p0",
     }
 
 
@@ -163,23 +78,32 @@ def writeheavyConfig():
     }
 
 
-# TODO: multiplas instancias
-
-
 if __name__ == "__main__":
     sourceDir = os.path.abspath(sys.argv[1])
     outputDir = os.path.join(os.path.abspath(sys.argv[2]))
     sifPath = os.path.abspath(sys.argv[3]) if len(sys.argv) > 3 else None
     ycsb_executable = os.path.join(sourceDir, "build-ycsb/ycsb")  # Update this path
 
-    optimized = Setup(
-        "optimized",
+    loadPhase(
+        "overhead",
+        ycsb_executable,
+        loadConfig("overhead"),
+        sifPath,
+        status="INSERT",
+        sifBinds=[sourceDir],
+        rehearse=True,
+    )
+
+    baseline = Setup(
+        "baseline",
         ycsb_executable,
         {
-            "cachelib.eviction": "2q",
-            "cachelib.pooloptimizer": "on",
+            "operationcount": 1_000_000_000,
+            "cachelib.eviction": "lru",
+            "maxexecutiontime": 600,
             "cachelib.poolresizer": "on",
-            "cachelib.poolrebalancer": "off",
+            "cachelib.poolresizer.milliseconds": 1000,
+            "cachelib.poolresizer.slabs": 1000,
         },
     )
 
@@ -187,30 +111,30 @@ if __name__ == "__main__":
         "holpaca",
         ycsb_executable,
         {
-            "cachelib.eviction": "2q",
-            "cachelib.pooloptimizer": "off",
+            "cachelib.eviction": "lru",
             "cachelib.poolresizer": "on",
-            "cachelib.poolrebalancer": "off",
+            "cachelib.poolresizer.milliseconds": 1000,
+            "cachelib.poolresizer.slabs": 1000,
         },
         controller_exec=os.path.join(
             sourceDir, "opt/ycsb/bin/cachelib_holpaca_controller"
         ),
-        controller_args="MarginalHits 1000",
+        controller_args="ThroughputMaximization 1000:0.01",
     )
 
     holpaca_cce = Setup(
         "holpaca-cce",
         ycsb_executable,
         {
-            "cachelib.eviction": "2q",
-            "cachelib.pooloptimizer": "off",
+            "cachelib.eviction": "lru",
             "cachelib.poolresizer": "on",
-            "cachelib.poolrebalancer": "off",
+            "cachelib.poolresizer.milliseconds": 1000,
+            "cachelib.poolresizer.slabs": 1000,
         },
         controller_exec=os.path.join(
             sourceDir, "opt/ycsb/bin/cachelib_holpaca_controller"
         ),
-        controller_args="MarginalHits 1:100000",
+        controller_args="ThroughputMaximization 1:0.01:1000000",
     )
 
     cases = []
@@ -219,37 +143,28 @@ if __name__ == "__main__":
         ("mixed", mixedConfig),
         ("writeheavy", writeheavyConfig),
     ]:
-        for dist_name, dist in [("zipfian", zipfianConfig), ("uniform", uniformConfig)]:
-            for typ_name, typ in [
-                ("instance", instanceConfig),
-                ("tenant", tenantConfig),
-            ]:
-                for threads in [1, 2, 4, 8, 16, 32, 64]:
-                    setups = copy.deepcopy([optimized, holpaca, holpaca_cce])
-                    name = f"{workload_name}-{dist_name}-{typ_name}-{threads}"
-                    config = baseConfig(name, threads)
-                    load = loadConfig(
+        for setupTypeName, setupType in [
+            ("tenants", configTenants),
+            ("instances", configInstances),
+        ]:
+            for threads in [1, 2, 4, 8, 16, 32, 64]:
+                setups = copy.deepcopy([baseline])
+                name = f"{workload_name}-{setupTypeName}-{threads}"
+                for setup in setups:
+                    setup.config = {
+                        **baseConfig(name, threads),
+                        **setupType(name, threads),
+                        **workload(),
+                        **setup.config,
+                    }
+                cases.append(
+                    Case(
                         name,
-                        {**config, **typ(threads), **workload(), **dist(threads)},
-                        sourceDir,
+                        runs,
+                        setups,
+                        "READ-PASSED READ-FAILED UPDATE-PASSED UPDATE-FAILED INSERT-PASSED INSERT-FAILED",
                     )
-                    for setup in setups:
-                        setup.config = {
-                            **config,
-                            **typ(threads),
-                            **workload(),
-                            **dist(threads),
-                            **setup.config,
-                        }
-                    cases.append(
-                        Case(
-                            name,
-                            runs,
-                            load,
-                            setups,
-                            "READ-PASSED READ-FAILED UPDATE-PASSED UPDATE-FAILED INSERT-PASSED INSERT-FAILED",
-                        )
-                    )
+                )
 
     # Run the benchmark
     RunYCSB(

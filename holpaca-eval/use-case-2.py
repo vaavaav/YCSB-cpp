@@ -93,7 +93,7 @@ if __name__ == "__main__":
                 "cachelib.eviction": "2q",
                 "cachelib.pooloptimizer": "on",
                 "cachelib.poolresizer": "on",
-                "cachelib.poolresizer.milliseconds": 100,
+                "cachelib.poolresizer.milliseconds": 1000,
                 "cachelib.poolresizer.slabs": 1000,
                 # based on baseline results
                 "operationcount.0": 37412757,
@@ -108,7 +108,7 @@ if __name__ == "__main__":
             {
                 **ycsb_config,
                 "cachelib.poolresizer": "on",
-                "cachelib.poolresizer.milliseconds": 100,
+                "cachelib.poolresizer.milliseconds": 1000,
                 "cachelib.poolresizer.slabs": 1000,
                 "cachelib.size.0": 20_000_000_000,  # 20 GB
                 "cachelib.size.1": 20_000_000_000,

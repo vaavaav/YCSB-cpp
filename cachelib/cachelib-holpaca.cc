@@ -227,11 +227,11 @@ void CacheLibHolpaca::Init() {
     rocksdbIOPSPerThread_[threadId_] = 0;
     missesAndHitsPerThread_[threadId_] = {0, 0};
     previousMissesAndHitsPerThread_[threadId_] = {0, 0};
+    caches_[cacheName_] = cache_;
+    refCountPerCache_[cacheName_] = 1;
     rocksdb_.SetProps(props_);
     rocksdb_.Init();
     rocksdbs_[cacheName_] = rocksdb_;
-    caches_[cacheName_] = cache_;
-    refCountPerCache_[cacheName_] = 1;
   }
   std::string poolName = props_->GetProperty(
       PROP_POOL_NAME + "." + std::to_string(threadId_),
