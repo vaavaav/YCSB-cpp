@@ -56,7 +56,7 @@ namespace ycsbc {
 
 std::mutex CacheLibHolpacaOverhead::mutex_;
 thread_local facebook::cachelib::PoolId CacheLibHolpacaOverhead::poolId_;
-std::unordered_map<int, std::pair<int, int>>
+std::unordered_map<int, std::atomic<CacheLibHolpacaOverhead::missesAndHits>>
     CacheLibHolpacaOverhead::missesAndHitsPerThread_;
 std::unordered_map<int, std::pair<int, int>>
     CacheLibHolpacaOverhead::previousMissesAndHitsPerThread_;
@@ -202,6 +202,8 @@ void CacheLibHolpacaOverhead::Init() {
                                        PROP_CACHE_TYPE_DEFAULT)) == "holpaca") {
       cache_ = std::make_shared<CacheHolpacaLRU>(
           std::get<CacheHolpacaLRU::Config>(config));
+    } else {
+      throw std::runtime_error("Unknown cachelib.type property");
     }
     missesAndHitsPerThread_[threadId_] = {0, 0};
     previousMissesAndHitsPerThread_[threadId_] = {0, 0};
@@ -210,6 +212,7 @@ void CacheLibHolpacaOverhead::Init() {
   }
   if (cachesPerThread_.find(threadId_) != cachesPerThread_.end()) {
     poolId_ = std::get<1>(cachesPerThread_[threadId_]);
+    refCountPerCache_[cacheName_]--;
     return;
   }
 
@@ -240,10 +243,13 @@ DB::Status CacheLibHolpacaOverhead::Read(const std::string &table,
       [&table, &key, &fields, &result](auto &&cache) {
         auto handle = cache->find(key);
         auto status = handle != nullptr ? kOK : kNotFound;
+        auto mah = missesAndHitsPerThread_[threadId_].load();
         if (status == kNotFound) {
-          missesAndHitsPerThread_[threadId_].first++;
+          mah.misses++;
+        } else {
+          mah.hits++;
         }
-        missesAndHitsPerThread_[threadId_].second++;
+        missesAndHitsPerThread_[threadId_].store(mah);
         if (handle != nullptr) {
           volatile auto data =
               std::string(reinterpret_cast<const char *>(handle->getMemory()),
