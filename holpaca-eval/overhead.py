@@ -929,25 +929,37 @@ if __name__ == "__main__":
         ]:
             for threads in [1, 2, 4, 8, 16, 32, 64]:
                 for setupName, setup in [
-                    ("baseline", baseline),
-                    ("holpaca", holpaca),
+                    #   ("baseline", baseline),
+                    #   ("holpaca", holpaca),
                     ("holpaca-cce", holpaca_cce),
+                    ("holpaca-freq", holpaca),
                 ]:
                     for run in range(runs):
                         case = f"{workload_name}-{setupTypeName}-{threads}"
                         setup = copy.deepcopy(setup)
-                        setup.name = f"{case}-{setupName}-{run + 1}"
+                        setup.status = (
+                            "READ-PASSED READ-FAILED UPDATE-PASSED UPDATE-FAILED ALL"
+                        )
+                        setup.threads = threads
                         setup.config = {
                             **baseConfig(threads, MAXOPS[case]),
                             **setupType(threads),
                             **workload(),
                             **setup.config,
                         }
-                        setup.threads = threads
-                        setup.out = os.path.join(
-                            outputDir, case, setupName, str(run + 1)
-                        )
-                        setup.status = (
-                            "READ-PASSED READ-FAILED UPDATE-PASSED UPDATE-FAILED ALL"
-                        )
-                        setup.run(sifPath, binds=[sourceDir])
+                        if setupName == "holpaca-freq":
+                            for freq in [1, 10, 100, 1000, 10000]:
+                                setup.name = f"{case}-{setupName}-{freq}-{run + 1}"
+                                setup.controller_args = (
+                                    f"ThroughputMaximization {freq}:0.01:true"
+                                )
+                                setup.out = os.path.join(
+                                    outputDir, case, setupName, str(freq), str(run + 1)
+                                )
+                                setup.run(sifPath, binds=[sourceDir], rehearse=True)
+                        else:
+                            setup.name = f"{case}-{setupName}-{run + 1}"
+                            setup.out = os.path.join(
+                                outputDir, case, setupName, str(run + 1)
+                            )
+                            setup.run(sifPath, binds=[sourceDir], rehearse=True)
