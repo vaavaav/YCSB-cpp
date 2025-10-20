@@ -233,8 +233,7 @@ void CoreWorkload::Init(std::string const property_suffix,
   long op_count =
       std::stol(p.GetProperty(OPERATION_COUNT_PROPERTY + property_suffix,
                               p.GetProperty(OPERATION_COUNT_PROPERTY)));
-  core_workload long new_keys =
-      (long)(op_count * insert_proportion); // a fudge factor
+  long new_keys = (long)(op_count * insert_proportion); // a fudge factor
   long request_key_domain_start = std::stol(
       p.GetProperty(REQUEST_KEY_DOMAIN_START_PROPERTY + property_suffix,
                     p.GetProperty(REQUEST_KEY_DOMAIN_START_PROPERTY,
