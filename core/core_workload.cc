@@ -230,8 +230,11 @@ void CoreWorkload::Init(std::string const property_suffix,
   // that is larger than what exists at the beginning of the test.
   // If the generator picks a key that is not inserted yet, we just ignore it
   // and pick another key.
-  long op_count = std::stol(p.GetProperty(OPERATION_COUNT_PROPERTY));
-  long new_keys = (long)(op_count * insert_proportion); // a fudge factor
+  long op_count =
+      std::stol(p.GetProperty(OPERATION_COUNT_PROPERTY + property_suffix,
+                              p.GetProperty(OPERATION_COUNT_PROPERTY)));
+  core_workload long new_keys =
+      (long)(op_count * insert_proportion); // a fudge factor
   long request_key_domain_start = std::stol(
       p.GetProperty(REQUEST_KEY_DOMAIN_START_PROPERTY + property_suffix,
                     p.GetProperty(REQUEST_KEY_DOMAIN_START_PROPERTY,
