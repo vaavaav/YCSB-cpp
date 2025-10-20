@@ -914,7 +914,7 @@ if __name__ == "__main__":
         controller_exec=os.path.join(
             sourceDir, "opt/ycsb/bin/cachelib_holpaca_controller"
         ),
-        controller_args="ThroughputMaximization 1:0.01:true:1000000",
+        controller_args="ThroughputMaximization 1:0.01:true:10000",
     )
 
     setups = []
