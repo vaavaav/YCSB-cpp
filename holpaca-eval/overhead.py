@@ -944,7 +944,9 @@ if __name__ == "__main__":
                             **setup.config,
                         }
                         setup.threads = threads
-                        setup.out = os.path.join(outputDir, case, name, str(run + 1))
+                        setup.out = os.path.join(
+                            outputDir, case, setup.name, str(run + 1)
+                        )
                         setup.status = (
                             "READ-PASSED READ-FAILED UPDATE-PASSED UPDATE-FAILED ALL"
                         )
