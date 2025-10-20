@@ -71,6 +71,9 @@ class Setup:
         if not os.path.exists(self.controller_exec):
             raise ValueError(f"Controller executable not found: {self.controller_exec}")
 
+        if not os.path.exists(self.out) and not rehearse:
+            os.makedirs(self.out, exist_ok=True)
+
         # Store dool output in a local file
         local_dool_output = "/tmp/dool.csv"
         # Store YCSB output in a local file
