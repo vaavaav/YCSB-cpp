@@ -803,7 +803,7 @@ MAXOPS = {
 }
 
 
-def baseConfig(name, threads, maxops):
+def baseConfig(threads, maxops):
     return {
         "threadcount": threads,
         **{f"operationcount.{i}": maxops[i] for i in range(threads)},
@@ -819,7 +819,7 @@ def baseConfig(name, threads, maxops):
     }
 
 
-def configTenants(name, threads=1):
+def configTenants(threads=1):
     return {
         "cachelib.size": KEYS * ITEMSIZE * threads * OVERHEAD_MARGIN,
         "cachelib.name": "instance-0",
@@ -828,7 +828,7 @@ def configTenants(name, threads=1):
     }
 
 
-def configInstances(name, threads=1):
+def configInstances(threads=1):
     return {
         "cachelib.size": KEYS * ITEMSIZE * OVERHEAD_MARGIN,
         **{f"cachelib.name.{i}": f"instance-{i}" for i in range(threads)},
@@ -935,17 +935,16 @@ if __name__ == "__main__":
                 ]:
                     for run in range(runs):
                         case = f"{workload_name}-{setupTypeName}-{threads}"
-                        name = f"{case}-{setupName}"
                         setup = copy.deepcopy(setup)
-                        setup.name = name
+                        setup.name = f"{case}-{setupName}-{run + 1}"
                         setup.config = {
-                            **baseConfig(name, threads, MAXOPS[case]),
-                            **setupType(name, threads),
+                            **baseConfig(threads, MAXOPS[case]),
+                            **setupType(threads),
                             **workload(),
                             **setup.config,
                         }
                         setup.threads = threads
-                        setup.out = os.path.join(outputDir, name, str(run + 1))
+                        setup.out = os.path.join(outputDir, case, name, str(run + 1))
                         setup.status = (
                             "READ-PASSED READ-FAILED UPDATE-PASSED UPDATE-FAILED ALL"
                         )

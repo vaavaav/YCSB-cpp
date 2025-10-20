@@ -8,7 +8,6 @@ from datetime import datetime
 
 sanitize = lambda name: re.sub(r"\W+", "_", name)
 
-DRY_RUN = False
 TIMEOUT = None
 
 
