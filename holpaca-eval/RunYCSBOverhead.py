@@ -11,9 +11,7 @@ sanitize = lambda name: re.sub(r"\W+", "_", name)
 TIMEOUT = None
 
 
-def build_sbatch_cmd(
-    name, cmd, stdout, stderr, mem=None, jobid=None, export=None, ntasks=1
-):
+def build_sbatch_cmd(name, cmd, stdout, stderr, export=None, ntasks=1):
     sbatch_cmd = [
         "sbatch",
         f"--job-name={name}",
@@ -29,8 +27,6 @@ def build_sbatch_cmd(
         "--wrap",
         cmd,
     ]
-    if jobid:
-        sbatch_cmd.insert(1, f"--dependency=afterok:{jobid}")
     if export:
         sbatch_cmd.insert(1, f"--export={export}")
     if TIMEOUT:
@@ -91,7 +87,7 @@ class Setup:
       PORT=\\$((11111+i))
       IPS+=\\" -p cachelib.holpaca.address.\\$i=\\$CLIENT_IP:\\$PORT\\"
     done
-    singularity run --network host --bind '{','.join(binds)}' {sifPath} bash -c \\"
+    singularity run --network host --bind '/tmp,{','.join(binds)}' {sifPath} bash -c \\"
         dool -cdlmnyt --output {local_dool_output} &
         {self.build_cmd()} \\$IPS > {local_ycsb_output}
         echo "{self.build_cmd()} \\$IPS" >> {local_ycsb_output}
