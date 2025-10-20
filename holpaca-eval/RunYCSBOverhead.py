@@ -93,8 +93,8 @@ class Setup:
     done
     singularity run --network host --bind '{','.join(binds)}' {sifPath} bash -c \\"
         dool -cdlmnyt --output {local_dool_output} &
-        echo {self.build_cmd()} \\$IPS > {local_ycsb_output}
         {self.build_cmd()} \\$IPS > {local_ycsb_output}
+        echo "{self.build_cmd()} \\$IPS" >> {local_ycsb_output}
         kill \\$(pgrep dool) 2>/dev/null || true
     \\"
     scancel \\"\\$CONTROLLER_JOB_ID\\" 2>/dev/null || true
