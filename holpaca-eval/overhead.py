@@ -9,7 +9,6 @@ import time
 
 from RunYCSBOverhead import Setup
 
-runs = 1
 KEYS = 2_000_000
 ITEMSIZE = 1_000
 OVERHEAD_MARGIN = 1.2
@@ -873,6 +872,7 @@ if __name__ == "__main__":
     outputDir = os.path.join(os.path.abspath(sys.argv[2]))
     sifPath = os.path.abspath(sys.argv[3]) if len(sys.argv) > 3 else None
     ycsb_executable = os.path.join(sourceDir, "build-ycsb/ycsb")  # Update this path
+    runs = int(sys.argv[4]) if len(sys.argv) > 4 else 1
 
     baseline = Setup(
         "baseline",
@@ -929,23 +929,24 @@ if __name__ == "__main__":
         ]:
             for threads in [1, 2, 4, 8, 16, 32, 64]:
                 for setupName, setup in [
-                    # ("baseline", baseline),
+                    ("baseline", baseline),
                     ("holpaca", holpaca),
                     ("holpaca-cce", holpaca_cce),
                 ]:
-                    case = f"{workload_name}-{setupTypeName}-{threads}"
-                    name = f"{case}-{setupName}"
-                    setup = copy.deepcopy(setup)
-                    setup.name = name
-                    setup.config = {
-                        **baseConfig(name, threads, MAXOPS[case]),
-                        **setupType(name, threads),
-                        **workload(),
-                        **setup.config,
-                    }
-                    setup.threads = threads
-                    setup.out = os.path.join(outputDir, name)
-                    setup.status = (
-                        "READ-PASSED READ-FAILED UPDATE-PASSED UPDATE-FAILED ALL"
-                    )
-                    setup.run(sifPath, binds=[sourceDir], rehearse=True)
+                    for run in range(runs):
+                        case = f"{workload_name}-{setupTypeName}-{threads}"
+                        name = f"{case}-{setupName}"
+                        setup = copy.deepcopy(setup)
+                        setup.name = name
+                        setup.config = {
+                            **baseConfig(name, threads, MAXOPS[case]),
+                            **setupType(name, threads),
+                            **workload(),
+                            **setup.config,
+                        }
+                        setup.threads = threads
+                        setup.out = os.path.join(outputDir, name, run + 1)
+                        setup.status = (
+                            "READ-PASSED READ-FAILED UPDATE-PASSED UPDATE-FAILED ALL"
+                        )
+                        setup.run(sifPath, binds=[sourceDir])
