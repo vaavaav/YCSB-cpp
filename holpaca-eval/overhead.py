@@ -898,7 +898,7 @@ if __name__ == "__main__":
         controller_exec=os.path.join(
             sourceDir, "opt/ycsb/bin/cachelib_holpaca_controller"
         ),
-        controller_args="ThroughputMaximization 1000:0.01",
+        controller_args="ThroughputMaximization 1000:0.01:true",
     )
 
     holpaca_cce = Setup(
@@ -914,7 +914,7 @@ if __name__ == "__main__":
         controller_exec=os.path.join(
             sourceDir, "opt/ycsb/bin/cachelib_holpaca_controller"
         ),
-        controller_args="ThroughputMaximization 1:0.01:1000000",
+        controller_args="ThroughputMaximization 1:0.01:true:1000000",
     )
 
     setups = []
@@ -931,7 +931,7 @@ if __name__ == "__main__":
                 for setupName, setup in [
                     # ("baseline", baseline),
                     ("holpaca", holpaca),
-                    # ("holpaca-cce", holpaca_cce),
+                    ("holpaca-cce", holpaca_cce),
                 ]:
                     case = f"{workload_name}-{setupTypeName}-{threads}"
                     name = f"{case}-{setupName}"
