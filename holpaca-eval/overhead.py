@@ -935,7 +935,7 @@ if __name__ == "__main__":
                     #   ("baseline", baseline),
                     #   ("holpaca", holpaca),
                     ("holpaca-cce", holpaca_cce),
-                    # ("holpaca-freq", holpaca),
+                    ("holpaca-freq", holpaca),
                 ]:
                     for run in range(runs):
                         case = f"{workload_name}-{setupTypeName}-{threads}"
