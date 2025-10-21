@@ -882,6 +882,7 @@ if __name__ == "__main__":
             "cachelib.poolresizer": "on",
             "cachelib.poolresizer.milliseconds": 1000,
             "cachelib.poolresizer.slabs": 1000,
+            "cachelib.type": "baseline",
         },
     )
 
@@ -893,6 +894,7 @@ if __name__ == "__main__":
             "cachelib.poolresizer": "on",
             "cachelib.poolresizer.milliseconds": 1000,
             "cachelib.poolresizer.slabs": 1000,
+            "cachelib.type": "holpaca",
         },
         with_controller=True,
         controller_exec=os.path.join(
@@ -909,6 +911,7 @@ if __name__ == "__main__":
             "cachelib.poolresizer": "on",
             "cachelib.poolresizer.milliseconds": 1000,
             "cachelib.poolresizer.slabs": 1000,
+            "cachelib.type": "holpaca",
         },
         with_controller=True,
         controller_exec=os.path.join(
@@ -932,7 +935,7 @@ if __name__ == "__main__":
                     #   ("baseline", baseline),
                     #   ("holpaca", holpaca),
                     ("holpaca-cce", holpaca_cce),
-                    ("holpaca-freq", holpaca),
+                    # ("holpaca-freq", holpaca),
                 ]:
                     for run in range(runs):
                         case = f"{workload_name}-{setupTypeName}-{threads}"
@@ -956,10 +959,10 @@ if __name__ == "__main__":
                                 setup.out = os.path.join(
                                     outputDir, case, setupName, str(freq), str(run + 1)
                                 )
-                                setup.run(sifPath, binds=[sourceDir], rehearse=True)
+                                setup.run(sifPath, binds=[sourceDir])
                         else:
                             setup.name = f"{case}-{setupName}-{run + 1}"
                             setup.out = os.path.join(
                                 outputDir, case, setupName, str(run + 1)
                             )
-                            setup.run(sifPath, binds=[sourceDir], rehearse=True)
+                            setup.run(sifPath, binds=[sourceDir])
