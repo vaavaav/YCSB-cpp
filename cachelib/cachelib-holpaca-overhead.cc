@@ -110,7 +110,10 @@ void CacheLibHolpacaOverhead::Init() {
                                 15 /* lock power */}); // assuming caching
                                                        // 20 million items
 
-          if (std::is_same<decltype(config), CacheHolpacaLRU::Config>::value) {
+          if (props_->GetProperty(
+                  PROP_CACHE_TYPE + "." + std::to_string(threadId_),
+                  props_->GetProperty(PROP_CACHE_TYPE,
+                                      PROP_CACHE_TYPE_DEFAULT)) == "holpaca") {
             auto &holpacaConfig =
                 static_cast<CacheHolpacaLRU::Config &>(config);
             auto address = props_->GetProperty(
