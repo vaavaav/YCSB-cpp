@@ -84,6 +84,9 @@ public:
       return std::make_tuple("", "", 0, 0, 0, 0);
     }
     auto [cache, poolId] = cachesPerThread_[i];
+    if (std::visit([](auto &&c) { return c == nullptr; }, cache)) {
+      return std::make_tuple("", "", 0, 0, 0, 0);
+    }
     if (std::holds_alternative<std::shared_ptr<CacheHolpacaLRU>>(cache)) {
       auto c = std::get<std::shared_ptr<CacheHolpacaLRU>>(cache);
       auto it = missesAndHitsPerThread_.find(i);
