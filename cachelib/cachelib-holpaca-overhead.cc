@@ -76,6 +76,16 @@ thread_local CacheLibHolpacaOverhead::CacheType
 void CacheLibHolpacaOverhead::Init() {
 
   std::lock_guard<std::mutex> lock(mutex_);
+
+  if (missesAndHitsPerThread_.empty()) {
+    auto kThreads = std::stoi(props_->GetProperty("threadcount", "1"));
+    missesAndHitsPerThread_.reserve(kThreads);
+    previousMissesAndHitsPerThread_.reserve(kThreads);
+    caches_.reserve(kThreads);
+    cachesPerThread_.reserve(kThreads);
+    refCountPerCache_.reserve(kThreads);
+  }
+
   cacheName_ = props_->GetProperty(
       PROP_CACHE_NAME + "." + std::to_string(threadId_),
       props_->GetProperty(PROP_CACHE_NAME, PROP_CACHE_NAME_DEFAULT));
@@ -334,15 +344,12 @@ void CacheLibHolpacaOverhead::SetThreadId(int threadId) {
 void CacheLibHolpacaOverhead::Cleanup() {
   std::lock_guard<std::mutex> lock(mutex_);
   auto &[cache, poolId] = cachesPerThread_[threadId_];
-  std::visit(
-      [&](auto &&c) {
-        c = nullptr;
-        if (auto ref = std::get_if<std::shared_ptr<CacheHolpacaLRU>>(&cache_);
-            ref) {
-          (*ref)->removePool(poolId);
-        }
-      },
-      cache);
+  if (auto ref = std::get_if<std::shared_ptr<CacheHolpacaLRU>>(&cache_); ref) {
+    cache = static_cast<std::shared_ptr<CacheHolpacaLRU>>(nullptr);
+    (*ref)->removePool(poolId);
+  } else {
+    cache = static_cast<std::shared_ptr<CacheBaselineLRU>>(nullptr);
+  }
 
   if (refCountPerCache_[cacheName_] == 1) {
     refCountPerCache_.erase(cacheName_);
