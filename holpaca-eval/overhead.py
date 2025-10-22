@@ -92,9 +92,6 @@ if __name__ == "__main__":
         ycsb_executable,
         {
             "cachelib.eviction": "lru",
-            "cachelib.poolresizer": "on",
-            "cachelib.poolresizer.milliseconds": 1000,
-            "cachelib.poolresizer.slabs": 1000,
         },
     )
 
@@ -104,9 +101,6 @@ if __name__ == "__main__":
         ycsb_executable,
         {
             "cachelib.eviction": "lru",
-            "cachelib.poolresizer": "on",
-            "cachelib.poolresizer.milliseconds": 1000,
-            "cachelib.poolresizer.slabs": 1000,
         },
         with_controller=True,
         controller_exec=os.path.join(
@@ -121,9 +115,6 @@ if __name__ == "__main__":
         ycsb_executable,
         {
             "cachelib.eviction": "lru",
-            "cachelib.poolresizer": "on",
-            "cachelib.poolresizer.milliseconds": 1000,
-            "cachelib.poolresizer.slabs": 1000,
         },
         with_controller=True,
         controller_exec=os.path.join(

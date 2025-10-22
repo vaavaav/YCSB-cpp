@@ -258,7 +258,7 @@ int main(const int argc, const char *argv[]) {
     std::cout << "Run runtime(sec): " << runtime << std::endl;
     std::cout << "Run operations(ops): " << sum << std::endl
               << "Run throughput(ops/sec): " << sum / runtime << std::endl;
-    std::cout << gMeasurements->GetCDF() << std::endl;
+    std::cout << gMeasurements->GetMean() << std::endl;
 
     for (int i = 0; i < num_threads; i++) {
       delete dbs[i];

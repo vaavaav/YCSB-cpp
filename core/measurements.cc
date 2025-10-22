@@ -81,10 +81,26 @@ void BasicMeasurements::Reset() {
   std::fill(std::begin(latency_max_), std::end(latency_max_), 0);
 }
 
+std::string BasicMeasurements::GetMean() {
+  std::ostringstream msg_stream;
+  msg_stream.precision(6);
+  msg_stream << "Mean latencies (ms):";
+  for (int op = 0; op < MAXOPTYPE; op++) {
+    uint64_t cnt = count_[op].load(std::memory_order_relaxed);
+    double mean = (cnt > 0) ? static_cast<double>(latency_sum_[op].load(
+                                  std::memory_order_relaxed)) /
+                                  cnt
+                            : 0;
+    msg_stream << " [" << kOperationString[static_cast<Operation>(op)] << ":"
+               << mean / 1000.0 << "]";
+  }
+  return msg_stream.str();
+}
+
 #ifdef HDRMEASUREMENT
 HdrHistogramMeasurements::HdrHistogramMeasurements() {
   for (int op = 0; op < MAXOPTYPE; op++) {
-    if (hdr_init(1, 100LL * 1000 * 1000 * 1000, 3, &histogram_[op]) != 0) {
+    if (hdr_init(10, 100LL * 1000 * 1000 * 1000, 3, &histogram_[op]) != 0) {
       utils::Exception("hdr init failed");
     }
   }

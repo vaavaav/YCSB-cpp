@@ -27,6 +27,7 @@ public:
   virtual std::string
   GetStatusMsg(std::vector<Operation> const &operations) = 0;
   virtual std::string GetCDF() = 0;
+  virtual std::string GetMean() = 0;
   virtual void Reset() = 0;
 };
 
@@ -37,6 +38,7 @@ public:
   std::string GetStatusMsg(std::vector<Operation> const &operations) override;
   std::string GetCDF() override { return ""; }
   void Reset() override;
+  std::string GetMean() override;
 
 private:
   std::atomic<uint> count_[MAXOPTYPE];
@@ -53,6 +55,7 @@ public:
   std::string GetStatusMsg(std::vector<Operation> const &operations) override;
   std::string GetCDF() override;
   void Reset() override;
+  std::string GetMean() override { return ""; }
 
 private:
   hdr_histogram *histogram_[MAXOPTYPE];
