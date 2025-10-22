@@ -62,6 +62,8 @@ std::unordered_map<int, std::pair<int, int>>
     CacheLibHolpacaOverhead::previousMissesAndHitsPerThread_;
 std::unordered_map<std::string, CacheLibHolpacaOverhead::Cache>
     CacheLibHolpacaOverhead::caches_;
+std::unordered_map<std::string, CacheLibHolpacaOverhead::CacheType>
+    CacheLibHolpacaOverhead::cacheTypes_;
 std::unordered_map<
     int, std::tuple<CacheLibHolpacaOverhead::Cache, facebook::cachelib::PoolId,
                     CacheLibHolpacaOverhead::CacheType>>
@@ -71,8 +73,6 @@ thread_local std::string CacheLibHolpacaOverhead::cacheName_;
 thread_local CacheLibHolpacaOverhead::Cache CacheLibHolpacaOverhead::cache_;
 thread_local int CacheLibHolpacaOverhead::threadId_;
 thread_local facebook::cachelib::PoolId poolId_;
-thread_local CacheLibHolpacaOverhead::CacheType
-    CacheLibHolpacaOverhead::cacheType_;
 
 void CacheLibHolpacaOverhead::Init() {
 
@@ -85,6 +85,7 @@ void CacheLibHolpacaOverhead::Init() {
     caches_.reserve(kThreads);
     cachesPerThread_.reserve(kThreads);
     refCountPerCache_.reserve(kThreads);
+    cacheTypes_.reserve(kThreads);
   }
 
   cacheName_ = props_->GetProperty(
@@ -103,14 +104,14 @@ void CacheLibHolpacaOverhead::Init() {
         "baseline") {
       CacheBaselineLRU::Config configBaselineLRU;
       config = configBaselineLRU;
-      cacheType_ = CacheType::kBaselineLRU;
+      cacheTypes_[cacheName_] = CacheType::kBaselineLRU;
     } else if (props_->GetProperty(
                    PROP_CACHE_TYPE + "." + std::to_string(threadId_),
                    props_->GetProperty(PROP_CACHE_TYPE,
                                        PROP_CACHE_TYPE_DEFAULT)) == "holpaca") {
       CacheHolpacaLRU::Config configHolpacaLRU;
       config = configHolpacaLRU;
-      cacheType_ = CacheType::kHolpacaLRU;
+      cacheTypes_[cacheName_] = CacheType::kHolpacaLRU;
     } else {
       throw std::runtime_error("Unknown cachelib.type property");
     }
@@ -125,7 +126,7 @@ void CacheLibHolpacaOverhead::Init() {
                                 15 /* lock power */}); // assuming caching
                                                        // 20 million items
 
-          if (cacheType_ == CacheType::kHolpacaLRU) {
+          if (cacheTypes_[cacheName_] == CacheType::kHolpacaLRU) {
             auto &holpacaConfig =
                 static_cast<CacheHolpacaLRU::Config &>(config);
             auto address = props_->GetProperty(
@@ -203,10 +204,10 @@ void CacheLibHolpacaOverhead::Init() {
           config.validate(); // will throw if bad config
         },
         config);
-    if (cacheType_ == CacheType::kBaselineLRU) {
+    if (cacheTypes_[cacheName_] == CacheType::kBaselineLRU) {
       cache_ = std::make_shared<CacheBaselineLRU>(
           std::get<CacheBaselineLRU::Config>(config));
-    } else if (cacheType_ == CacheType::kHolpacaLRU) {
+    } else if (cacheTypes_[cacheName_] == CacheType::kHolpacaLRU) {
       cache_ = std::make_shared<CacheHolpacaLRU>(
           std::get<CacheHolpacaLRU::Config>(config));
     } else {
@@ -220,7 +221,6 @@ void CacheLibHolpacaOverhead::Init() {
 
   if (cachesPerThread_.find(threadId_) != cachesPerThread_.end()) {
     poolId_ = std::get<1>(cachesPerThread_.at(threadId_));
-    cacheType_ = std::get<2>(cachesPerThread_.at(threadId_));
     refCountPerCache_[cacheName_]--;
     return;
   }
@@ -239,8 +239,8 @@ void CacheLibHolpacaOverhead::Init() {
                               poolSize));
       },
       cache_);
-  cachesPerThread_.emplace(threadId_,
-                           std::make_tuple(cache_, poolId_, cacheType_));
+  cachesPerThread_.emplace(
+      threadId_, std::make_tuple(cache_, poolId_, cacheTypes_[cacheName_]));
 }
 
 DB::Status CacheLibHolpacaOverhead::Read(const std::string &table,

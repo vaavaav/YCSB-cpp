@@ -23,6 +23,7 @@ public:
 private:
   static std::mutex mutex_;
   static std::unordered_map<std::string, Cache> caches_;
+  static std::unordered_map<std::string, CacheType> cacheTypes_;
   static std::unordered_map<
       int, std::tuple<Cache, facebook::cachelib::PoolId, CacheType>>
       cachesPerThread_;
@@ -32,7 +33,6 @@ private:
   thread_local static Cache cache_;
   thread_local static int threadId_;
   thread_local static facebook::cachelib::PoolId poolId_;
-  thread_local static CacheType cacheType_;
   static std::unordered_map<int, std::pair<int, int>> missesAndHitsPerThread_;
   static std::unordered_map<int, std::pair<int, int>>
       previousMissesAndHitsPerThread_;

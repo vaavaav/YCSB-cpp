@@ -184,9 +184,9 @@ if __name__ == "__main__":
     ]:
         for setupTypeName, setupType in [
             ("tenants", configTenants),
-            ("instances", configInstances),
+            #            ("instances", configInstances),
         ]:
-            for threads in [1, 2, 4, 8, 16, 32, 64]:
+            for threads in [2]:  # [1, 2, 4, 8, 16, 32, 64]:
                 for setupName, setup in [
                     ("baseline", baseline),
                     #   ("holpaca", holpaca),
@@ -222,4 +222,4 @@ if __name__ == "__main__":
                             setup.out = os.path.join(
                                 outputDir, case, setupName, str(run + 1)
                             )
-                            setup.run(sifPath, binds=[sourceDir])
+                            setup.run(sifPath, binds=[sourceDir], rehearse=True)
