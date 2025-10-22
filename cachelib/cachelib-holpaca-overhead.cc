@@ -255,7 +255,7 @@ DB::Status CacheLibHolpacaOverhead::Read(const std::string &table,
                                          const std::vector<std::string> *fields,
                                          std::vector<Field> &result) {
   return std::visit(
-      [&table, &key, &fields, &result](auto &&cache) {
+      [&key](auto &&cache) {
         auto handle = cache->find(key);
         auto status = handle != nullptr ? kOK : kNotFound;
         auto &[misses, hits] = missesAndHitsPerThread_[threadId_];
