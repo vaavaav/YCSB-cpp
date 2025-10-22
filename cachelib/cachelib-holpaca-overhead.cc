@@ -56,7 +56,7 @@ namespace ycsbc {
 
 std::mutex CacheLibHolpacaOverhead::mutex_;
 thread_local facebook::cachelib::PoolId CacheLibHolpacaOverhead::poolId_;
-std::unordered_map<int, std::atomic<CacheLibHolpacaOverhead::missesAndHits>>
+std::unordered_map<int, std::pair<int, int>>
     CacheLibHolpacaOverhead::missesAndHitsPerThread_;
 std::unordered_map<int, std::pair<int, int>>
     CacheLibHolpacaOverhead::previousMissesAndHitsPerThread_;
@@ -69,7 +69,9 @@ std::unordered_map<std::string, int> CacheLibHolpacaOverhead::refCountPerCache_;
 thread_local std::string CacheLibHolpacaOverhead::cacheName_;
 thread_local CacheLibHolpacaOverhead::Cache CacheLibHolpacaOverhead::cache_;
 thread_local int CacheLibHolpacaOverhead::threadId_;
-thread_local static facebook::cachelib::PoolId poolId_;
+thread_local facebook::cachelib::PoolId poolId_;
+thread_local CacheLibHolpacaOverhead::CacheType
+    CacheLibHolpacaOverhead::cacheType_;
 
 void CacheLibHolpacaOverhead::Init() {
 
@@ -242,25 +244,16 @@ DB::Status CacheLibHolpacaOverhead::Read(const std::string &table,
                                          const std::string &key,
                                          const std::vector<std::string> *fields,
                                          std::vector<Field> &result) {
-  //  std::lock_guard<std::mutex> lock(mutex_);
   return std::visit(
       [&table, &key, &fields, &result](auto &&cache) {
         auto handle = cache->find(key);
         auto status = handle != nullptr ? kOK : kNotFound;
-        auto it = missesAndHitsPerThread_.find(threadId_);
-        if (it == missesAndHitsPerThread_.end()) {
-          it = missesAndHitsPerThread_
-                   .emplace(threadId_,
-                            CacheLibHolpacaOverhead::missesAndHits{0, 0})
-                   .first;
-        }
-        auto mah = it->second.load();
-        if (status == kNotFound) {
-          mah.misses++;
+        auto &[misses, hits] = missesAndHitsPerThread_[threadId_];
+        if (status == kOK) {
+          hits++;
         } else {
-          mah.hits++;
+          misses++;
         }
-        it->second.store(mah);
         if (handle != nullptr) {
           volatile auto data =
               std::string(reinterpret_cast<const char *>(handle->getMemory()),
@@ -286,7 +279,6 @@ CacheLibHolpacaOverhead::Scan(const std::string &table, const std::string &key,
 DB::Status CacheLibHolpacaOverhead::Update(const std::string &table,
                                            const std::string &key,
                                            std::vector<Field> &values) {
-  //  std::lock_guard<std::mutex> lock(mutex_);
   uint32_t size = values.front().value.size();
   std::string data = values.front().value;
   return std::visit(
@@ -306,7 +298,6 @@ DB::Status CacheLibHolpacaOverhead::Update(const std::string &table,
 DB::Status CacheLibHolpacaOverhead::Insert(const std::string &table,
                                            const std::string &key,
                                            std::vector<Field> &values) {
-  // std::lock_guard<std::mutex> lock(mutex_);
   uint32_t size = values.front().value.size();
   std::string data = values.front().value;
   return std::visit(
@@ -325,7 +316,6 @@ DB::Status CacheLibHolpacaOverhead::Insert(const std::string &table,
 
 DB::Status CacheLibHolpacaOverhead::Delete(const std::string &table,
                                            const std::string &key) {
-  std::lock_guard<std::mutex> lock(mutex_);
   auto key_ = key;
   // return cache_->remove(key_) == Cache::RemoveRes::kSuccess ? kOK :
   // kNotFound;
@@ -344,11 +334,16 @@ void CacheLibHolpacaOverhead::SetThreadId(int threadId) {
 void CacheLibHolpacaOverhead::Cleanup() {
   std::lock_guard<std::mutex> lock(mutex_);
   auto &[cache, poolId] = cachesPerThread_[threadId_];
-  std::visit([&](auto &&c) { c = nullptr; }, cache);
+  std::visit(
+      [&](auto &&c) {
+        c = nullptr;
+        if (auto ref = std::get_if<std::shared_ptr<CacheHolpacaLRU>>(&cache_);
+            ref) {
+          (*ref)->removePool(poolId);
+        }
+      },
+      cache);
 
-  if (std::holds_alternative<std::shared_ptr<CacheHolpacaLRU>>(cache_)) {
-    std::get<std::shared_ptr<CacheHolpacaLRU>>(cache_)->removePool(poolId_);
-  }
   if (refCountPerCache_[cacheName_] == 1) {
     refCountPerCache_.erase(cacheName_);
     caches_.erase(cacheName_);

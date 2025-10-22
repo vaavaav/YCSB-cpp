@@ -10,6 +10,8 @@ namespace ycsbc {
 
 class CacheLibHolpacaOverhead : public DB {
 
+  enum CacheType { kHolpacaLRU, kBaselineLRU };
+
 public:
   using CacheHolpacaLRU = facebook::cachelib::holpaca::LruAllocator;
   using CacheBaselineLRU = facebook::cachelib::LruAllocator;
@@ -24,18 +26,13 @@ private:
   static std::unordered_map<int, std::tuple<Cache, facebook::cachelib::PoolId>>
       cachesPerThread_;
 
-  struct missesAndHits {
-    int misses;
-    int hits;
-  };
-
   static std::unordered_map<std::string, int> refCountPerCache_;
   thread_local static std::string cacheName_;
   thread_local static Cache cache_;
   thread_local static int threadId_;
   thread_local static facebook::cachelib::PoolId poolId_;
-  static std::unordered_map<int, std::atomic<missesAndHits>>
-      missesAndHitsPerThread_;
+  thread_local static CacheType cacheType_;
+  static std::unordered_map<int, std::pair<int, int>> missesAndHitsPerThread_;
   static std::unordered_map<int, std::pair<int, int>>
       previousMissesAndHitsPerThread_;
 
@@ -87,34 +84,28 @@ public:
     if (std::visit([](auto &&c) { return c == nullptr; }, cache)) {
       return std::make_tuple("", "", 0, 0, 0, 0);
     }
-    if (std::holds_alternative<std::shared_ptr<CacheHolpacaLRU>>(cache)) {
-      auto c = std::get<std::shared_ptr<CacheHolpacaLRU>>(cache);
-      auto it = missesAndHitsPerThread_.find(i);
-      if (it == missesAndHitsPerThread_.end()) {
-        it = missesAndHitsPerThread_
-                 .emplace(i, CacheLibHolpacaOverhead::missesAndHits{0, 0})
-                 .first;
-      }
 
-      auto const accMissesAndHits = it->second.load();
-
-      int misses =
-          accMissesAndHits.misses - previousMissesAndHitsPerThread_[i].first;
-
-      int hits =
-          accMissesAndHits.hits - previousMissesAndHitsPerThread_[i].second;
-
-      c->registerMetrics(poolId, 0,
-                         (misses + hits == 0)
-                             ? 0
-                             : static_cast<double>(misses) / (misses + hits),
-                         hits + misses);
-
-      previousMissesAndHitsPerThread_[i].first = accMissesAndHits.misses;
-      previousMissesAndHitsPerThread_[i].second = accMissesAndHits.hits;
-    }
     return std::visit(
         [i, poolId](auto &&c) {
+          if (cacheType_ == CacheType::kHolpacaLRU) {
+            auto [misses, hits] = missesAndHitsPerThread_[i];
+            auto &[pmisses, phits] = previousMissesAndHitsPerThread_[i];
+
+            int const kMisses = misses - pmisses;
+            int const kHits = hits - phits;
+            pmisses = misses;
+            phits = hits;
+            if (auto ref =
+                    std::get_if<std::shared_ptr<CacheHolpacaLRU>>(&cache_);
+                ref) {
+              (*ref)->registerMetrics(poolId, 0,
+                                      (kMisses + kHits == 0)
+                                          ? 0
+                                          : static_cast<double>(kMisses) /
+                                                (kMisses + kHits),
+                                      kHits + kMisses);
+            }
+          }
           const auto &pool = c->getPool(poolId);
           auto cms = c->getCacheMemoryStats();
           return std::make_tuple(c->getCacheName(), c->getPoolName(poolId),
