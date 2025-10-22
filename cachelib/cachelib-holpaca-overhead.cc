@@ -215,7 +215,7 @@ void CacheLibHolpacaOverhead::Init() {
   previousMissesAndHitsPerThread_[threadId_] = {0, 0};
 
   if (cachesPerThread_.find(threadId_) != cachesPerThread_.end()) {
-    poolId_ = std::get<1>(cachesPerThread_[threadId_]);
+    poolId_ = std::get<1>(cachesPerThread_.at(threadId_));
     refCountPerCache_[cacheName_]--;
     return;
   }
@@ -234,8 +234,8 @@ void CacheLibHolpacaOverhead::Init() {
                               poolSize));
       },
       cache_);
-  cachesPerThread_[threadId_] =
-      std::make_tuple(cache_, CacheLibHolpacaOverhead::poolId_);
+  cachesPerThread_.emplace(
+      threadId_, std::make_tuple(cache_, CacheLibHolpacaOverhead::poolId_));
 }
 
 DB::Status CacheLibHolpacaOverhead::Read(const std::string &table,
