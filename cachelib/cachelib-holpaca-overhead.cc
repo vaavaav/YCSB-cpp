@@ -346,7 +346,6 @@ void CacheLibHolpacaOverhead::Cleanup() {
   auto &[cache, poolId] = cachesPerThread_[threadId_];
   if (cacheType_ == CacheType::kHolpacaLRU) {
     cache = static_cast<std::shared_ptr<CacheHolpacaLRU>>(nullptr);
-    std::get<std::shared_ptr<CacheHolpacaLRU>>(cache_)->removePool(poolId);
   } else {
     cache = static_cast<std::shared_ptr<CacheBaselineLRU>>(nullptr);
   }
