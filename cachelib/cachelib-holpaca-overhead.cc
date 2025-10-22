@@ -63,7 +63,8 @@ std::unordered_map<int, std::pair<int, int>>
 std::unordered_map<std::string, CacheLibHolpacaOverhead::Cache>
     CacheLibHolpacaOverhead::caches_;
 std::unordered_map<
-    int, std::tuple<CacheLibHolpacaOverhead::Cache, facebook::cachelib::PoolId>>
+    int, std::tuple<CacheLibHolpacaOverhead::Cache, facebook::cachelib::PoolId,
+                    CacheLibHolpacaOverhead::CacheType>>
     CacheLibHolpacaOverhead::cachesPerThread_;
 std::unordered_map<std::string, int> CacheLibHolpacaOverhead::refCountPerCache_;
 thread_local std::string CacheLibHolpacaOverhead::cacheName_;
@@ -210,6 +211,7 @@ void CacheLibHolpacaOverhead::Init() {
 
       cache_ = std::make_shared<CacheBaselineLRU>(
           std::get<CacheBaselineLRU::Config>(config));
+      cacheType_ = CacheType::kBaselineLRU;
 
     } else if (props_->GetProperty(
                    PROP_CACHE_TYPE + "." + std::to_string(threadId_),
@@ -217,6 +219,7 @@ void CacheLibHolpacaOverhead::Init() {
                                        PROP_CACHE_TYPE_DEFAULT)) == "holpaca") {
       cache_ = std::make_shared<CacheHolpacaLRU>(
           std::get<CacheHolpacaLRU::Config>(config));
+      cacheType_ = CacheType::kHolpacaLRU;
     } else {
       throw std::runtime_error("Unknown cachelib.type property");
     }
@@ -228,6 +231,7 @@ void CacheLibHolpacaOverhead::Init() {
 
   if (cachesPerThread_.find(threadId_) != cachesPerThread_.end()) {
     poolId_ = std::get<1>(cachesPerThread_.at(threadId_));
+    cacheType_ = std::get<2>(cachesPerThread_.at(threadId_));
     refCountPerCache_[cacheName_]--;
     return;
   }
@@ -246,8 +250,8 @@ void CacheLibHolpacaOverhead::Init() {
                               poolSize));
       },
       cache_);
-  cachesPerThread_.emplace(
-      threadId_, std::make_tuple(cache_, CacheLibHolpacaOverhead::poolId_));
+  cachesPerThread_.emplace(threadId_,
+                           std::make_tuple(cache_, poolId_, cacheType_));
 }
 
 DB::Status CacheLibHolpacaOverhead::Read(const std::string &table,
@@ -343,8 +347,8 @@ void CacheLibHolpacaOverhead::SetThreadId(int threadId) {
 
 void CacheLibHolpacaOverhead::Cleanup() {
   std::lock_guard<std::mutex> lock(mutex_);
-  auto &[cache, poolId] = cachesPerThread_[threadId_];
-  if (cacheType_ == CacheType::kHolpacaLRU) {
+  auto &[cache, poolId, cacheType] = cachesPerThread_[threadId_];
+  if (cacheType == CacheType::kHolpacaLRU) {
     cache = static_cast<std::shared_ptr<CacheHolpacaLRU>>(nullptr);
   } else {
     cache = static_cast<std::shared_ptr<CacheBaselineLRU>>(nullptr);

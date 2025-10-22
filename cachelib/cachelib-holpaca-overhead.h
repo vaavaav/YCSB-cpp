@@ -23,7 +23,8 @@ public:
 private:
   static std::mutex mutex_;
   static std::unordered_map<std::string, Cache> caches_;
-  static std::unordered_map<int, std::tuple<Cache, facebook::cachelib::PoolId>>
+  static std::unordered_map<
+      int, std::tuple<Cache, facebook::cachelib::PoolId, CacheType>>
       cachesPerThread_;
 
   static std::unordered_map<std::string, int> refCountPerCache_;
@@ -80,11 +81,11 @@ public:
     if (cachesPerThread_.find(i) == cachesPerThread_.end()) {
       return std::make_tuple("", "", 0, 0, 0, 0);
     }
-    auto [cache, poolId] = cachesPerThread_[i];
+    auto [cache, poolId, cacheType] = cachesPerThread_[i];
     if (std::visit([](auto &&c) { return c == nullptr; }, cache)) {
       return std::make_tuple("", "", 0, 0, 0, 0);
     }
-    if (cacheType_ == CacheType::kHolpacaLRU) {
+    if (cacheType == CacheType::kHolpacaLRU) {
       auto [misses, hits] = missesAndHitsPerThread_[i];
       auto &[pmisses, phits] = previousMissesAndHitsPerThread_[i];
 
