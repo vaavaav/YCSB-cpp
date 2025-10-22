@@ -344,17 +344,16 @@ void CacheLibHolpacaOverhead::SetThreadId(int threadId) {
 void CacheLibHolpacaOverhead::Cleanup() {
   std::lock_guard<std::mutex> lock(mutex_);
   auto &[cache, poolId] = cachesPerThread_[threadId_];
-  if (auto ref = std::get_if<std::shared_ptr<CacheHolpacaLRU>>(&cache_); ref) {
+  if (cacheType_ == CacheType::kHolpacaLRU) {
     cache = static_cast<std::shared_ptr<CacheHolpacaLRU>>(nullptr);
-    (*ref)->removePool(poolId);
+    std::get<std::shared_ptr<CacheHolpacaLRU>>(cache_)->removePool(poolId);
   } else {
     cache = static_cast<std::shared_ptr<CacheBaselineLRU>>(nullptr);
   }
-
   if (refCountPerCache_[cacheName_] == 1) {
     refCountPerCache_.erase(cacheName_);
     caches_.erase(cacheName_);
-    std::visit([&](auto &&c) { c.reset(); }, cache_);
+    std::visit([](auto &&cache) { cache.reset(); }, cache_);
   } else {
     refCountPerCache_[cacheName_]--;
   }
