@@ -175,13 +175,11 @@ DB::Status CacheLibOverhead::Read(const std::string &table,
                                   const std::vector<std::string> *fields,
                                   std::vector<Field> &result) {
   auto handle = cache_->find(key);
-  auto status = handle != nullptr ? kOK : kNotFound;
   if (handle != nullptr) {
-    volatile auto data = std::string(
-        reinterpret_cast<const char *>(handle->getMemory()), handle->getSize());
+    return kOK;
   }
 
-  return status;
+  return kNotFound;
 }
 
 DB::Status CacheLibOverhead::Scan(const std::string &table,
