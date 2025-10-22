@@ -38,6 +38,7 @@ class Setup:
     def __init__(
         self,
         name,
+        version,
         executable,
         config,
         with_controller=False,
@@ -46,6 +47,7 @@ class Setup:
         status=None,
     ):
         self.name = name
+        self.version = version
         self.config = config
         self.executable = executable
         self.with_controller = with_controller
@@ -57,7 +59,10 @@ class Setup:
         self.status = status
 
     def build_cmd(self):
-        return f"{self.executable} -load -run -db cachelib-holpaca-overhead {f'-s {self.status}' if self.status else ''} {' '.join(f'-p {k}={v}' for k, v in self.config.items())}"
+        if self.version not in ["cachelib-holpaca-overhead", "cachelib-overhead"]:
+            raise ValueError(f"Unsupported version: {self.version}")
+
+        return f"{self.executable} -load -run -db {self.version} {f'-s {self.status}' if self.status else ''} {' '.join(f'-p {k}={v}' for k, v in self.config.items())}"
 
     def run_controller(self, sifPath, binds=[], rehearse=False):
         if not os.path.exists(sifPath):

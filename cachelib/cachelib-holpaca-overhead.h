@@ -1,31 +1,22 @@
 #pragma once
 
-#include <atomic>
 #include <cachelib/holpaca/data-plane/CacheAllocator.h>
 #include <core/db.h>
 #include <unordered_map>
-#include <variant>
 
 namespace ycsbc {
 
 class CacheLibHolpacaOverhead : public DB {
 
-  enum CacheType { kHolpacaLRU, kBaselineLRU };
-
 public:
-  using CacheHolpacaLRU = facebook::cachelib::holpaca::LruAllocator;
-  using CacheBaselineLRU = facebook::cachelib::LruAllocator;
-  using Cache = std::variant<std::shared_ptr<CacheHolpacaLRU>,
-                             std::shared_ptr<CacheBaselineLRU>>;
-  using Config =
-      std::variant<CacheHolpacaLRU::Config, CacheBaselineLRU::Config>;
+  using CacheAllocator = facebook::cachelib::holpaca::LruAllocator;
+  using Cache = std::shared_ptr<CacheAllocator>;
+  using Config = CacheAllocator::Config;
 
 private:
   static std::mutex mutex_;
   static std::unordered_map<std::string, Cache> caches_;
-  static std::unordered_map<std::string, CacheType> cacheTypes_;
-  static std::unordered_map<
-      int, std::tuple<Cache, facebook::cachelib::PoolId, CacheType>>
+  static std::unordered_map<int, std::tuple<Cache, facebook::cachelib::PoolId>>
       cachesPerThread_;
 
   static std::unordered_map<std::string, int> refCountPerCache_;
@@ -78,41 +69,36 @@ public:
 
   std::tuple<std::string, std::string, uint64_t, uint64_t, uint64_t, uint64_t>
   OccupancyCapacityAndGlobal(int i) {
-    if (cachesPerThread_.find(i) == cachesPerThread_.end()) {
+    auto it = cachesPerThread_.find(i);
+    if (it == cachesPerThread_.end()) {
       return std::make_tuple("", "", 0, 0, 0, 0);
     }
-    auto [cache, poolId, cacheType] = cachesPerThread_[i];
-    if (std::visit([](auto &&c) { return c == nullptr; }, cache)) {
+    auto [cache, poolId] = it->second;
+    if (cache == nullptr) {
       return std::make_tuple("", "", 0, 0, 0, 0);
     }
-    if (cacheType == CacheType::kHolpacaLRU) {
-      auto [misses, hits] = missesAndHitsPerThread_[i];
-      auto &[pmisses, phits] = previousMissesAndHitsPerThread_[i];
+    auto [misses, hits] = missesAndHitsPerThread_[i];
+    auto &[pmisses, phits] = previousMissesAndHitsPerThread_[i];
 
-      int const kMisses = misses - pmisses;
-      int const kHits = hits - phits;
-      pmisses = misses;
-      phits = hits;
-      std::get<std::shared_ptr<CacheHolpacaLRU>>(cache)->registerMetrics(
-          poolId, 0,
-          (kMisses + kHits == 0)
-              ? 0
-              : static_cast<double>(kMisses) / (kMisses + kHits),
-          kHits + kMisses);
-    }
-    return std::visit(
-        [i, poolId](auto &&c) {
-          const auto &pool = c->getPool(poolId);
-          auto cms = c->getCacheMemoryStats();
-          return std::make_tuple(c->getCacheName(), c->getPoolName(poolId),
-                                 pool.getCurrentAllocSize(), pool.getPoolSize(),
-                                 cms.configuredRamCacheRegularSize -
-                                     cms.unReservedSize,
-                                 cms.configuredRamCacheRegularSize);
-        },
-        cache);
+    int const kMisses = misses - pmisses;
+    int const kHits = hits - phits;
+    pmisses = misses;
+    phits = hits;
+    cache->registerMetrics(poolId, 0,
+                           (kMisses + kHits == 0)
+                               ? 0
+                               : static_cast<double>(kMisses) /
+                                     (kMisses + kHits),
+                           kHits + kMisses);
+    const auto &pool = cache->getPool(poolId);
+    auto cms = cache->getCacheMemoryStats();
+    return std::make_tuple(cache->getCacheName(), cache->getPoolName(poolId),
+                           pool.getCurrentAllocSize(), pool.getPoolSize(),
+                           cms.configuredRamCacheRegularSize -
+                               cms.unReservedSize,
+                           cms.configuredRamCacheRegularSize);
   }
-}; // namespace ycsbc
+};
 
 DB *NewCacheLibHolpacaOverhead();
 
