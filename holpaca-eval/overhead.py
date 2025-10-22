@@ -13,56 +13,12 @@ KEYS = 2_000_000
 ITEMSIZE = 1_000
 OVERHEAD_MARGIN = 1.2
 
-MAXOPS = {
-    "readonly-tenants-1": 803222388,
-    "readonly-tenants-2": 288551269,
-    "readonly-tenants-4": 235916876,
-    "readonly-tenants-8": 172403555,
-    "readonly-tenants-16": 107081467,
-    "readonly-tenants-32": 53934992,
-    "readonly-tenants-64": 46656321,
-    "readonly-instances-1": 794525794,
-    "readonly-instances-2": 415926533,
-    "readonly-instances-4": 281486697,
-    "readonly-instances-8": 192452918,
-    "readonly-instances-16": 107220121,
-    "readonly-instances-32": 56139892,
-    "readonly-instances-64": 45162605,
-    "mixed-tenants-1": 277247741,
-    "mixed-tenants-2": 184073391,
-    "mixed-tenants-4": 165221719,
-    "mixed-tenants-8": 143927444,
-    "mixed-tenants-16": 104999242,
-    "mixed-tenants-32": 55158867,
-    "mixed-tenants-64": 48883347,
-    "mixed-instances-1": 281590745,
-    "mixed-instances-2": 213051135,
-    "mixed-instances-4": 185307122,
-    "mixed-instances-8": 159483595,
-    "mixed-instances-16": 105063448,
-    "mixed-instances-32": 58982595,
-    "mixed-instances-64": 49882208,
-    "writeheavy-tenants-1": 188169857,
-    "writeheavy-tenants-2": 136957792,
-    "writeheavy-tenants-4": 129692151,
-    "writeheavy-tenants-8": 116312833,
-    "writeheavy-tenants-16": 95153183,
-    "writeheavy-tenants-32": 54855094,
-    "writeheavy-tenants-64": 42622624,
-    "writeheavy-instances-1": 189963896,
-    "writeheavy-instances-2": 150743806,
-    "writeheavy-instances-4": 140593283,
-    "writeheavy-instances-8": 129830771,
-    "writeheavy-instances-16": 99474086,
-    "writeheavy-instances-32": 52859342,
-    "writeheavy-instances-64": 40671915,
-}
-
 
 def baseConfig(threads, maxops):
     return {
         "threadcount": threads,
-        "operationcount": maxops,
+        "operationcount": 100_000_000_000,
+        "maxexecutiontime": 600,  # 10 minutes
         "sleepafterload": 0,
         "recordcount": KEYS,
         **{f"request_key_prefix.{i}": f"p{i}" for i in range(threads)},
