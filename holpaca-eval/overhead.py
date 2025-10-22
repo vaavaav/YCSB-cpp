@@ -14,7 +14,7 @@ ITEMSIZE = 1_000
 OVERHEAD_MARGIN = 1.2
 
 
-def baseConfig(threads, maxops):
+def baseConfig(threads):
     return {
         "threadcount": threads,
         "operationcount": 100_000_000_000,
@@ -151,14 +151,13 @@ if __name__ == "__main__":
                 ]:
                     for run in range(runs):
                         case = f"{workload_name}-{setupTypeName}-{threads}"
-                        print(MAXOPS[case])
                         setup = copy.deepcopy(setup)
                         setup.status = (
                             "READ-PASSED READ-FAILED UPDATE-PASSED UPDATE-FAILED ALL"
                         )
                         setup.threads = threads
                         setup.config = {
-                            **baseConfig(threads, MAXOPS[case]),
+                            **baseConfig(threads),
                             **setupType(threads),
                             **workload(),
                             **setup.config,
