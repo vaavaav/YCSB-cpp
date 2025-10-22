@@ -190,11 +190,12 @@ if __name__ == "__main__":
                 for setupName, setup in [
                     ("baseline", baseline),
                     #   ("holpaca", holpaca),
-                    ("holpaca-cce", holpaca_cce),
+                    # ("holpaca-cce", holpaca_cce),
                     # ("holpaca-freq", holpaca),
                 ]:
                     for run in range(runs):
                         case = f"{workload_name}-{setupTypeName}-{threads}"
+                        print(MAXOPS[case])
                         setup = copy.deepcopy(setup)
                         setup.status = (
                             "READ-PASSED READ-FAILED UPDATE-PASSED UPDATE-FAILED ALL"

@@ -103,12 +103,14 @@ void CacheLibHolpacaOverhead::Init() {
         "baseline") {
       CacheBaselineLRU::Config configBaselineLRU;
       config = configBaselineLRU;
+      cacheType_ = CacheType::kBaselineLRU;
     } else if (props_->GetProperty(
                    PROP_CACHE_TYPE + "." + std::to_string(threadId_),
                    props_->GetProperty(PROP_CACHE_TYPE,
                                        PROP_CACHE_TYPE_DEFAULT)) == "holpaca") {
       CacheHolpacaLRU::Config configHolpacaLRU;
       config = configHolpacaLRU;
+      cacheType_ = CacheType::kHolpacaLRU;
     } else {
       throw std::runtime_error("Unknown cachelib.type property");
     }
@@ -123,10 +125,7 @@ void CacheLibHolpacaOverhead::Init() {
                                 15 /* lock power */}); // assuming caching
                                                        // 20 million items
 
-          if (props_->GetProperty(
-                  PROP_CACHE_TYPE + "." + std::to_string(threadId_),
-                  props_->GetProperty(PROP_CACHE_TYPE,
-                                      PROP_CACHE_TYPE_DEFAULT)) == "holpaca") {
+          if (cacheType_ == CacheType::kHolpacaLRU) {
             auto &holpacaConfig =
                 static_cast<CacheHolpacaLRU::Config &>(config);
             auto address = props_->GetProperty(
@@ -204,22 +203,12 @@ void CacheLibHolpacaOverhead::Init() {
           config.validate(); // will throw if bad config
         },
         config);
-    if (props_->GetProperty(
-            PROP_CACHE_TYPE + "." + std::to_string(threadId_),
-            props_->GetProperty(PROP_CACHE_TYPE, PROP_CACHE_TYPE_DEFAULT)) ==
-        "baseline") {
-
+    if (cacheType_ == CacheType::kBaselineLRU) {
       cache_ = std::make_shared<CacheBaselineLRU>(
           std::get<CacheBaselineLRU::Config>(config));
-      cacheType_ = CacheType::kBaselineLRU;
-
-    } else if (props_->GetProperty(
-                   PROP_CACHE_TYPE + "." + std::to_string(threadId_),
-                   props_->GetProperty(PROP_CACHE_TYPE,
-                                       PROP_CACHE_TYPE_DEFAULT)) == "holpaca") {
+    } else if (cacheType_ == CacheType::kHolpacaLRU) {
       cache_ = std::make_shared<CacheHolpacaLRU>(
           std::get<CacheHolpacaLRU::Config>(config));
-      cacheType_ = CacheType::kHolpacaLRU;
     } else {
       throw std::runtime_error("Unknown cachelib.type property");
     }
