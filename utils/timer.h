@@ -15,12 +15,9 @@ namespace ycsbc {
 
 namespace utils {
 
-template <typename R, typename P = std::ratio<1>>
-class Timer {
- public:
-  void Start() {
-    time_ = Clock::now();
-  }
+template <typename R, typename P = std::ratio<1>> class Timer {
+public:
+  void Start() { time_ = Clock::now(); }
 
   R End() {
     Duration span;
@@ -29,16 +26,15 @@ class Timer {
     return span.count();
   }
 
- private:
+private:
   using Duration = std::chrono::duration<R, P>;
-  using Clock = std::chrono::high_resolution_clock;
+  using Clock = std::chrono::steady_clock;
 
   Clock::time_point time_;
 };
 
-} // utils
+} // namespace utils
 
-} // ycsbc
+} // namespace ycsbc
 
 #endif // YCSB_C_TIMER_H_
-

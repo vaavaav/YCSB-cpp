@@ -39,10 +39,11 @@ void ClientThread(std::chrono::seconds sleepafterload,
 
     std::condition_variable cv;
     std::mutex m;
-    std::future<void> terminator;
+    std::thread terminator;
+
     if (maxexecutiontime > 0s) {
-      terminator = std::async(std::launch::async, ycsbc::TerminatorThread,
-                              maxexecutiontime, wl, std::ref(cv), std::ref(m));
+      terminator = std::thread(TerminatorThread, maxexecutiontime, wl,
+                               std::ref(cv), std::ref(m));
     }
 
     if (load) {
@@ -65,7 +66,7 @@ void ClientThread(std::chrono::seconds sleepafterload,
     }
 
     if (maxexecutiontime > 0s) {
-      terminator.wait();
+      terminator.join();
     }
 
   } catch (const utils::Exception &e) {

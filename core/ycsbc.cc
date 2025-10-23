@@ -70,9 +70,9 @@ void StatusThread(std::vector<ycsbc::Measurements *> *measurements,
                   std::chrono::seconds interval = 1s) {
   using namespace std::chrono;
 
-  auto start = high_resolution_clock::now();
+  auto start = steady_clock::now();
   while (1) {
-    auto now = high_resolution_clock::now();
+    auto now = steady_clock::now();
     auto elapsed_time = duration_cast<std::chrono::seconds>(now - start);
     std::stringstream msg;
 
@@ -258,7 +258,7 @@ int main(const int argc, const char *argv[]) {
     std::cout << "Run runtime(sec): " << runtime << std::endl;
     std::cout << "Run operations(ops): " << sum << std::endl
               << "Run throughput(ops/sec): " << sum / runtime << std::endl;
-    std::cout << gMeasurements->GetMean() << std::endl;
+    std::cout << gMeasurements->GetCDF() << std::endl;
 
     for (int i = 0; i < num_threads; i++) {
       delete dbs[i];
