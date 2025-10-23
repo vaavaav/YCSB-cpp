@@ -198,13 +198,12 @@ DB::Status CacheLibHolpacaOverhead::Read(const std::string &table,
                                          const std::vector<std::string> *fields,
                                          std::vector<Field> &result) {
   auto handle = cache_->find(key);
-  auto &[misses, hits] = missesAndHitsPerThread_[threadId_];
+  // auto &[misses, hits] = missesAndHitsPerThread_[threadId_];
   if (handle != nullptr) {
-    hits++;
-
+    // hits++;
     return kOK;
   }
-  misses++;
+  // misses++;
   return kNotFound;
 } // namespace ycsbc
 
