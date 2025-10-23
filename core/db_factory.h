@@ -19,15 +19,14 @@
 namespace ycsbc {
 
 class DBFactory {
- public:
-  using DBCreator = DB* (*)();
+public:
+  using DBCreator = DB *(*)(int);
   static bool RegisterDB(std::string db_name, DBCreator db_creator);
-  static DB* CreateDB(utils::Properties* props,
-                      Measurements* measurements,
-                      Measurements* gMeasurements);
+  static DB *CreateDB(utils::Properties *props, Measurements *measurements,
+                      Measurements *gMeasurements, int threadId);
 
- private:
-  static std::map<std::string, DBCreator>& Registry();
+private:
+  static std::map<std::string, DBCreator> &Registry();
 };
 
 } // namespace ycsbc

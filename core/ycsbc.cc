@@ -78,7 +78,7 @@ void StatusThread(std::vector<ycsbc::Measurements *> *measurements,
 
     for (long i = 0; i < measurements->size(); i++) {
       auto const &[cacheName, poolName, occ, cap, gOcc, gCap] =
-          (*dbs)[i]->OccupancyCapacityAndGlobal(i);
+          (*dbs)[i]->OccupancyCapacityAndGlobal();
       msg << elapsed_time.count() << " sec [T-" << i
           << "]: " << (*measurements)[i]->GetStatusMsg(*operations) << " ("
           << poolName << "@" << cacheName << ": " << occ << " / " << cap
@@ -125,7 +125,7 @@ int main(const int argc, const char *argv[]) {
       exit(1);
     }
     ycsbc::DB *db =
-        ycsbc::DBFactory::CreateDB(&props, measurements[i], gMeasurements);
+        ycsbc::DBFactory::CreateDB(&props, measurements[i], gMeasurements, i);
     if (db == nullptr) {
       std::cerr << "Unknown database name " << props["dbname"] << std::endl;
       exit(1);

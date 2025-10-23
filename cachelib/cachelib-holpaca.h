@@ -18,24 +18,23 @@ public:
 
 private:
   static std::mutex mutex_;
-  static std::unordered_map<std::string, RocksDB> rocksdbs_;
-  static std::unordered_map<std::string, std::shared_ptr<Cache>> caches_;
-  static std::unordered_map<
-      int, std::tuple<std::shared_ptr<Cache>, facebook::cachelib::PoolId>>
-      cachesPerThread_;
+  static std::unordered_map<std::string,
+                            std::tuple<RocksDB, std::shared_ptr<Cache>, int>>
+      rocksdbsAndCaches_;
 
-  static std::unordered_map<std::string, int> refCountPerCache_;
-  thread_local static std::string cacheName_;
-  thread_local static std::shared_ptr<Cache> cache_;
-  thread_local static RocksDB rocksdb_;
-  thread_local static int threadId_;
-  thread_local static facebook::cachelib::PoolId poolId_;
-  static std::unordered_map<int, int> rocksdbIOPSPerThread_;
-  static std::unordered_map<int, std::pair<int, int>> missesAndHitsPerThread_;
-  static std::unordered_map<int, std::pair<int, int>>
-      previousMissesAndHitsPerThread_;
+  int const threadId_;
+  std::shared_ptr<Cache> cache_ = nullptr;
+  std::string cacheName_;
+  std::string poolName_ = "";
+  facebook::cachelib::PoolId poolId_;
+  RocksDB rocksdb_;
+  std::pair<int, int> missesAndHits_{0, 0};
+  std::pair<int, int> previousMissesAndHits_{0, 0};
+  int rocksdbIOPS_ = 0;
 
 public:
+  explicit CacheLibHolpaca(int threadId) : threadId_(threadId) {}
+
   void Init();
 
   Status Read(const std::string &table, const std::string &key,
@@ -70,49 +69,42 @@ public:
   static void DeserializeRow(std::vector<Field> &values,
                              const std::string &data);
 
-  void SetThreadId(int threadId) override;
-
   void Cleanup() override;
 
   std::tuple<std::string, std::string, uint64_t, uint64_t, uint64_t, uint64_t>
-  OccupancyCapacityAndGlobal(int i) {
-    if (cachesPerThread_.find(i) == cachesPerThread_.end() ||
-        std::get<0>(cachesPerThread_[i]) == nullptr) {
+  OccupancyCapacityAndGlobal() {
+    if (cache_ == nullptr) {
       return std::make_tuple("", "", 0, 0, 0, 0);
     }
-    auto [cache, poolId] = cachesPerThread_[i];
-    auto value = std::visit(
-        [i, poolId](auto &&c) {
-          auto accMissesAndHits = missesAndHitsPerThread_[i];
+    return std::visit(
+        [&](auto &&c) {
+          auto [misses, hits] = missesAndHits_;
+          auto &[pmisses, phits] = previousMissesAndHits_;
 
-          int misses = missesAndHitsPerThread_[i].first -
-                       previousMissesAndHitsPerThread_[i].first;
-
-          int hits = missesAndHitsPerThread_[i].second -
-                     previousMissesAndHitsPerThread_[i].second;
-
-          c.registerMetrics(poolId, rocksdbIOPSPerThread_[i],
-                            (misses + hits == 0)
+          int const kMisses = misses - pmisses;
+          int const kHits = hits - phits;
+          pmisses = misses;
+          phits = hits;
+          c.registerMetrics(poolId_, rocksdbIOPS_,
+                            (kMisses + kHits == 0)
                                 ? 0
-                                : static_cast<double>(misses) / (misses + hits),
-                            hits + misses);
+                                : static_cast<double>(kMisses) /
+                                      (kMisses + kHits),
+                            kHits + kMisses);
 
-          previousMissesAndHitsPerThread_[i] = accMissesAndHits;
-
-          const auto &pool = c.getPool(poolId);
+          rocksdbIOPS_ = 0;
+          const auto &pool = c.getPool(poolId_);
           auto cms = c.getCacheMemoryStats();
-          return std::make_tuple(c.getCacheName(), c.getPoolName(poolId),
+          return std::make_tuple(cacheName_, poolName_,
                                  pool.getCurrentAllocSize(), pool.getPoolSize(),
                                  cms.configuredRamCacheRegularSize -
                                      cms.unReservedSize,
                                  cms.configuredRamCacheRegularSize);
         },
-        *cache);
-    rocksdbIOPSPerThread_[i] = 0;
-    return value;
+        *cache_);
   }
-};
+}; // namespace ycsbc
 
-DB *NewCacheLibHolpaca();
+DB *NewCacheLibHolpaca(int threadId);
 
 } // namespace ycsbc

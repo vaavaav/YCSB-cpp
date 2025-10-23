@@ -117,11 +117,9 @@ public:
     return s;
   }
 
-  void SetThreadId(int id) { db_->SetThreadId(id); }
-
   std::tuple<std::string, std::string, uint64_t, uint64_t, uint64_t, uint64_t>
-  OccupancyCapacityAndGlobal(int i) {
-    return db_->OccupancyCapacityAndGlobal(i);
+  OccupancyCapacityAndGlobal() {
+    return db_->OccupancyCapacityAndGlobal();
   }
 
 private:

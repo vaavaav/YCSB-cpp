@@ -45,42 +45,24 @@ const std::string PROP_POOL_REBALANCER_SLABS_DEFAULT = "1";
 namespace ycsbc {
 
 std::mutex CacheLibOverhead::mutex_;
-thread_local facebook::cachelib::PoolId CacheLibOverhead::poolId_;
-std::unordered_map<int, std::pair<int, int>>
-    CacheLibOverhead::missesAndHitsPerThread_;
-std::unordered_map<int, std::pair<int, int>>
-    CacheLibOverhead::previousMissesAndHitsPerThread_;
-std::unordered_map<std::string, CacheLibOverhead::Cache>
+std::unordered_map<std::string, std::pair<CacheLibOverhead::Cache, int>>
     CacheLibOverhead::caches_;
-std::unordered_map<
-    int, std::tuple<CacheLibOverhead::Cache, facebook::cachelib::PoolId>>
-    CacheLibOverhead::cachesPerThread_;
-std::unordered_map<std::string, int> CacheLibOverhead::refCountPerCache_;
-thread_local std::string CacheLibOverhead::cacheName_;
-thread_local CacheLibOverhead::Cache CacheLibOverhead::cache_;
-thread_local int CacheLibOverhead::threadId_;
 
 void CacheLibOverhead::Init() {
 
   std::lock_guard<std::mutex> lock(mutex_);
 
-  if (missesAndHitsPerThread_.empty()) {
-    auto kThreads = std::stoi(props_->GetProperty("threadcount", "1"));
-    missesAndHitsPerThread_.reserve(kThreads);
-    previousMissesAndHitsPerThread_.reserve(kThreads);
-    caches_.reserve(kThreads);
-    cachesPerThread_.reserve(kThreads);
-    refCountPerCache_.reserve(kThreads);
+  if (caches_.empty()) {
+    caches_.reserve(std::stoi(props_->GetProperty("threadcount", "1")));
   }
 
-  cacheName_ = props_->GetProperty(
+  auto const cacheName_ = props_->GetProperty(
       PROP_CACHE_NAME + "." + std::to_string(threadId_),
       props_->GetProperty(PROP_CACHE_NAME, PROP_CACHE_NAME_DEFAULT));
 
   if (auto it = caches_.find(cacheName_); it != caches_.end()) {
-    // already initialized (two threads can point to the same cache)
-    cache_ = it->second;
-    refCountPerCache_[cacheName_]++;
+    cache_ = it->second.first;
+    ++it->second.second;
   } else {
     Config config;
     config
@@ -146,28 +128,22 @@ void CacheLibOverhead::Init() {
     }
     config.validate(); // will throw if bad config
     cache_ = std::make_shared<CacheLibOverhead::CacheAllocator>(config);
-    caches_[cacheName_] = cache_;
-    refCountPerCache_[cacheName_] = 1;
-  }
-  missesAndHitsPerThread_[threadId_] = {0, 0};
-  previousMissesAndHitsPerThread_[threadId_] = {0, 0};
-
-  if (cachesPerThread_.find(threadId_) != cachesPerThread_.end()) {
-    poolId_ = std::get<1>(cachesPerThread_.at(threadId_));
-    refCountPerCache_[cacheName_]--;
-    return;
+    caches_[cacheName_] = {cache_, 1};
   }
 
-  std::string poolName = props_->GetProperty(
-      PROP_POOL_NAME + "." + std::to_string(threadId_),
-      props_->GetProperty(PROP_POOL_NAME, PROP_POOL_NAME_DEFAULT));
-  auto poolSize = std::stod(props_->GetProperty(
-      PROP_POOL_SIZE + "." + std::to_string(threadId_),
-      props_->GetProperty(PROP_POOL_SIZE, PROP_POOL_SIZE_DEFAULT)));
-  CacheLibOverhead::poolId_ = cache_->addPool(
-      poolName,
-      static_cast<long>(cache_->getCacheMemoryStats().ramCacheSize * poolSize));
-  cachesPerThread_.emplace(threadId_, std::make_tuple(cache_, poolId_));
+  if (poolName_.empty()) {
+
+    poolName_ = props_->GetProperty(
+        PROP_POOL_NAME + "." + std::to_string(threadId_),
+        props_->GetProperty(PROP_POOL_NAME, PROP_POOL_NAME_DEFAULT));
+    auto poolSize = std::stod(props_->GetProperty(
+        PROP_POOL_SIZE + "." + std::to_string(threadId_),
+        props_->GetProperty(PROP_POOL_SIZE, PROP_POOL_SIZE_DEFAULT)));
+
+    poolId_ = cache_->addPool(
+        poolName_, static_cast<long>(
+                       cache_->getCacheMemoryStats().ramCacheSize * poolSize));
+  }
 }
 
 DB::Status CacheLibOverhead::Read(const std::string &table,
@@ -200,7 +176,11 @@ DB::Status CacheLibOverhead::Update(const std::string &table,
   auto new_handle = cache_->allocate(poolId_, key, size);
   if (new_handle) {
     std::memcpy(new_handle->getMemory(), data.data(), size);
-    cache_->insertOrReplace(new_handle);
+    auto oldHandle = cache_->insertOrReplace(new_handle);
+    if (oldHandle == nullptr) {
+      std::cerr << "First time insert in update for key: " << key << std::endl;
+      std::abort();
+    }
     return kOK;
   }
   std::cerr << "Failed to allocate memory for key: " << key << std::endl;
@@ -215,7 +195,11 @@ DB::Status CacheLibOverhead::Insert(const std::string &table,
   auto new_handle = cache_->allocate(poolId_, key, size);
   if (new_handle) {
     std::memcpy(new_handle->getMemory(), data.data(), size);
-    cache_->insert(new_handle);
+    auto success = cache_->insert(new_handle);
+    if (!success) {
+      std::cerr << "Failed to insert key: " << key << std::endl;
+      std::abort();
+    }
     return kOK;
   }
   std::cerr << "Failed to allocate memory for key: " << key << std::endl;
@@ -230,28 +214,19 @@ DB::Status CacheLibOverhead::Delete(const std::string &table,
   return kOK;
 }
 
-DB *NewCacheLibOverhead() { return new CacheLibOverhead(); }
+DB *NewCacheLibOverhead(int threadId) { return new CacheLibOverhead(threadId); }
 
 const bool registered =
     DBFactory::RegisterDB("cachelib-overhead", NewCacheLibOverhead);
 
-void CacheLibOverhead::SetThreadId(int threadId) { threadId_ = threadId; }
-
 void CacheLibOverhead::Cleanup() {
   std::lock_guard<std::mutex> lock(mutex_);
-  auto &[cache, poolId] = cachesPerThread_[threadId_];
-  cache = nullptr;
-  if (refCountPerCache_[cacheName_] == 1) {
-    refCountPerCache_.erase(cacheName_);
+  cache_ = nullptr;
+  auto &[_, refCount] = caches_[cacheName_];
+  if (refCount == 1) {
     caches_.erase(cacheName_);
-    cache_.reset();
   } else {
-    refCountPerCache_[cacheName_]--;
-  }
-
-  if (refCountPerCache_.empty()) {
-    caches_.clear();
-    cachesPerThread_.clear();
+    --refCount;
   }
 }
 

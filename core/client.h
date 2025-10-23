@@ -29,8 +29,6 @@ void ClientThread(std::chrono::seconds sleepafterload,
                   ycsbc::DB *db, ycsbc::CoreWorkload *wl, const long num_ops,
                   bool load, bool cleanup_db) {
   try {
-    db->SetThreadId(threadId);
-
     if (sleepafterload > 0s) {
       std::this_thread::sleep_for(sleepafterload);
     }

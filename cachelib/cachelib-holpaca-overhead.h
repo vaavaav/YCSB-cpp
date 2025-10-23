@@ -15,20 +15,19 @@ public:
 
 private:
   static std::mutex mutex_;
-  static std::unordered_map<std::string, Cache> caches_;
-  static std::unordered_map<int, std::tuple<Cache, facebook::cachelib::PoolId>>
-      cachesPerThread_;
+  static std::unordered_map<std::string, std::pair<Cache, int>> caches_;
 
-  static std::unordered_map<std::string, int> refCountPerCache_;
-  thread_local static std::string cacheName_;
-  thread_local static Cache cache_;
-  thread_local static int threadId_;
-  thread_local static facebook::cachelib::PoolId poolId_;
-  static std::unordered_map<int, std::pair<int, int>> missesAndHitsPerThread_;
-  static std::unordered_map<int, std::pair<int, int>>
-      previousMissesAndHitsPerThread_;
+  int const threadId_;
+  Cache cache_ = nullptr;
+  std::string cacheName_;
+  std::string poolName_ = "";
+  facebook::cachelib::PoolId poolId_;
+  std::pair<int, int> missesAndHits_{0, 0};
+  std::pair<int, int> previousMissesAndHits_{0, 0};
 
 public:
+  explicit CacheLibHolpacaOverhead(int threadId) : threadId_(threadId) {}
+
   void Init();
 
   Status Read(const std::string &table, const std::string &key,
@@ -63,43 +62,36 @@ public:
   static void DeserializeRow(std::vector<Field> &values,
                              const std::string &data);
 
-  void SetThreadId(int threadId) override;
-
   void Cleanup() override;
 
   std::tuple<std::string, std::string, uint64_t, uint64_t, uint64_t, uint64_t>
-  OccupancyCapacityAndGlobal(int i) {
-    auto it = cachesPerThread_.find(i);
-    if (it == cachesPerThread_.end()) {
+  OccupancyCapacityAndGlobal() {
+    if (cache_ == nullptr) {
       return std::make_tuple("", "", 0, 0, 0, 0);
     }
-    auto [cache, poolId] = it->second;
-    if (cache == nullptr) {
-      return std::make_tuple("", "", 0, 0, 0, 0);
-    }
-    auto [misses, hits] = missesAndHitsPerThread_[i];
-    auto &[pmisses, phits] = previousMissesAndHitsPerThread_[i];
+
+    auto [misses, hits] = missesAndHits_;
+    auto &[pmisses, phits] = previousMissesAndHits_;
 
     int const kMisses = misses - pmisses;
     int const kHits = hits - phits;
     pmisses = misses;
     phits = hits;
-    cache->registerMetrics(poolId, 0,
-                           (kMisses + kHits == 0)
-                               ? 0
-                               : static_cast<double>(kMisses) /
-                                     (kMisses + kHits),
-                           kHits + kMisses);
-    const auto &pool = cache->getPool(poolId);
-    auto cms = cache->getCacheMemoryStats();
-    return std::make_tuple(cache->getCacheName(), cache->getPoolName(poolId),
-                           pool.getCurrentAllocSize(), pool.getPoolSize(),
-                           cms.configuredRamCacheRegularSize -
-                               cms.unReservedSize,
-                           cms.configuredRamCacheRegularSize);
+    cache_->registerMetrics(poolId_, 0,
+                            (kMisses + kHits == 0)
+                                ? 0
+                                : static_cast<double>(kMisses) /
+                                      (kMisses + kHits),
+                            kHits + kMisses);
+    const auto &pool = cache_->getPool(poolId_);
+    auto cms = cache_->getCacheMemoryStats();
+    return std::make_tuple(
+        cacheName_, poolName_, pool.getCurrentAllocSize(), pool.getPoolSize(),
+        cms.configuredRamCacheRegularSize - cms.unReservedSize,
+        cms.configuredRamCacheRegularSize);
   }
 };
 
-DB *NewCacheLibHolpacaOverhead();
+DB *NewCacheLibHolpacaOverhead(int threadId);
 
 } // namespace ycsbc

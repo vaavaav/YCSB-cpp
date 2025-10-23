@@ -39,7 +39,7 @@ public:
   Status Delete(const std::string &table, const std::string &key);
 
   std::tuple<std::string, std::string, uint64_t, uint64_t, uint64_t, uint64_t>
-  OccupancyCapacityAndGlobal(int i) {
+  OccupancyCapacityAndGlobal() {
     return std::make_tuple("", "", 0, 0, 0, 0);
   }
 
@@ -47,7 +47,7 @@ private:
   static std::mutex mutex_;
 };
 
-DB *NewBasicDB();
+DB *NewBasicDB(int threadId);
 
 } // namespace ycsbc
 

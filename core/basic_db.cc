@@ -80,7 +80,7 @@ DB::Status BasicDB::Delete(const std::string &table, const std::string &key) {
   return kOK;
 }
 
-DB *NewBasicDB() { return new BasicDB; }
+DB *NewBasicDB(int ignored) { return new BasicDB; }
 
 const bool registered = DBFactory::RegisterDB("basic", NewBasicDB);
 

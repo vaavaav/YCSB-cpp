@@ -24,12 +24,12 @@ bool DBFactory::RegisterDB(std::string db_name, DBCreator db_creator) {
 }
 
 DB *DBFactory::CreateDB(utils::Properties *props, Measurements *measurements,
-                        Measurements *gMeasurements) {
+                        Measurements *gMeasurements, int threadId) {
   std::string db_name = props->GetProperty("dbname", "basic");
   DB *db = nullptr;
   std::map<std::string, DBCreator> &registry = Registry();
   if (registry.find(db_name) != registry.end()) {
-    DB *new_db = (*registry[db_name])();
+    DB *new_db = (*registry[db_name])(threadId);
     new_db->SetProps(props);
     db = new DBWrapper(new_db, measurements, gMeasurements);
   }

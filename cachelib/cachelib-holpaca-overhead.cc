@@ -51,43 +51,24 @@ const std::string PROP_POOL_REBALANCER_SLABS_DEFAULT = "1";
 namespace ycsbc {
 
 std::mutex CacheLibHolpacaOverhead::mutex_;
-thread_local facebook::cachelib::PoolId CacheLibHolpacaOverhead::poolId_;
-std::unordered_map<int, std::pair<int, int>>
-    CacheLibHolpacaOverhead::missesAndHitsPerThread_;
-std::unordered_map<int, std::pair<int, int>>
-    CacheLibHolpacaOverhead::previousMissesAndHitsPerThread_;
-std::unordered_map<std::string, CacheLibHolpacaOverhead::Cache>
+std::unordered_map<std::string, std::pair<CacheLibHolpacaOverhead::Cache, int>>
     CacheLibHolpacaOverhead::caches_;
-std::unordered_map<
-    int, std::tuple<CacheLibHolpacaOverhead::Cache, facebook::cachelib::PoolId>>
-    CacheLibHolpacaOverhead::cachesPerThread_;
-std::unordered_map<std::string, int> CacheLibHolpacaOverhead::refCountPerCache_;
-thread_local std::string CacheLibHolpacaOverhead::cacheName_;
-thread_local CacheLibHolpacaOverhead::Cache CacheLibHolpacaOverhead::cache_;
-thread_local int CacheLibHolpacaOverhead::threadId_;
-thread_local facebook::cachelib::PoolId poolId_;
 
 void CacheLibHolpacaOverhead::Init() {
 
   std::lock_guard<std::mutex> lock(mutex_);
 
-  if (missesAndHitsPerThread_.empty()) {
-    auto kThreads = std::stoi(props_->GetProperty("threadcount", "1"));
-    missesAndHitsPerThread_.reserve(kThreads);
-    previousMissesAndHitsPerThread_.reserve(kThreads);
-    caches_.reserve(kThreads);
-    cachesPerThread_.reserve(kThreads);
-    refCountPerCache_.reserve(kThreads);
+  if (caches_.empty()) {
+    caches_.reserve(std::stoi(props_->GetProperty("threadcount", "1")));
   }
 
-  cacheName_ = props_->GetProperty(
+  auto const cacheName_ = props_->GetProperty(
       PROP_CACHE_NAME + "." + std::to_string(threadId_),
       props_->GetProperty(PROP_CACHE_NAME, PROP_CACHE_NAME_DEFAULT));
 
   if (auto it = caches_.find(cacheName_); it != caches_.end()) {
-    // already initialized (two threads can point to the same cache)
-    cache_ = it->second;
-    refCountPerCache_[cacheName_]++;
+    cache_ = it->second.first;
+    ++it->second.second; // increment ref count
   } else {
     Config config;
     config
@@ -168,29 +149,22 @@ void CacheLibHolpacaOverhead::Init() {
     config.validate(); // will throw if bad config
 
     cache_ = std::make_shared<CacheLibHolpacaOverhead::CacheAllocator>(config);
-    caches_[cacheName_] = cache_;
-    refCountPerCache_[cacheName_] = 1;
-  }
-  missesAndHitsPerThread_[threadId_] = {0, 0};
-  previousMissesAndHitsPerThread_[threadId_] = {0, 0};
-
-  if (cachesPerThread_.find(threadId_) != cachesPerThread_.end()) {
-    poolId_ = std::get<1>(cachesPerThread_.at(threadId_));
-    refCountPerCache_[cacheName_]--;
-    return;
+    caches_[cacheName_] = {cache_, 1};
   }
 
-  std::string poolName = props_->GetProperty(
-      PROP_POOL_NAME + "." + std::to_string(threadId_),
-      props_->GetProperty(PROP_POOL_NAME, PROP_POOL_NAME_DEFAULT));
-  auto poolSize = std::stod(props_->GetProperty(
-      PROP_POOL_SIZE + "." + std::to_string(threadId_),
-      props_->GetProperty(PROP_POOL_SIZE, PROP_POOL_SIZE_DEFAULT)));
-  CacheLibHolpacaOverhead::poolId_ = cache_->addPool(
-      poolName,
-      static_cast<long>(cache_->getCacheMemoryStats().ramCacheSize * poolSize));
+  if (poolName_.empty()) {
 
-  cachesPerThread_.emplace(threadId_, std::make_tuple(cache_, poolId_));
+    poolName_ = props_->GetProperty(
+        PROP_POOL_NAME + "." + std::to_string(threadId_),
+        props_->GetProperty(PROP_POOL_NAME, PROP_POOL_NAME_DEFAULT));
+    auto poolSize = std::stod(props_->GetProperty(
+        PROP_POOL_SIZE + "." + std::to_string(threadId_),
+        props_->GetProperty(PROP_POOL_SIZE, PROP_POOL_SIZE_DEFAULT)));
+
+    poolId_ = cache_->addPool(
+        poolName_, static_cast<long>(
+                       cache_->getCacheMemoryStats().ramCacheSize * poolSize));
+  }
 }
 
 DB::Status CacheLibHolpacaOverhead::Read(const std::string &table,
@@ -255,30 +229,21 @@ DB::Status CacheLibHolpacaOverhead::Delete(const std::string &table,
   return kOK;
 }
 
-DB *NewCacheLibHolpacaOverhead() { return new CacheLibHolpacaOverhead(); }
+DB *NewCacheLibHolpacaOverhead(int threadId) {
+  return new CacheLibHolpacaOverhead(threadId);
+}
 
 const bool registered = DBFactory::RegisterDB("cachelib-holpaca-overhead",
                                               NewCacheLibHolpacaOverhead);
 
-void CacheLibHolpacaOverhead::SetThreadId(int threadId) {
-  threadId_ = threadId;
-}
-
 void CacheLibHolpacaOverhead::Cleanup() {
   std::lock_guard<std::mutex> lock(mutex_);
-  auto &[cache, poolId] = cachesPerThread_[threadId_];
-  cache = nullptr;
-  if (refCountPerCache_[cacheName_] == 1) {
-    refCountPerCache_.erase(cacheName_);
+  cache_ = nullptr;
+  auto &[_, refCount] = caches_[cacheName_];
+  if (refCount == 1) {
     caches_.erase(cacheName_);
-    cache_.reset();
   } else {
-    refCountPerCache_[cacheName_]--;
-  }
-
-  if (refCountPerCache_.empty()) {
-    caches_.clear();
-    cachesPerThread_.clear();
+    --refCount;
   }
 }
 

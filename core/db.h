@@ -97,13 +97,13 @@ public:
 
   //
   //
-  virtual std::tuple<std::string, std::string, uint64_t, uint64_t, uint64_t, uint64_t>
-  OccupancyCapacityAndGlobal(int i) = 0;
+  virtual std::tuple<std::string, std::string, uint64_t, uint64_t, uint64_t,
+                     uint64_t>
+  OccupancyCapacityAndGlobal() = 0;
 
   virtual ~DB() {}
 
   void SetProps(utils::Properties *props) { props_ = props; }
-  virtual void SetThreadId(int id) {}
 
 protected:
   utils::Properties *props_;

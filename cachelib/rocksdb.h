@@ -51,10 +51,10 @@ public:
                   std::vector<rocksdb::ColumnFamilyDescriptor> *cf_descs);
 
   std::tuple<std::string, std::string, uint64_t, uint64_t, uint64_t, uint64_t>
-  OccupancyCapacityAndGlobal(int i) {
+  OccupancyCapacityAndGlobal() {
     return std::make_tuple("", "", 0, 0, 0, 0);
   }
 };
 
-DB *NewRocksDB();
+DB *NewRocksDB(int threadId);
 } // namespace ycsbc
