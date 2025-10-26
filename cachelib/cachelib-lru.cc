@@ -122,7 +122,6 @@ void CacheLibLRU::Init() {
     }
     config.validate(); // will throw if bad config
     cache_ = std::make_shared<CacheLibLRU::CacheAllocator>(config);
-
     rocksdb_.SetProps(props_);
     rocksdb_.Init();
     rocksdbsAndCaches_[cacheName_] = std::make_tuple(rocksdb_, cache_, 1);
@@ -145,6 +144,7 @@ void CacheLibLRU::Init() {
             ? 0
             : static_cast<long>(cache_->getCacheMemoryStats().ramCacheSize *
                                 poolSize));
+    // now it's safe to set cache_
   }
 }
 
@@ -184,7 +184,6 @@ DB::Status CacheLibLRU::Scan(const std::string &table, const std::string &key,
                              long len, const std::vector<std::string> *fields,
                              std::vector<std::vector<Field>> &result) {
 
-  std::lock_guard<std::mutex> lock(mutex_);
   // TODO
 
   return kError;

@@ -164,7 +164,6 @@ void CacheLibHolpaca::Init() {
     }
     config.validate(); // will throw if bad config
     cache_ = std::make_shared<CacheLibHolpaca::CacheAllocator>(config);
-
     rocksdb_.SetProps(props_);
     rocksdb_.Init();
     rocksdbsAndCaches_[cacheName_] = std::make_tuple(rocksdb_, cache_, 1);
@@ -239,7 +238,6 @@ DB::Status CacheLibHolpaca::Scan(const std::string &table,
                                  const std::vector<std::string> *fields,
                                  std::vector<std::vector<Field>> &result) {
 
-  std::lock_guard<std::mutex> lock(mutex_);
   // TODO
 
   return kError;

@@ -197,7 +197,6 @@ DB::Status CacheLibLRU2Q::Scan(const std::string &table, const std::string &key,
                                long len, const std::vector<std::string> *fields,
                                std::vector<std::vector<Field>> &result) {
 
-  std::lock_guard<std::mutex> lock(mutex_);
   // TODO
 
   return kError;

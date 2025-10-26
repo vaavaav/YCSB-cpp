@@ -65,6 +65,7 @@ public:
 
   std::tuple<std::string, std::string, uint64_t, uint64_t, uint64_t, uint64_t>
   OccupancyCapacityAndGlobal() {
+    std::lock_guard<std::mutex> lock(mutex_);
     if (cache_ == nullptr) {
       return std::make_tuple("", "", 0, 0, 0, 0);
     }
