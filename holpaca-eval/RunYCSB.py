@@ -68,7 +68,7 @@ class Setup:
         self.out = {}
 
     def build_cmd(self, status=None):
-        return f"{self.executable} -run -db {version} {f'-s {status}' if status else ''} {' '.join(f'-p {k}={v}' for k, v in self.config.items())}"
+        return f"{self.executable} -run -db {self.version} {f'-s {status}' if status else ''} {' '.join(f'-p {k}={v}' for k, v in self.config.items())}"
 
 
 class Case:
