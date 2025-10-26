@@ -26,14 +26,21 @@ class Load:
         self.status = f"-s {status}" if status else ""
 
     def build_cmd(self):
-        return f"{self.executable} -load -db cachelib-holpaca {self.status} {' '.join(f'-p {k}={v}' for k, v in self.config.items())}"
+        return f"{self.executable} -load -db cachelib-lru {self.status} {' '.join(f'-p {k}={v}' for k, v in self.config.items())}"
 
 
 class Setup:
     def __init__(
-        self, name, executable, config, controller_exec=None, controller_args=None
+        self,
+        name,
+        version,
+        executable,
+        config,
+        controller_exec=None,
+        controller_args=None,
     ):
         self.name = name
+        self.version = version
         self.config = config
         self.executable = executable
         self.used_mem = getMem(
@@ -61,7 +68,7 @@ class Setup:
         self.out = {}
 
     def build_cmd(self, status=None):
-        return f"{self.executable} -run -db cachelib-holpaca {f'-s {status}' if status else ''} {' '.join(f'-p {k}={v}' for k, v in self.config.items())}"
+        return f"{self.executable} -run -db {version} {f'-s {status}' if status else ''} {' '.join(f'-p {k}={v}' for k, v in self.config.items())}"
 
 
 class Case:

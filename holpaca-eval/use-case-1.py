@@ -35,7 +35,6 @@ if __name__ == "__main__":
         # Cachelib
         "cachelib.size": 4_500_000_000,  # 4.5 GB
         "cachelib.name": "instance-0",
-        "cachelib.eviction": "lru",
         "cachelib.pool.relsize.0": 0.048,
         "cachelib.pool.relsize.1": 0.078,
         "cachelib.pool.relsize.2": 0.249,
@@ -78,21 +77,18 @@ if __name__ == "__main__":
 
     # Create Setup objects for different configurations
     setups = [
-        # Setup(
-        #     "baseline",
-        #     ycsb_executable,
-        #     {
-        #         **ycsb_config,
-        #         "cachelib.pooloptimizer": "off",
-        #         "cachelib.poolresizer": "off",
-        #     },
-        # ),
+        Setup(
+            "baseline",
+            "cachelib-lru",
+            ycsb_executable,
+            ycsb_config,
+        ),
         Setup(
             "optimized",
+            "cachelib-lru2q",
             ycsb_executable,
             {
                 **ycsb_config,
-                "cachelib.eviction": "2q",
                 "cachelib.pooloptimizer": "on",
                 "cachelib.poolresizer": "on",
                 "cachelib.poolresizer.milliseconds": 1000,
@@ -106,6 +102,7 @@ if __name__ == "__main__":
         ),
         Setup(
             "holpaca",
+            "cachelib-holpaca",
             ycsb_executable,
             {
                 **ycsb_config,

@@ -4,26 +4,23 @@
 #include <cachelib/holpaca/data-plane/CacheAllocator.h>
 #include <core/db.h>
 #include <unordered_map>
-#include <variant>
 
 namespace ycsbc {
 
 class CacheLibHolpaca : public DB {
 
 public:
-  using CacheLRU = facebook::cachelib::holpaca::LruAllocator;
-  using Cache2Q = facebook::cachelib::holpaca::Lru2QAllocator;
-  using Cache = std::variant<CacheLRU, Cache2Q>;
-  using Config = std::variant<CacheLRU::Config, Cache2Q::Config>;
+  using CacheAllocator = facebook::cachelib::holpaca::LruAllocator;
+  using Cache = std::shared_ptr<CacheAllocator>;
+  using Config = CacheAllocator::Config;
 
 private:
   static std::mutex mutex_;
-  static std::unordered_map<std::string,
-                            std::tuple<RocksDB, std::shared_ptr<Cache>, int>>
+  static std::unordered_map<std::string, std::tuple<RocksDB, Cache, int>>
       rocksdbsAndCaches_;
 
   int const threadId_;
-  std::shared_ptr<Cache> cache_ = nullptr;
+  Cache cache_ = nullptr;
   std::string cacheName_;
   std::string poolName_ = "";
   facebook::cachelib::PoolId poolId_;
@@ -76,34 +73,29 @@ public:
     if (cache_ == nullptr) {
       return std::make_tuple("", "", 0, 0, 0, 0);
     }
-    return std::visit(
-        [&](auto &&c) {
-          auto [misses, hits] = missesAndHits_;
-          auto &[pmisses, phits] = previousMissesAndHits_;
+    auto [misses, hits] = missesAndHits_;
+    auto &[pmisses, phits] = previousMissesAndHits_;
 
-          int const kMisses = misses - pmisses;
-          int const kHits = hits - phits;
-          pmisses = misses;
-          phits = hits;
-          c.registerMetrics(poolId_, rocksdbIOPS_,
+    int const kMisses = misses - pmisses;
+    int const kHits = hits - phits;
+    pmisses = misses;
+    phits = hits;
+    cache_->registerMetrics(poolId_, rocksdbIOPS_,
                             (kMisses + kHits == 0)
                                 ? 0
                                 : static_cast<double>(kMisses) /
                                       (kMisses + kHits),
                             kHits + kMisses);
 
-          rocksdbIOPS_ = 0;
-          const auto &pool = c.getPool(poolId_);
-          auto cms = c.getCacheMemoryStats();
-          return std::make_tuple(cacheName_, poolName_,
-                                 pool.getCurrentAllocSize(), pool.getPoolSize(),
-                                 cms.configuredRamCacheRegularSize -
-                                     cms.unReservedSize,
-                                 cms.configuredRamCacheRegularSize);
-        },
-        *cache_);
+    rocksdbIOPS_ = 0;
+    const auto &pool = cache_->getPool(poolId_);
+    auto cms = cache_->getCacheMemoryStats();
+    return std::make_tuple(
+        cacheName_, poolName_, pool.getCurrentAllocSize(), pool.getPoolSize(),
+        cms.configuredRamCacheRegularSize - cms.unReservedSize,
+        cms.configuredRamCacheRegularSize);
   }
-}; // namespace ycsbc
+};
 
 DB *NewCacheLibHolpaca(int threadId);
 

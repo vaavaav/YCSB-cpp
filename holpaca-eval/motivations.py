@@ -44,7 +44,6 @@ if __name__ == "__main__":
         "maxexecutiontime": maxexecutiontime,
         "cachelib.size": 2_000_000_000 * threads,
         "cachelib.name": "instance-0",
-        "cachelib.eviction": "lru",
         "cachelib.pool.relsize": 1 / threads,
         **{f"cachelib.pool.name.{i}": f"p{i}" for i in range(threads)},
         **{f"request_key_prefix.{i}": f"p{i}" for i in range(threads)},
@@ -82,20 +81,16 @@ if __name__ == "__main__":
     setups_motivation_1 = [
         Setup(
             "baseline",
+            "cachelib-lru",
             ycsb_executable,
-            {
-                **ycsb_config_motivation_1,
-                "cachelib.pooloptimizer": "off",
-                "cachelib.poolresizer": "off",
-                "cachelib.poolrebalancer": "off",
-            },
+            ycsb_config_motivation_1,
         ),
         Setup(
             "custom",
+            "cachelib-holpaca",
             ycsb_executable,
             {
                 **ycsb_config_motivation_1,
-                "cachelib.pooloptimizer": "off",
                 "cachelib.poolresizer": "off",
                 "cachelib.poolrebalancer": "off",
                 "cachelib.pool.proportion.0": 0.91,
@@ -110,10 +105,10 @@ if __name__ == "__main__":
         ),
         Setup(
             "optimized",
+            "cachelib-lru2q",
             ycsb_executable,
             {
                 **ycsb_config_motivation_1,
-                "cachelib.eviction": "2q",
                 "cachelib.pooloptimizer": "on",
                 "cachelib.poolresizer": "on",
                 "cachelib.poolrebalancer": "off",
@@ -147,6 +142,7 @@ if __name__ == "__main__":
     setups_motivation_2 = [
         Setup(
             "custom",
+            "cachelib-holpaca",
             ycsb_executable,
             {
                 **ycsb_config_motivation_2,
@@ -168,10 +164,10 @@ if __name__ == "__main__":
         ),
         Setup(
             "optimized",
+            "cachelib-lru2q",
             ycsb_executable,
             {
                 **ycsb_config_motivation_2,
-                "cachelib.eviction": "2q",
                 "cachelib.poolrebalancer": "off",
                 "cachelib.pooloptimizer": "on",
                 "cachelib.poolresizer": "on",
@@ -207,15 +203,20 @@ if __name__ == "__main__":
     )
 
     setups_motivation_3 = [
-        #           Setup('optimized', ycsb_executable, {
-        #               **ycsb_config_motivation_3,
-        #               'cachelib.eviction': '2q',
-        #               'cachelib.pooloptimizer': 'on',
-        #               'cachelib.poolresizer': 'on',
-        #               'cachelib.poolrebalancer': 'off',
-        #               }),
+        Setup(
+            "optimized",
+            "cachelib-lru2q",
+            ycsb_executable,
+            {
+                **ycsb_config_motivation_3,
+                "cachelib.pooloptimizer": "on",
+                "cachelib.poolresizer": "on",
+                "cachelib.poolrebalancer": "off",
+            },
+        ),
         Setup(
             "custom",
+            "cachelib-holpaca",
             ycsb_executable,
             {
                 **ycsb_config_motivation_3,
@@ -240,7 +241,7 @@ if __name__ == "__main__":
                 sourceDir, "opt/ycsb/bin/cachelib_holpaca_controller"
             ),
             controller_args="Motivation 1000",
-        )
+        ),
     ]
 
     ## Cases

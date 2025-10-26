@@ -32,7 +32,6 @@ if __name__ == "__main__":
         "status.interval": 1,
         "sleepafterload": 0,
         **{f"cachelib.name.{i}": f"instance-{i}" for i in range(len(traces))},
-        "cachelib.eviction": "lru",
         "cachelib.pool.relsize": 1,
         **{f"request_key_prefix.{i}": f"p{i}" for i in range(len(traces))},
         **{f"cachelib.pool.name.{i}": f"p{i}" for i in range(len(traces))},
@@ -92,6 +91,7 @@ if __name__ == "__main__":
     setups = [
         Setup(
             "holpaca-V1",
+            "cachelib-holpaca",
             ycsb_executable,
             {
                 **holpaca_config,
@@ -107,6 +107,7 @@ if __name__ == "__main__":
         ),
         Setup(
             "holpaca-V2",
+            "cachelib-holpaca",
             ycsb_executable,
             {
                 **holpaca_config,
@@ -123,6 +124,7 @@ if __name__ == "__main__":
         Setup(
             "holpaca-V3",
             ycsb_executable,
+            "cachelib-holpaca",
             {
                 **holpaca_config,
                 "cachelib.pool.qos.0": 5_000.0,
