@@ -114,6 +114,21 @@ if __name__ == "__main__":
                 "cachelib.poolrebalancer": "off",
             },
         ),
+        Setup(
+            "holpaca",
+            "cachelib-holpaca",
+            ycsb_executable,
+            {
+                **ycsb_config_motivation_1,
+                "cachelib.poolresizer": "on",
+                "cachelib.poolresizer.milliseconds": 1000,
+                "cachelib.poolresizer.slabs": 1000,
+            },
+            controller_exec=os.path.join(
+                sourceDir, "opt/ycsb/bin/cachelib_holpaca_controller"
+            ),
+            controller_args="ThroughputMaximization 1000:0.01",
+        ),
     ]
 
     ycsb_config_motivation_2 = {
@@ -150,7 +165,7 @@ if __name__ == "__main__":
                 "cachelib.pooloptimizer": "off",
                 "cachelib.poolresizer": "on",
                 "cachelib.poolresizer.milliseconds": 1000,
-                "cachelib.poolresizer.slabs": 100,
+                "cachelib.poolresizer.slabs": 1000,
                 "cachelib.pool.noinitialsize": "on",
                 "cachelib.pool.proportion.0": 0.91,
                 "cachelib.pool.proportion.1": 0.03,
@@ -174,6 +189,22 @@ if __name__ == "__main__":
                 "cachelib.poolresizer.milliseconds": 1000,
                 "cachelib.poolresizer.slabs": 1000,
             },
+        ),
+        Setup(
+            "holpaca",
+            "cachelib-holpaca",
+            ycsb_executable,
+            {
+                **ycsb_config_motivation_2,
+                "cachelib.poolresizer": "on",
+                "cachelib.poolresizer.milliseconds": 1000,
+                "cachelib.poolresizer.slabs": 1000,
+                "cachelib.pool.noinitialsize": "on",
+            },
+            controller_exec=os.path.join(
+                sourceDir, "opt/ycsb/bin/cachelib_holpaca_controller"
+            ),
+            controller_args="ThroughputMaximization 1000:0.01",
         ),
     ]
 
@@ -241,6 +272,24 @@ if __name__ == "__main__":
                 sourceDir, "opt/ycsb/bin/cachelib_holpaca_controller"
             ),
             controller_args="Motivation 1000",
+        ),
+        Setup(
+            "holpaca",
+            "cachelib-holpaca",
+            ycsb_executable,
+            {
+                **ycsb_config_motivation_2,
+                "cachelib.size": 10_000_000_000,
+                "cachelib.virtualsize": 2_000_000_000,
+                "cachelib.pool.noinitialsize": "on",
+                "cachelib.poolresizer": "on",
+                "cachelib.poolresizer.milliseconds": 1000,
+                "cachelib.poolresizer.slabs": 1000,
+            },
+            controller_exec=os.path.join(
+                sourceDir, "opt/ycsb/bin/cachelib_holpaca_controller"
+            ),
+            controller_args="ThroughputMaximization 1000:0.01",
         ),
     ]
 
