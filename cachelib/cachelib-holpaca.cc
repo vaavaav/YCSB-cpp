@@ -258,9 +258,9 @@ DB::Status CacheLibHolpaca::Update(const std::string &table,
         cache_->insertOrReplace(new_handle);
         return kOK;
       }
-      return kError;
+    } else {
+      return kOK;
     }
-    return kOK;
   }
   return kError;
 }
@@ -280,9 +280,9 @@ DB::Status CacheLibHolpaca::Insert(const std::string &table,
         cache_->insertOrReplace(new_handle);
         return kOK;
       }
-      return kError;
+    } else {
+      return kOK;
     }
-    return kOK;
   }
   return kError;
 }

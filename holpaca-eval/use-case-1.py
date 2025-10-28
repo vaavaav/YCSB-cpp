@@ -28,6 +28,7 @@ if __name__ == "__main__":
 
     ycsb_config = {
         "threadcount": threads,
+        "cleanupafterload": "true",
         "maxexecutiontime": maxexecutiontime,
         "status.interval": 1,
         "operationcount": 1_000_000_000_000,

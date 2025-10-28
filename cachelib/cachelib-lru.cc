@@ -164,9 +164,6 @@ DB::Status CacheLibLRU::Read(const std::string &table, const std::string &key,
         }
         cache_->insertOrReplace(new_handle);
       } else {
-        //              std::cerr << "Failed to allocate memory for key: "
-        //              << key
-        //                        << std::endl;
         return kError;
       }
     } else {
@@ -203,9 +200,9 @@ DB::Status CacheLibLRU::Update(const std::string &table, const std::string &key,
         cache_->insertOrReplace(new_handle);
         return kOK;
       }
-      return kError;
+    } else {
+      return kOK;
     }
-    return kOK;
   }
   return kError;
 }
@@ -224,9 +221,9 @@ DB::Status CacheLibLRU::Insert(const std::string &table, const std::string &key,
         cache_->insertOrReplace(new_handle);
         return kOK;
       }
-      return kError;
+    } else {
+      return kOK;
     }
-    return kOK;
   }
   return kError;
 }

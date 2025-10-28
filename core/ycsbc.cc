@@ -58,6 +58,9 @@ static const std::string SLEEP_AFTER_LOAD_DEFAULT = "0";
 static const std::string MAX_EXECUTION_TIME_PROPERTY = "maxexecutiontime";
 static const std::string MAX_EXECUTION_TIME_DEFAULT = "0";
 
+static const std::string CLEANUP_AFTER_LOAD_PROPERTY = "cleanupafterload";
+static const std::string CLEANUP_AFTER_LOAD_DEFAULT = "false";
+
 void UsageMessage(const char *command);
 bool StrStartWith(const char *str, const char *pre);
 void ParseCommandLine(int argc, const char *argv[],
@@ -175,9 +178,15 @@ int main(const int argc, const char *argv[]) {
           ycsbc::CoreWorkload::RECORD_COUNT_PROPERTY + "." + std::to_string(i),
           props.GetProperty(ycsbc::CoreWorkload::RECORD_COUNT_PROPERTY, "0")));
 
+      const bool cleanup_after_load =
+          (props.GetProperty(
+               CLEANUP_AFTER_LOAD_PROPERTY + "." + std::to_string(i),
+               props.GetProperty(CLEANUP_AFTER_LOAD_PROPERTY,
+                                 CLEANUP_AFTER_LOAD_DEFAULT)) == "true");
+
       client_threads.emplace_back(std::thread(ycsbc::ClientThread, 0s, 0s, i,
                                               dbs[i], wls[i], thread_ops, true,
-                                              false));
+                                              cleanup_after_load));
     }
     assert((int)client_threads.size() == num_threads);
 

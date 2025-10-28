@@ -25,6 +25,7 @@ if __name__ == "__main__":
     # Base YCSB configuration
     ycsb_config_motivation_1 = {
         "threadcount": threads,
+        "cleanupafterload": "true",
         "sleepafterload": 0,
         "maxexecutiontime": maxexecutiontime,
         "operationcount": 1_000_000_000,
@@ -58,7 +59,6 @@ if __name__ == "__main__":
         "rocksdb.no_block_cache": "true",
         "rocksdb.use_direct_io_for_flush_compaction": "true",
         "rocksdb.dbname": os.path.join(sourceDir, "db", "motivation-1"),
-        "rocksdb.name": "instance-0",
         # workload
         "workload.type": "synthetic",
         "readproportion": 1,
@@ -210,7 +210,6 @@ if __name__ == "__main__":
 
     ycsb_config_motivation_3 = {
         **ycsb_config_motivation_1,
-        **{f"rocksdb.name.{i}": f"instance-{i}" for i in range(threads)},
         "cachelib.size": 2_000_000_000,
         "cachelib.pool.relsize": 1,
         **{f"cachelib.name.{i}": f"instance-{i}" for i in range(threads)},
