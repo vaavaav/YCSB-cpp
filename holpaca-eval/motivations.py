@@ -91,8 +91,6 @@ if __name__ == "__main__":
             ycsb_executable,
             {
                 **ycsb_config_motivation_1,
-                "cachelib.poolresizer": "off",
-                "cachelib.poolrebalancer": "off",
                 "cachelib.pool.proportion.0": 0.91,
                 "cachelib.pool.proportion.1": 0.03,
                 "cachelib.pool.proportion.2": 0.03,
@@ -111,7 +109,6 @@ if __name__ == "__main__":
                 **ycsb_config_motivation_1,
                 "cachelib.pooloptimizer": "on",
                 "cachelib.poolresizer": "on",
-                "cachelib.poolrebalancer": "off",
             },
         ),
         Setup(
@@ -161,8 +158,6 @@ if __name__ == "__main__":
             ycsb_executable,
             {
                 **ycsb_config_motivation_2,
-                "cachelib.poolrebalancer": "off",
-                "cachelib.pooloptimizer": "off",
                 "cachelib.poolresizer": "on",
                 "cachelib.poolresizer.milliseconds": 1000,
                 "cachelib.poolresizer.slabs": 1000,
@@ -183,7 +178,6 @@ if __name__ == "__main__":
             ycsb_executable,
             {
                 **ycsb_config_motivation_2,
-                "cachelib.poolrebalancer": "off",
                 "cachelib.pooloptimizer": "on",
                 "cachelib.poolresizer": "on",
                 "cachelib.poolresizer.milliseconds": 1000,
@@ -252,12 +246,9 @@ if __name__ == "__main__":
                 **ycsb_config_motivation_3,
                 "cachelib.size": 10_000_000_000,
                 "cachelib.virtualsize": 2_000_000_000,
-                "cachelib.pooloptimizer": "off",
-                "cachelib.poolrebalancer": "off",
                 "cachelib.poolresizer": "on",
                 "cachelib.poolresizer.milliseconds": 1000,
                 "cachelib.poolresizer.slabs": 1000,
-                "cachelib.pool.noinitialsize": "on",
                 "cachelib.proportion.0": 0.91,
                 "cachelib.pool.proportion.0": 1.0,
                 "cachelib.proportion.1": 0.03,
@@ -277,10 +268,9 @@ if __name__ == "__main__":
             "cachelib-holpaca",
             ycsb_executable,
             {
-                **ycsb_config_motivation_2,
+                **ycsb_config_motivation_3,
                 "cachelib.size": 10_000_000_000,
                 "cachelib.virtualsize": 2_000_000_000,
-                "cachelib.pool.noinitialsize": "on",
                 "cachelib.poolresizer": "on",
                 "cachelib.poolresizer.milliseconds": 1000,
                 "cachelib.poolresizer.slabs": 1000,
@@ -294,7 +284,13 @@ if __name__ == "__main__":
 
     ## Cases
     cases = [
-        #   Case('motivation-1', runs, load_setup_motivation_1, setups_motivation_1, "READ-PASSED READ-FAILED ALL"),
+        Case(
+            "motivation-1",
+            runs,
+            load_setup_motivation_1,
+            setups_motivation_1,
+            "READ-PASSED READ-FAILED ALL",
+        ),
         Case(
             "motivation-2",
             runs,
@@ -312,4 +308,4 @@ if __name__ == "__main__":
     ]
 
     # Run the benchmark
-    RunYCSB(cases, outputDir, sif_path=sifPath, binds=[sourceDir], timeout="01:00:00")
+    RunYCSB(cases, outputDir, sif_path=sifPath, binds=[sourceDir], timeout="01:30:00")

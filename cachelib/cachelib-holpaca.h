@@ -25,9 +25,10 @@ private:
   std::string poolName_ = "";
   facebook::cachelib::PoolId poolId_;
   RocksDB rocksdb_;
-  std::pair<int, int> missesAndHits_{0, 0};
-  std::pair<int, int> previousMissesAndHits_{0, 0};
-  int rocksdbIOPS_ = 0;
+  std::pair<long, long> missesAndHits_{0, 0};
+  std::pair<long, long> previousMissesAndHits_{0, 0};
+  long rocksdbIOPS_ = 0;
+  long prevRocksdbIOPS_ = 0;
 
 public:
   explicit CacheLibHolpaca(int threadId) : threadId_(threadId) {}
@@ -77,18 +78,22 @@ public:
     auto [misses, hits] = missesAndHits_;
     auto &[pmisses, phits] = previousMissesAndHits_;
 
-    int const kMisses = misses - pmisses;
-    int const kHits = hits - phits;
-    pmisses = misses;
-    phits = hits;
-    cache_->registerMetrics(poolId_, rocksdbIOPS_,
+    long const kPrevMisses = misses;
+    long const kMisses = misses - pmisses;
+    pmisses = kPrevMisses;
+    long const kPrevHits = hits;
+    long const kHits = hits - phits;
+    phits = kPrevHits;
+    long const kPrevRocksdbIOPS = rocksdbIOPS_;
+    long const kRocksdbIOPS = rocksdbIOPS_ - prevRocksdbIOPS_;
+    prevRocksdbIOPS_ = kPrevRocksdbIOPS;
+    cache_->registerMetrics(poolId_, kRocksdbIOPS,
                             (kMisses + kHits == 0)
                                 ? 0
                                 : static_cast<double>(kMisses) /
                                       (kMisses + kHits),
                             kHits + kMisses);
 
-    rocksdbIOPS_ = 0;
     const auto &pool = cache_->getPool(poolId_);
     auto cms = cache_->getCacheMemoryStats();
     return std::make_tuple(
