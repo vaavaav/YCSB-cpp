@@ -79,12 +79,12 @@ if __name__ == "__main__":
 
     # Create Setup objects for different configurations
     setups_motivation_1 = [
-        Setup(
-            "baseline",
-            "cachelib-lru",
-            ycsb_executable,
-            ycsb_config_motivation_1,
-        ),
+        #       Setup(
+        #           "baseline",
+        #           "cachelib-lru",
+        #           ycsb_executable,
+        #           ycsb_config_motivation_1,
+        #       ),
         Setup(
             "custom",
             "cachelib-holpaca",
@@ -152,38 +152,38 @@ if __name__ == "__main__":
 
     # Create Setup objects for different configurations
     setups_motivation_2 = [
-        Setup(
-            "custom",
-            "cachelib-holpaca",
-            ycsb_executable,
-            {
-                **ycsb_config_motivation_2,
-                "cachelib.poolresizer": "on",
-                "cachelib.poolresizer.milliseconds": 1000,
-                "cachelib.poolresizer.slabs": 1000,
-                "cachelib.pool.noinitialsize": "on",
-                "cachelib.pool.proportion.0": 0.91,
-                "cachelib.pool.proportion.1": 0.03,
-                "cachelib.pool.proportion.2": 0.03,
-                "cachelib.pool.proportion.3": 0.03,
-            },
-            controller_exec=os.path.join(
-                sourceDir, "opt/ycsb/bin/cachelib_holpaca_controller"
-            ),
-            controller_args="Motivation 1000",
-        ),
-        Setup(
-            "optimized",
-            "cachelib-lru2q",
-            ycsb_executable,
-            {
-                **ycsb_config_motivation_2,
-                "cachelib.pooloptimizer": "on",
-                "cachelib.poolresizer": "on",
-                "cachelib.poolresizer.milliseconds": 1000,
-                "cachelib.poolresizer.slabs": 1000,
-            },
-        ),
+        #       Setup(
+        #           "custom",
+        #           "cachelib-holpaca",
+        #           ycsb_executable,
+        #           {
+        #               **ycsb_config_motivation_2,
+        #               "cachelib.poolresizer": "on",
+        #               "cachelib.poolresizer.milliseconds": 1000,
+        #               "cachelib.poolresizer.slabs": 1000,
+        #               "cachelib.pool.noinitialsize": "on",
+        #               "cachelib.pool.proportion.0": 0.91,
+        #               "cachelib.pool.proportion.1": 0.03,
+        #               "cachelib.pool.proportion.2": 0.03,
+        #               "cachelib.pool.proportion.3": 0.03,
+        #           },
+        #           controller_exec=os.path.join(
+        #               sourceDir, "opt/ycsb/bin/cachelib_holpaca_controller"
+        #           ),
+        #           controller_args="Motivation 1000",
+        #       ),
+        #       Setup(
+        #           "optimized",
+        #           "cachelib-lru2q",
+        #           ycsb_executable,
+        #           {
+        #               **ycsb_config_motivation_2,
+        #               "cachelib.pooloptimizer": "on",
+        #               "cachelib.poolresizer": "on",
+        #               "cachelib.poolresizer.milliseconds": 1000,
+        #               "cachelib.poolresizer.slabs": 1000,
+        #           },
+        #       ),
         Setup(
             "holpaca",
             "cachelib-holpaca",
@@ -227,17 +227,17 @@ if __name__ == "__main__":
     )
 
     setups_motivation_3 = [
-        Setup(
-            "optimized",
-            "cachelib-lru2q",
-            ycsb_executable,
-            {
-                **ycsb_config_motivation_3,
-                "cachelib.pooloptimizer": "on",
-                "cachelib.poolresizer": "on",
-                "cachelib.poolrebalancer": "off",
-            },
-        ),
+        #       Setup(
+        #           "optimized",
+        #           "cachelib-lru2q",
+        #           ycsb_executable,
+        #           {
+        #               **ycsb_config_motivation_3,
+        #               "cachelib.pooloptimizer": "on",
+        #               "cachelib.poolresizer": "on",
+        #               "cachelib.poolrebalancer": "off",
+        #           },
+        #       ),
         Setup(
             "custom",
             "cachelib-holpaca",
@@ -249,6 +249,7 @@ if __name__ == "__main__":
                 "cachelib.poolresizer": "on",
                 "cachelib.poolresizer.milliseconds": 1000,
                 "cachelib.poolresizer.slabs": 1000,
+                "cachelib.pool.noinitialsize": "on",
                 "cachelib.proportion.0": 0.91,
                 "cachelib.pool.proportion.0": 1.0,
                 "cachelib.proportion.1": 0.03,
@@ -274,6 +275,7 @@ if __name__ == "__main__":
                 "cachelib.poolresizer": "on",
                 "cachelib.poolresizer.milliseconds": 1000,
                 "cachelib.poolresizer.slabs": 1000,
+                "cachelib.pool.noinitialsize": "on",
             },
             controller_exec=os.path.join(
                 sourceDir, "opt/ycsb/bin/cachelib_holpaca_controller"
