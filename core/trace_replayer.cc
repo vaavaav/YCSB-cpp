@@ -98,7 +98,7 @@ std::tuple<Operation, std::string, size_t> TraceReplayer::NextOperation() {
 
 std::string TraceReplayer::BuildKeyName(const std::string &k) {
   std::string key;
-  return key.append(request_key_prefix_).append(k);
+  return key.append(request_key_prefix_).append("+").append(k);
 }
 
 bool TraceReplayer::DoInsert(DB &db) {

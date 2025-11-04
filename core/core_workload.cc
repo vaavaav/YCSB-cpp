@@ -310,7 +310,10 @@ std::string CoreWorkload::BuildKeyName(uint64_t key_num) {
   std::string value = std::to_string(key_num);
   long fill = std::max(0l, zero_padding_ - static_cast<long>(value.size()));
   std::string key;
-  return key.append(request_key_prefix_).append(fill, '0').append(value);
+  return key.append(request_key_prefix_)
+      .append("+")
+      .append(fill, '0')
+      .append(value);
 }
 
 void CoreWorkload::BuildValues(std::vector<ycsbc::DB::Field> &values) {
