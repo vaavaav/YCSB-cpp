@@ -44,6 +44,7 @@ class Setup:
         with_controller=False,
         controller_exec=None,
         controller_args=None,
+        controller_same_node=False,
         status=None,
     ):
         self.name = name
@@ -54,6 +55,7 @@ class Setup:
         self.controller_exec = controller_exec
         self.controller_ip = config.get("cachelib.controller.address", None)
         self.controller_args = controller_args or ""
+        self.controller_same_node = controller_same_node
         self.threads = int(config.get("threadcount", 1))
         self.out = {}
         self.status = status
@@ -141,12 +143,76 @@ class Setup:
         # Run the sbatch command to submit the controller job
         subprocess.run(sbatch_cmd)
 
+    def run_controller_same_node(self, sifPath, binds=[], rehearse=False):
+        if not os.path.exists(sifPath):
+            raise FileNotFoundError(f"SIF file not found: {sifPath}")
+
+        if not os.path.exists(self.controller_exec):
+            raise ValueError(f"Controller executable not found: {self.controller_exec}")
+
+        if not os.path.exists(self.out) and not rehearse:
+            os.makedirs(self.out, exist_ok=True)
+
+        local_controller_pidstat_output = "/tmp/controller_pidstat.log"
+        # Store YCSB output in a local file
+        local_ycsb_output = "/tmp/ycsb.txt"
+        # Prepare the output paths for dool
+        controller_pidstat_output = os.path.join(self.out, "controller_pidstat.log")
+        # Prepare the output paths for YCSB
+        ycsb_output = os.path.join(self.out, "ycsb.txt")
+        # List commands to copy workload files to the local storage
+
+        controller_dir = os.path.dirname(self.controller_exec)
+        executable_dir = os.path.dirname(self.executable)
+
+        # Prepare the command to run the SIF container of the client
+        script = f""" "
+    CLIENT_IP="localhost"
+    IPS=\\"-p cachelib.controller.address=localhost:11110\\"
+    for i in \\$(seq 0 {self.threads - 1}); do
+      PORT=\\$((11111+i))
+      IPS+=\\" -p cachelib.holpaca.address.\\$i=\\$CLIENT_IP:\\$PORT\\"
+    done
+
+    srun -n 1 singularity run --network host --bind '{controller_dir},{executable_dir},{self.out},{','.join(binds)}' {sifPath} bash -c \\"
+        pidstat -r -u -d -h 1 -- '{self.controller_exec} localhost:11110 {self.controller_args} > {self.out}/controller.log 2>&1' > /tmp/controller_pidstat.log 2>&1 
+    \\"
+
+    srun -n 1 singularity run --network host --bind '/tmp,{','.join(binds)}' {sifPath} bash -c \\"
+        {self.build_cmd()} \\$IPS > {local_ycsb_output}
+        kill \\$(pgrep {os.path.basename(self.controller_exec)}) 2>/dev/null || true
+    \\"
+
+    wait
+
+    cp {local_controller_pidstat_output} {controller_pidstat_output}
+    cp {local_ycsb_output} {ycsb_output}
+    " """
+
+        sbatch_cmd = build_sbatch_cmd(
+            name=self.name,
+            cmd=script,
+            stdout=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-{self.name}.out",
+            stderr=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-{self.name}.err",
+            ntasks=2,
+        )
+
+        if rehearse:
+            print(f"[REHEARSE] {' '.join(sbatch_cmd)}")
+            return
+
+        # Run the sbatch command to submit the controller job
+        subprocess.run(sbatch_cmd)
+
     def run(self, sifPath, binds=[], rehearse=False):
         if not os.path.exists(sifPath):
             raise FileNotFoundError(f"SIF file not found: {sifPath}")
 
         if self.with_controller:
-            self.run_controller(sifPath, binds, rehearse)
+            if self.controller_same_node:
+                self.run_controller(sifPath, binds, rehearse)
+            else:
+                self.run_controller_same_node(sifPath, binds, rehearse)
             return
 
         if not os.path.exists(self.out) and not rehearse:

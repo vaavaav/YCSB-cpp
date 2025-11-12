@@ -107,6 +107,7 @@ if __name__ == "__main__":
             sourceDir, "opt/ycsb/bin/cachelib_holpaca_controller"
         ),
         controller_args="ThroughputMaximization 1000:0.01:true",
+        controller_same_node=True,
     )
 
     holpaca_cce = Setup(
@@ -121,6 +122,7 @@ if __name__ == "__main__":
             sourceDir, "opt/ycsb/bin/cachelib_holpaca_controller"
         ),
         controller_args="ThroughputMaximization 1:0.01:true:1000",
+        controller_same_node=True,
     )
 
     setups = []
@@ -135,9 +137,9 @@ if __name__ == "__main__":
         ]:
             for threads in [1, 2, 4, 8, 16, 32, 64]:
                 for setupName, setup in [
-                    ("baseline", baseline),
+                    # ("baseline", baseline),
                     # ("holpaca", holpaca),
-                    # ("holpaca-cce", holpaca_cce),
+                    ("holpaca-cce", holpaca_cce),
                     # ("holpaca-freq", holpaca),
                 ]:
                     for run in range(runs):
