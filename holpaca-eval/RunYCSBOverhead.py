@@ -173,7 +173,7 @@ class Setup:
       IPS+=" -p cachelib.holpaca.address.$i=localhost:$PORT"
     done
 
-    jobController=$(srun -n 1 singularity run --network host --bind '{controller_dir},{executable_dir},{self.out},{','.join(binds)}' {sifPath} bash -c "
+    jobController=$(srun --parsable -n 1 singularity run --network host --bind '{controller_dir},{executable_dir},{self.out},{','.join(binds)}' {sifPath} bash -c "
         pidstat -r -u -d -h 1 -e bash -c '{self.controller_exec} localhost:11110 {self.controller_args} > {self.out}/controller.log 2>&1' > /tmp/controller_pidstat.log 2>&1 
     ")
 
