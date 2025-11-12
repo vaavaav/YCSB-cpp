@@ -175,17 +175,22 @@ class Setup:
 
         srun -n 1 singularity run --network host --bind '{controller_dir},{executable_dir},{self.out},{','.join(binds)}' {sifPath} bash -c '
         {self.controller_exec} localhost:11110 {self.controller_args} > {self.out}/controller.log 2>&1 &
-        JOB_CONTROLLER=\$(pgrep -f {os.path.basename(self.controller_exec)} | sed -n '4p')
-        pidstat -u -p \$JOB_CONTROLLER 1 > {local_controller_pidstat_output} 2>&1 
-    ' &
-
-    task1_pid=$!
+    ' 
 
     sleep 1
 
+    task1_pid=$!
+
+        srun -n 1 singularity run --network host --bind '{controller_dir},{executable_dir},{self.out},{','.join(binds)}' {sifPath} bash -c '
+        JOB_CONTROLLER=\$(pgrep -f {os.path.basename(self.controller_exec)} | sed -n '4p')
+        pidstat -u -p \$JOB_CONTROLLER 1 > {local_controller_pidstat_output} 2>&1 
+    ' 
+
+    task2_pid=$!
+
     srun -n 1 singularity run --network host --bind '/tmp,{executable_dir},{','.join(binds)}' {sifPath} bash -c "
         {self.build_cmd()} $IPS > {local_ycsb_output}
-        kill -9 $task1_pid
+        kill -9 $task1_pid $task2_pid
     " 
 
     wait
@@ -199,7 +204,7 @@ class Setup:
             cmd=script,
             stdout=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-{self.name}.out",
             stderr=f"/projects/F202400014TESTDEUCALION/pedro/YCSB-cpp/slurm-{self.name}.err",
-            ntasks=2,
+            ntasks=3,
         )
 
         if rehearse:
