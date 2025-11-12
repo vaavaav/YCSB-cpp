@@ -166,21 +166,21 @@ class Setup:
         executable_dir = os.path.dirname(self.executable)
 
         # Prepare the command to run the SIF container of the client
-        script = f""" "
-        IPS=\"-p cachelib.controller.address=localhost:11110\"
-    for i in \$(seq 0 {self.threads - 1}); do
+        script = f""" 
+        IPS="-p cachelib.controller.address=localhost:11110"
+    for i in $(seq 0 {self.threads - 1}); do
       PORT=$((11111+i))
-      IPS+=\" -p cachelib.holpaca.address.\$i=localhost:$PORT\"
+      IPS+=" -p cachelib.holpaca.address.$i=localhost:$PORT"
     done
 
-    srun -n 1 singularity run --network host --bind '{controller_dir},{executable_dir},{self.out},{','.join(binds)}' {sifPath} bash -c \"
+    srun -n 1 singularity run --network host --bind '{controller_dir},{executable_dir},{self.out},{','.join(binds)}' {sifPath} bash -c "
         pidstat -r -u -d -h 1 -- '{self.controller_exec} localhost:11110 {self.controller_args} > {self.out}/controller.log 2>&1' > /tmp/controller_pidstat.log 2>&1 
-    \"
+    "
 
-    srun -n 1 singularity run --network host --bind '/tmp,{','.join(binds)}' {sifPath} bash -c \"
+    srun -n 1 singularity run --network host --bind '/tmp,{','.join(binds)}' {sifPath} bash -c "
         {self.build_cmd()} $IPS > {local_ycsb_output}
         kill $(pgrep {os.path.basename(self.controller_exec)}) 2>/dev/null || true
-    \"
+    "
 
     wait
 
