@@ -175,7 +175,7 @@ class Setup:
 
     srun -n 1 singularity run --network host --bind '{controller_dir},{executable_dir},{self.out},{','.join(binds)}' {sifPath} bash -c "
         {self.controller_exec} localhost:11110 {self.controller_args} > {self.out}/controller.log 2>&1 &
-        jobController=$(pgrep -f '{self.controller_exec}' | head -n 1)
+        jobController=$(pgrep -f '{os.path.basename(self.controller_exec)}' | head -n 1)
         pidstat -u -p $jobController 1 > {local_controller_pidstat_output} 2>&1
     " &
 
