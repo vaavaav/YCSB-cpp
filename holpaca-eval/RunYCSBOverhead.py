@@ -210,9 +210,9 @@ class Setup:
 
         if self.with_controller:
             if self.controller_same_node:
-                self.run_controller(sifPath, binds, rehearse)
-            else:
                 self.run_controller_same_node(sifPath, binds, rehearse)
+            else:
+                self.run_controller(sifPath, binds, rehearse)
             return
 
         if not os.path.exists(self.out) and not rehearse:
