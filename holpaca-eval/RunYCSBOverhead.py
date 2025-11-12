@@ -173,20 +173,22 @@ class Setup:
         IPS+=" -p cachelib.holpaca.address.$i=localhost:$PORT"
         done
 
-    srun -n 1 singularity run --network host --bind '{controller_dir},{executable_dir},{self.out},{','.join(binds)}' {sifPath} bash -c '
+        srun -n 1 singularity run --network host --bind '{controller_dir},{executable_dir},{self.out},{','.join(binds)}' {sifPath} bash -c '
         {self.controller_exec} localhost:11110 {self.controller_args} > {self.out}/controller.log 2>&1 &
-        JOB_CONTROLLER=\$(pgrep -f '{os.path.basename(self.controller_exec)}' | tail -n 1)
-        pidstat -u -p \$JOB_CONTROLLER 1 > {local_controller_pidstat_output} 2>&1
+        JOB_CONTROLLER=\$(pgrep -f {os.path.basename(self.controller_exec)} | sed -n '4p')
+        pidstat -u -p \$JOB_CONTROLLER 1 > {local_controller_pidstat_output} 2>&1 
     ' &
 
     task1_pid=$!
 
     sleep 1
 
-    srun -n 1 singularity run --network host --bind '/tmp,{','.join(binds)}' {sifPath} bash -c "
+    srun -n 1 singularity run --network host --bind '/tmp,{executable_dir},{','.join(binds)}' {sifPath} bash -c "
         {self.build_cmd()} $IPS > {local_ycsb_output}
+        kill -9 $task1_pid
     " 
-    kill -9 $task1_pid
+
+    wait
 
     cp {local_controller_pidstat_output} {controller_pidstat_output}
     cp {local_ycsb_output} {ycsb_output}
