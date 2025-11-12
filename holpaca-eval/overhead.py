@@ -84,24 +84,16 @@ if __name__ == "__main__":
     outputDir = os.path.join(os.path.abspath(sys.argv[2]))
     sifPath = os.path.abspath(sys.argv[3]) if len(sys.argv) > 3 else None
     ycsb_executable = os.path.join(sourceDir, "build-ycsb/ycsb")  # Update this path
-    runs = int(sys.argv[4]) if len(sys.argv) > 4 else 1
+    run_from = int(sys.argv[4]) if len(sys.argv) > 4 else 1
+    run_to = int(sys.argv[5]) if len(sys.argv) > 5 else run_from
 
-    baseline = Setup(
-        "baseline",
-        "cachelib-overhead",
-        ycsb_executable,
-        {
-            "cachelib.eviction": "lru",
-        },
-    )
+    baseline = Setup("baseline", "cachelib-overhead", ycsb_executable, {})
 
     holpaca = Setup(
         "holpaca",
         "cachelib-holpaca-overhead",
         ycsb_executable,
-        {
-            "cachelib.eviction": "lru",
-        },
+        {},
         with_controller=True,
         controller_exec=os.path.join(
             sourceDir, "opt/ycsb/bin/cachelib_holpaca_controller"
@@ -114,9 +106,7 @@ if __name__ == "__main__":
         "holpaca-cce",
         "cachelib-holpaca-overhead",
         ycsb_executable,
-        {
-            "cachelib.eviction": "lru",
-        },
+        {},
         with_controller=True,
         controller_exec=os.path.join(
             sourceDir, "opt/ycsb/bin/cachelib_holpaca_controller"
@@ -135,14 +125,14 @@ if __name__ == "__main__":
             ("tenants", configTenants),
             ("instances", configInstances),
         ]:
-            for threads in [1, 2, 4, 8, 16, 32, 64]:
+            for threads in [1, 2, 4, 8, 16, 32]:
                 for setupName, setup in [
                     # ("baseline", baseline),
                     # ("holpaca", holpaca),
                     ("holpaca-cce", holpaca_cce),
                     # ("holpaca-freq", holpaca),
                 ]:
-                    for run in range(runs):
+                    for run in range(run_from, run_to + 1):
                         case = f"{workload_name}-{setupTypeName}-{threads}"
                         setup = copy.deepcopy(setup)
                         setup.status = (
@@ -157,17 +147,17 @@ if __name__ == "__main__":
                         }
                         if setupName == "holpaca-freq":
                             for freq in [1, 10, 100, 1000, 10000]:
-                                setup.name = f"{case}-{setupName}-{freq}-{run + 1}"
+                                setup.name = f"{case}-{setupName}-{freq}-{run}"
                                 setup.controller_args = (
                                     f"ThroughputMaximization {freq}:0.01:true"
                                 )
                                 setup.out = os.path.join(
-                                    outputDir, case, setupName, str(freq), str(run + 1)
+                                    outputDir, case, setupName, str(freq), str(run)
                                 )
                                 setup.run(sifPath, binds=[sourceDir])
                         else:
-                            setup.name = f"{case}-{setupName}-{run + 1}"
+                            setup.name = f"{case}-{setupName}-{run}"
                             setup.out = os.path.join(
-                                outputDir, case, setupName, str(run + 1)
+                                outputDir, case, setupName, str(run)
                             )
                             setup.run(sifPath, binds=[sourceDir])
